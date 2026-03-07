@@ -1,0 +1,808 @@
+"use client";
+
+import { useState, useEffect, useMemo, useCallback } from "react";
+import Link from "next/link";
+import { useTenant } from "@/lib/tenant/context";
+import { createClient } from "@/lib/supabase/client";
+import { Navbar } from "@/components/ui/navbar";
+import type { Kelurahan } from "@/types";
+import {
+    ChevronLeft, TrendingUp, MapPin, Building2, Store,
+    Briefcase, Activity, Target, Factory, ArrowUpRight,
+    Search, Users, PieChart as PieChartIcon, BarChart3,
+    AlertTriangle, ShoppingCart, Info, Award, ChevronDown
+} from "lucide-react";
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+    ResponsiveContainer, PieChart, Pie, Cell, Legend,
+    LineChart, Line, AreaChart, Area, RadarChart, Radar,
+    PolarGrid, PolarAngleAxis, PolarRadiusAxis
+} from "recharts";
+
+const THEME = {
+    gradient: "from-indigo-500 to-indigo-700",
+    bgGradient: "bg-digital-batik",
+    lightBg: "bg-indigo-50",
+    textColor: "text-indigo-700",
+};
+
+const CHART_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4", "#f97316", "#14b8a6", "#ec4899", "#84cc16"];
+const KELURAHAN_ICONS = ["🏘️", "🏠", "🏡", "🏢", "🏫", "🏛️", "🏗️", "🏟️"];
+
+function StatCard({ label, value, icon: Icon, color = "indigo", subtitle }: { label: string; value: string | number; icon: any; color?: string; subtitle?: string }) {
+    return (
+        <div className="group bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden relative flex flex-col justify-center min-h-[130px]">
+            <div className={`absolute top-0 left-0 w-full h-1.5 bg-${color}-500`} />
+            <div className="flex items-center gap-4">
+                <div className={`p-4 rounded-2xl bg-${color}-50 text-${color}-600`}>
+                    <Icon className="w-7 h-7" />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1 mt-1">{label}</p>
+                    <div className="flex items-baseline gap-2">
+                        <h4 className="text-3xl font-black text-slate-800 truncate leading-tight">{value}</h4>
+                        {subtitle && <span className="text-xs text-slate-500 font-semibold">{subtitle}</span>}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENT: SEKTOR USAHA
+// ─────────────────────────────────────────────────────────────────────────────
+function SektorSection({ sectors, kelurahans, selectedKelurahan }: { sectors: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
+    const kelMap = new Map<string, string>();
+    kelurahans.forEach(k => kelMap.set(k.id, k.nama));
+
+    // Filter by kelurahan & get latest year data
+    const filteredByKelurahan = selectedKelurahan ? sectors.filter(s => s.kelurahan_id === selectedKelurahan) : sectors;
+    const years = Array.from(new Set(filteredByKelurahan.map(s => s.tahun))).sort((a, b) => b - a);
+    const latestYear = years[0] || new Date().getFullYear();
+    const latestData = filteredByKelurahan.filter(s => s.tahun === latestYear);
+
+    // Stats
+    const totalUsaha = latestData.reduce((acc, curr) => acc + (curr.jumlah_usaha || 0), 0);
+    const totalTenagaKerja = latestData.reduce((acc, curr) => acc + (curr.jumlah_tenaga_kerja || 0), 0);
+    const uniqueSectors = Array.from(new Set(latestData.map(s => s.sektor)));
+
+    // Sector Aggregation (Group by Sektor)
+    const sektorMap = new Map<string, { jumlah_usaha: number; jumlah_tenaga_kerja: number }>();
+    latestData.forEach(d => {
+        const key = d.sektor || "Lainnya";
+        const curr = sektorMap.get(key) || { jumlah_usaha: 0, jumlah_tenaga_kerja: 0 };
+        sektorMap.set(key, {
+            jumlah_usaha: curr.jumlah_usaha + (d.jumlah_usaha || 0),
+            jumlah_tenaga_kerja: curr.jumlah_tenaga_kerja + (d.jumlah_tenaga_kerja || 0),
+        });
+    });
+
+    const sektorChartData = Array.from(sektorMap.entries()).map(([name, data]) => ({
+        name: name.length > 15 ? name.substring(0, 15) + "..." : name,
+        full_name: name,
+        ...data
+    })).sort((a, b) => b.jumlah_usaha - a.jumlah_usaha);
+
+    // multi-year trend for Top 3 sectors
+    const top3Sectors = sektorChartData.slice(0, 3).map(s => s.full_name);
+    const trendDataRaw = new Map<number, any>();
+    filteredByKelurahan.forEach(d => {
+        if (!top3Sectors.includes(d.sektor)) return;
+        if (!trendDataRaw.has(d.tahun)) trendDataRaw.set(d.tahun, { tahun: d.tahun });
+        const entry = trendDataRaw.get(d.tahun);
+        entry[d.sektor] = (entry[d.sektor] || 0) + (d.jumlah_usaha || 0);
+    });
+    const trendData = Array.from(trendDataRaw.values()).sort((a, b) => a.tahun - b.tahun);
+
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard label="Total Usaha" value={totalUsaha.toLocaleString('id-ID')} icon={Store} color="indigo" subtitle={`Tahun ${latestYear}`} />
+                <StatCard label="Tenaga Kerja" value={totalTenagaKerja.toLocaleString('id-ID')} icon={Users} color="blue" subtitle={`Tahun ${latestYear}`} />
+                <StatCard label="Sektor Usaha" value={uniqueSectors.length} icon={Factory} color="amber" subtitle="Aktif terdata" />
+                <StatCard label="Rerata TK/Usaha" value={totalUsaha > 0 ? (totalTenagaKerja / totalUsaha).toFixed(1) : 0} icon={Briefcase} color="purple" subtitle="Orang per usaha" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Bar Chart Sektor */}
+                <div className="lg:col-span-8 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col min-h-[400px]">
+                    <div className="mb-6">
+                        <h3 className="text-base font-bold text-slate-800">Distribusi Usaha per Sektor</h3>
+                        <p className="text-xs text-slate-500">Jumlah entitas usaha tersebar di seluruh kelurahan</p>
+                    </div>
+                    <div className="flex-1 w-full relative">
+                        {sektorChartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%" minHeight={300}>
+                                <BarChart data={sektorChartData} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} angle={-45} textAnchor="end" />
+                                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{ fill: '#f8fafc' }} />
+                                    <Bar dataKey="jumlah_usaha" name="Jumlah Usaha" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={50}>
+                                        {sektorChartData.map((d, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                                <Activity className="w-8 h-8 mb-2 opacity-50" />
+                                <span className="text-sm">Belum ada data sektor usaha</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Pie Chart Tenaga Kerja */}
+                <div className="lg:col-span-4 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col min-h-[400px]">
+                    <div className="mb-4">
+                        <h3 className="text-base font-bold text-slate-800">Serapan Tenaga Kerja</h3>
+                        <p className="text-xs text-slate-500">Komposisi pekerja berdasar sektor</p>
+                    </div>
+                    <div className="flex-1 relative">
+                        {sektorChartData.length > 0 && totalTenagaKerja > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={sektorChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={2} dataKey="jumlah_tenaga_kerja">
+                                        {sektorChartData.map((d, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                                    </Pie>
+                                    <Tooltip formatter={(value: number) => [`${value.toLocaleString('id-ID')} orang`, 'Tenaga Kerja']} contentStyle={{ borderRadius: 8, fontSize: "12px" }} />
+                                    <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "10px" }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">Tidak ada serapan pekerja</div>
+                        )}
+                        {sektorChartData.length > 0 && totalTenagaKerja > 0 && (
+                            <div className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                                <span className="block text-xl font-extrabold text-slate-800">{totalTenagaKerja > 1000 ? (totalTenagaKerja / 1000).toFixed(1) + 'k' : totalTenagaKerja}</span>
+                                <span className="text-[9px] text-slate-500 uppercase font-bold">Pekerja</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Trend Chart */}
+            <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col min-h-[350px]">
+                <div className="mb-6">
+                    <h3 className="text-base font-bold text-slate-800">Tren Pertumbuhan Top 3 Sektor</h3>
+                    <p className="text-xs text-slate-500">Berdasarkan data historis {years.length} tahun terakhir</p>
+                </div>
+                <div className="flex-1">
+                    {trendData.length > 1 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                                <XAxis dataKey="tahun" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: '12px', border: '1px solid #e2e8f0' }} />
+                                <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
+                                {top3Sectors.map((s, i) => (
+                                    <Line key={s} type="monotone" dataKey={s} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                                ))}
+                            </LineChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="h-full flex items-center justify-center text-slate-400 text-sm">Data historis tidak mencukupi untuk tren multi-tahun.</div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENT: SARANA EKONOMI
+// ─────────────────────────────────────────────────────────────────────────────
+function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { facilities: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
+    const kelMap = new Map<string, string>();
+    kelurahans.forEach(k => kelMap.set(k.id, k.nama));
+
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 15;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedKelurahan, searchQuery]);
+
+    const filteredData = useMemo(() => {
+        return facilities.filter(f => {
+            if (selectedKelurahan && f.kelurahan_id !== selectedKelurahan) return false;
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                return (f.nama?.toLowerCase().includes(q)) || (f.jenis?.toLowerCase().includes(q));
+            }
+            return true;
+        });
+    }, [facilities, selectedKelurahan, searchQuery]);
+
+    const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+    const paginatedData = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredData.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredData, currentPage]);
+
+    const jenisCount = new Map<string, number>();
+    filteredData.forEach(d => {
+        const j = d.jenis || "Lainnya";
+        jenisCount.set(j, (jenisCount.get(j) || 0) + 1);
+    });
+    const jenisChartData = Array.from(jenisCount.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+
+    // Most dominant type
+    const topJenis = jenisChartData[0]?.name || "-";
+
+    const kelCount = new Map<string, number>();
+    filteredData.forEach(d => {
+        const kn = kelMap.get(d.kelurahan_id) || "Lainnya";
+        kelCount.set(kn, (kelCount.get(kn) || 0) + 1);
+    });
+    const kelChartData = Array.from(kelCount.entries()).map(([nama, jumlah]) => ({ nama, jumlah })).sort((a, b) => b.jumlah - a.jumlah);
+
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <StatCard label="Total Sarana" value={filteredData.length.toLocaleString()} icon={Building2} color="indigo" />
+                <StatCard label="Kategori Terbanyak" value={topJenis} icon={TrendingUp} color="amber" />
+                <StatCard label="Jenis Sarana" value={jenisChartData.length} icon={ShoppingCart} color="blue" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-8 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col min-h-[350px]">
+                    <h3 className="text-base font-bold text-slate-800 mb-6">Distribusi per Wilayah</h3>
+                    <div className="flex-1 relative">
+                        {kelChartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={kelChartData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                                    <XAxis dataKey="nama" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} angle={-30} textAnchor="end" />
+                                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{ fill: '#f8fafc' }} />
+                                    <Bar dataKey="jumlah" name="Jumlah Sarana" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">Tidak ada data distribusi wilayah</div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="lg:col-span-4 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col min-h-[350px]">
+                    <h3 className="text-base font-bold text-slate-800 mb-6">Komposisi Sarana</h3>
+                    <div className="flex-1 relative">
+                        {jenisChartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={jenisChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={2} dataKey="value">
+                                        {jenisChartData.map((d, i) => <Cell key={i} fill={CHART_COLORS[(i + 2) % CHART_COLORS.length]} />)}
+                                    </Pie>
+                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} />
+                                    <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "10px" }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">Tidak ada komposisi jenis</div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <h3 className="text-base font-bold text-slate-800">Daftar Sarana Ekonomi</h3>
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Cari nama atau jenis..."
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {paginatedData.map((row, i) => (
+                        <div key={row.id || i} className="p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-white hover:border-indigo-200 hover:shadow-md transition-all">
+                            <h4 className="font-bold text-slate-800 mb-1">{row.nama || "Tanpa Nama"}</h4>
+                            <span className="inline-block px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded mb-2">
+                                {row.jenis || "Lainnya"}
+                            </span>
+                            <p className="text-xs text-slate-500 flex items-start gap-1.5 line-clamp-2">
+                                <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                                {row.alamat || kelMap.get(row.kelurahan_id) || "Tidak ada alamat lengkap"}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+                {totalPages > 1 && (
+                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-sm text-slate-500">
+                            Menampilkan {Math.min(filteredData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(filteredData.length, currentPage * ITEMS_PER_PAGE)} dari {filteredData.length}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Sebelumnnya</button>
+                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{currentPage} / {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
+                        </div>
+                    </div>
+                )}
+                {filteredData.length === 0 && (
+                    <div className="py-12 text-center text-slate-400">
+                        <Search className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                        <p className="text-sm">Data sarana tidak ditemukan</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENT: POTENSI UMKM
+// ─────────────────────────────────────────────────────────────────────────────
+function UmkmSection({ potentials, kelurahans, selectedKelurahan }: { potentials: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
+    const kelMap = new Map<string, string>();
+    kelurahans.forEach(k => kelMap.set(k.id, k.nama));
+
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 12;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedKelurahan, searchQuery]);
+
+    const filteredData = useMemo(() => {
+        return potentials.filter(f => {
+            if (selectedKelurahan && f.kelurahan_id !== selectedKelurahan) return false;
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                return (f.nama_usaha?.toLowerCase().includes(q)) || (f.jenis_usaha?.toLowerCase().includes(q)) || (f.pemilik?.toLowerCase().includes(q));
+            }
+            return true;
+        });
+    }, [potentials, selectedKelurahan, searchQuery]);
+
+    const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+    const paginatedData = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredData.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredData, currentPage]);
+
+    const totalActive = filteredData.filter(d => d.status === 'aktif').length;
+    const totalOmzet = filteredData.reduce((acc, curr) => acc + (Number(curr.omzet_per_bulan) || 0), 0);
+    const totalPekerja = filteredData.reduce((acc, curr) => acc + (curr.jumlah_tenaga_kerja || 0), 0);
+    const prcActive = filteredData.length > 0 ? Math.round((totalActive / filteredData.length) * 100) : 0;
+
+    // Top 10 by Omzet
+    const top10Omzet = [...filteredData]
+        .filter(d => Number(d.omzet_per_bulan) > 0)
+        .sort((a, b) => Number(b.omzet_per_bulan) - Number(a.omzet_per_bulan))
+        .slice(0, 5) // Reduced to Top 5 for better viz
+        .map(d => ({
+            name: d.nama_usaha?.length > 15 ? d.nama_usaha.substring(0, 15) : d.nama_usaha,
+            omzet: Number(d.omzet_per_bulan)
+        }));
+
+    // Status Pie
+    const statusData = [
+        { name: 'Aktif', value: totalActive },
+        { name: 'Tidak Aktif', value: filteredData.length - totalActive }
+    ];
+
+    const formatRupiah = (val: number) => {
+        if (val >= 1000000000) return `Rp ${(val / 1000000000).toFixed(1)} M`;
+        if (val >= 1000000) return `Rp ${(val / 1000000).toFixed(1)} Jt`;
+        return `Rp ${val.toLocaleString()}`;
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard label="Total UMKM Terdata" value={filteredData.length} icon={Store} color="indigo" />
+                <StatCard label="UMKM Aktif" value={`${prcActive}%`} icon={Activity} color="indigo" subtitle={`${totalActive} unit aktif`} />
+                <StatCard label="Estimasi Omzet Binaan" value={formatRupiah(totalOmzet)} icon={Briefcase} color="amber" subtitle="Total omzet bulanan" />
+                <StatCard label="Serapan Pekerja" value={totalPekerja.toLocaleString()} icon={Users} color="blue" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm min-h-[350px] flex flex-col">
+                    <h3 className="text-base font-bold text-slate-800 mb-2">Top 5 UMKM dengan Omzet Tertinggi</h3>
+                    <p className="text-xs text-slate-500 mb-6">Berdasarkan hasil konfirmasi evaluasi bulanan</p>
+                    <div className="flex-1 relative">
+                        {top10Omzet.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart layout="vertical" data={top10Omzet} margin={{ top: 0, right: 30, left: 30, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                                    <XAxis type="number" tickFormatter={formatRupiah} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                    <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: '#334155', fontWeight: 600 }} axisLine={false} tickLine={false} />
+                                    <Tooltip
+                                        formatter={(val: number) => [formatRupiah(val), 'Omzet']}
+                                        contentStyle={{ borderRadius: 8, fontSize: '12px' }}
+                                    />
+                                    <Bar dataKey="omzet" fill="#34d399" radius={[0, 4, 4, 0]} barSize={24}>
+                                        {top10Omzet.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">Belum ada data omzet tersedia</div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm min-h-[350px] flex flex-col">
+                    <h3 className="text-base font-bold text-slate-800 mb-6">Status Keaktifan UMKM</h3>
+                    <div className="flex-1 flex items-center justify-center relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie data={statusData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={2} dataKey="value">
+                                    <Cell fill="#10b981" />
+                                    <Cell fill="#cbd5e1" />
+                                </Pie>
+                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: '12px' }} />
+                                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '12px' }} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[60%] text-center pointer-events-none">
+                            <span className="block text-3xl font-black text-indigo-600">{prcActive}%</span>
+                            <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Aktif</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* List Table UMKM */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <h3 className="text-base font-bold text-slate-800">Direktori UMKM</h3>
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Cari UMKM..."
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-slate-50/80 text-slate-500 uppercase text-xs font-semibold">
+                            <tr>
+                                <th className="px-5 py-3 rounded-tl-lg">Nama Usaha / Pemilik</th>
+                                <th className="px-5 py-3">Jenis Usaha</th>
+                                <th className="px-5 py-3">Omzet Bln</th>
+                                <th className="px-5 py-3 text-center">Pekerja</th>
+                                <th className="px-5 py-3 text-center">Status</th>
+                                <th className="px-5 py-3 rounded-tr-lg">Wilayah</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {paginatedData.map((row, i) => (
+                                <tr key={row.id || i} className="hover:bg-slate-50/50">
+                                    <td className="px-5 py-3">
+                                        <div className="font-bold text-slate-800">{row.nama_usaha || "-"}</div>
+                                        <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Users className="w-3 h-3" /> {row.pemilik || "Tanpa data pemilik"}</div>
+                                    </td>
+                                    <td className="px-5 py-3 text-slate-600">{row.jenis_usaha || "-"}</td>
+                                    <td className="px-5 py-3 font-medium text-indigo-600">{formatRupiah(Number(row.omzet_per_bulan) || 0)}</td>
+                                    <td className="px-5 py-3 text-center text-slate-600">{row.jumlah_tenaga_kerja || 0}</td>
+                                    <td className="px-5 py-3 text-center">
+                                        <div className={`px-2 py-0.5 rounded text-[10px] font-bold inline-block ${row.status === 'aktif' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                                            {(row.status || 'tdk diketahui').toUpperCase()}
+                                        </div>
+                                    </td>
+                                    <td className="px-5 py-3 text-slate-500 text-xs">
+                                        {kelMap.get(row.kelurahan_id) || "-"}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                {totalPages > 1 && (
+                    <div className="p-4 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-xs text-slate-500">
+                            Halaman {currentPage} dari {totalPages}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-medium text-slate-600 hover:bg-white disabled:opacity-50">Prev</button>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 bg-slate-50 border border-slate-200 rounded text-xs font-medium text-slate-600 hover:bg-white disabled:opacity-50">Next</button>
+                        </div>
+                    </div>
+                )}
+                {filteredData.length === 0 && (
+                    <div className="py-8 text-center text-slate-400">Pencarian tidak menemukan UMKM.</div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENT: ANALISIS & INSIGHT
+// ─────────────────────────────────────────────────────────────────────────────
+function AnalisisSection({ sectors, facilities, potentials, kelurahans, selectedKelurahan }: { sectors: any[]; facilities: any[]; potentials: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
+
+    // Build combined analytical records per kelurahan
+    const analyticsMap = new Map<string, { id: string, name: string, umkm: number, sarana: number, usaha: number, score: number }>();
+
+    kelurahans.forEach(k => {
+        analyticsMap.set(k.id, { id: k.id, name: k.nama, umkm: 0, sarana: 0, usaha: 0, score: 0 });
+    });
+
+    potentials.forEach(p => {
+        if (p.kelurahan_id && analyticsMap.has(p.kelurahan_id)) {
+            analyticsMap.get(p.kelurahan_id)!.umkm += 1;
+        }
+    });
+
+    facilities.forEach(f => {
+        if (f.kelurahan_id && analyticsMap.has(f.kelurahan_id)) {
+            analyticsMap.get(f.kelurahan_id)!.sarana += 1;
+        }
+    });
+
+    sectors.forEach(s => {
+        if (s.kelurahan_id && analyticsMap.has(s.kelurahan_id)) {
+            analyticsMap.get(s.kelurahan_id)!.usaha += (s.jumlah_usaha || 0);
+        }
+    });
+
+    // Score computation
+    let maxUmkm = 0, maxSarana = 0, maxUsaha = 0;
+    const records = Array.from(analyticsMap.values());
+    records.forEach(r => {
+        if (r.umkm > maxUmkm) maxUmkm = r.umkm;
+        if (r.sarana > maxSarana) maxSarana = r.sarana;
+        if (r.usaha > maxUsaha) maxUsaha = r.usaha;
+    });
+
+    records.forEach(r => {
+        const scoreUmkm = maxUmkm > 0 ? (r.umkm / maxUmkm) * 100 : 0;
+        const scoreSarana = maxSarana > 0 ? (r.sarana / maxSarana) * 100 : 0;
+        const scoreUsaha = maxUsaha > 0 ? (r.usaha / maxUsaha) * 100 : 0;
+        r.score = Math.round((scoreUmkm * 0.4) + (scoreSarana * 0.3) + (scoreUsaha * 0.3));
+    });
+
+    const rankedRecords = [...records].sort((a, b) => b.score - a.score);
+
+    // Radar Data
+    const focusKelurahanId = selectedKelurahan || (rankedRecords[0]?.id);
+    const focusRecord = records.find(r => r.id === focusKelurahanId);
+
+    const radarData = [
+        { subject: 'Indeks UMKM', A: focusRecord ? (maxUmkm > 0 ? (focusRecord.umkm / maxUmkm) * 100 : 0) : 0, fullMark: 100 },
+        { subject: 'Daya Dukung Sarana', A: focusRecord ? (maxSarana > 0 ? (focusRecord.sarana / maxSarana) * 100 : 0) : 0, fullMark: 100 },
+        { subject: 'Volume Usaha', A: focusRecord ? (maxUsaha > 0 ? (focusRecord.usaha / maxUsaha) * 100 : 0) : 0, fullMark: 100 },
+        { subject: 'Agregat Skor', A: focusRecord?.score || 0, fullMark: 100 },
+    ];
+
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-5 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm min-h-[400px] flex flex-col">
+                    <h3 className="text-base font-bold text-slate-800 mb-2">Profil Agregat Wilayah</h3>
+                    <p className="text-xs text-slate-500 mb-6 flex items-center gap-1.5 bg-slate-50 p-2 rounded-lg">
+                        <MapPin className="w-4 h-4 text-indigo-500" />
+                        Menampilkan profil: <strong className="text-indigo-700">{focusRecord?.name || "-"}</strong>
+                    </p>
+                    <div className="flex-1 w-full relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                                <PolarGrid stroke="#e2e8f0" />
+                                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: '#64748b' }} />
+                                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                                <Radar name={focusRecord?.name} dataKey="A" stroke="#10b981" fill="#34d399" fillOpacity={0.4} strokeWidth={2} />
+                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: '11px' }} />
+                            </RadarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-[400px]">
+                    <div className="p-6 border-b border-slate-100">
+                        <h3 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-1">
+                            <Award className="w-5 h-5 text-amber-500" /> Peringkat Kinerja Ekonomi
+                        </h3>
+                        <p className="text-xs text-slate-500">Skor gabungan berdasarkan jumlah UMKM, ketersediaan sarana, dan total kapasitas usaha daerah.</p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto max-h-[500px]">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-slate-50/80 sticky top-0 border-b border-slate-100">
+                                <tr>
+                                    <th className="px-5 py-3 text-slate-500 text-xs w-12 text-center">Rnk</th>
+                                    <th className="px-5 py-3 text-slate-500 text-xs">Kelurahan</th>
+                                    <th className="px-5 py-3 text-slate-500 text-xs text-center">Vol. UMKM</th>
+                                    <th className="px-5 py-3 text-slate-500 text-xs text-center">Skor Agregat</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {rankedRecords.map((r, i) => (
+                                    <tr key={r.id} className={`hover:bg-slate-50 transition-colors ${selectedKelurahan === r.id ? 'bg-indigo-50/50' : ''}`}>
+                                        <td className="px-5 py-3 font-medium text-center text-slate-400">{i + 1}</td>
+                                        <td className="px-5 py-3 font-bold text-slate-800">{r.name}</td>
+                                        <td className="px-5 py-3 text-center text-slate-600">{r.umkm}</td>
+                                        <td className="px-5 py-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${r.score}%` }} />
+                                                </div>
+                                                <span className="w-8 text-right font-black text-indigo-700">{r.score}</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAGE MAIN COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+export default function EkonomiPage() {
+    const { tenant, kelurahans } = useTenant();
+
+    // States
+    const [sectors, setSectors] = useState<any[]>([]);
+    const [facilities, setFacilities] = useState<any[]>([]);
+    const [potentials, setPotentials] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedKelurahan, setSelectedKelurahan] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<"sektor" | "sarana" | "umkm" | "analisis">("sektor");
+
+    // Fetch
+    const fetchData = useCallback(async () => {
+        if (!tenant) return;
+        setLoading(true);
+        try {
+            const supabase = createClient();
+
+            const [secRes, facRes, potRes] = await Promise.all([
+                supabase.from("econ_business_sectors").select("*").eq("tenant_id", tenant.id),
+                supabase.from("econ_facilities").select("*").eq("tenant_id", tenant.id),
+                supabase.from("econ_potential").select("*").eq("tenant_id", tenant.id),
+            ]);
+
+            setSectors(secRes.data || []);
+            setFacilities(facRes.data || []);
+            setPotentials(potRes.data || []);
+
+        } catch (e) {
+            console.error("Failed fetching ekonomi data", e);
+        } finally {
+            setLoading(false);
+        }
+    }, [tenant]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#f8fafc]">
+                <header className={`relative text-white ${THEME.bgGradient}`}>
+                    <Navbar />
+                    <div className="px-6 py-20 text-center"><Activity className="w-10 h-10 animate-spin mx-auto opacity-50" /></div>
+                </header>
+            </div>
+        )
+    }
+
+    return (
+        <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+            {/* HERO HEADER */}
+            <header className={`relative overflow-hidden text-white ${THEME.bgGradient} flex-shrink-0 shrink-0`}>
+                <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-cyan-500/10 to-transparent pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-[#f8fafc] to-transparent z-10" />
+
+                <Navbar />
+
+                <div className="relative z-10 px-6 pt-8 pb-28 max-w-7xl mx-auto">
+                    <Link href="/" className="inline-flex items-center gap-1 text-white/60 hover:text-white text-sm font-medium mb-6 transition-colors">
+                        <ChevronLeft className="w-4 h-4" /> Beranda
+                    </Link>
+
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                        <div className="flex items-center gap-5">
+                            <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/20 shadow-xl">
+                                <TrendingUp className="w-10 h-10 text-white" />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2 text-white/60 text-xs font-bold uppercase tracking-[0.2em] mb-1">
+                                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                                    Modul Data Dedicated
+                                </div>
+                                <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">Data Ekonomi</h1>
+                                <p className="mt-2 text-lg text-white/70 max-w-2xl leading-relaxed">
+                                    Pusat informasi lengkap mengenai perkembangan sektor usaha, sarana ekonomi, dan analisis performa UMKM se-Kota Bogor.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Filter Dropdown */}
+                        <div className="w-full md:w-72 relative z-20">
+                            <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-2">Filter Wilayah</label>
+                            <div className="relative">
+                                <select
+                                    className="w-full appearance-none bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold py-3 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/30 cursor-pointer hover:bg-white/20 transition-all [&>option]:text-slate-800"
+                                    value={selectedKelurahan || ""}
+                                    onChange={(e) => setSelectedKelurahan(e.target.value || null)}
+                                >
+                                    <option value="">🗺️ Semua Kelurahan</option>
+                                    {kelurahans.map((kel) => (
+                                        <option key={kel.id} value={kel.id}>📍 {kel.nama}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/70 pointer-events-none" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            {/* MAIN CONTAINER */}
+            <main className="px-6 max-w-7xl mx-auto -mt-16 relative z-20 pb-20 flex-1 w-full flex flex-col">
+
+                {/* TABS NAVIGATION */}
+                <div className="flex items-center gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-8 overflow-x-auto custom-scrollbar">
+                    <button
+                        onClick={() => setActiveTab('sektor')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'sektor' ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-white ring-1 ring-indigo-500/10' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-transparent'}`}
+                    >
+                        <Factory className="w-4 h-4" /> Sektor Usaha
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('sarana')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'sarana' ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-white ring-1 ring-indigo-500/10' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-transparent'}`}
+                    >
+                        <Building2 className="w-4 h-4" /> Sarana Ekonomi
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('umkm')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'umkm' ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-white ring-1 ring-indigo-500/10' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-transparent'}`}
+                    >
+                        <Store className="w-4 h-4" /> Potensi UMKM
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('analisis')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'analisis' ? 'bg-slate-800 text-white shadow-md border border-slate-700 ring-1 ring-slate-900/10' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-transparent'}`}
+                    >
+                        <Target className="w-4 h-4" /> Analisis & Insight
+                    </button>
+                </div>
+
+                {/* TAB CONTENT */}
+                <div className="flex-1 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    {activeTab === 'sektor' && <SektorSection sectors={sectors} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />}
+                    {activeTab === 'sarana' && <SaranaSection facilities={facilities} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />}
+                    {activeTab === 'umkm' && <UmkmSection potentials={potentials} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />}
+                    {activeTab === 'analisis' && <AnalisisSection sectors={sectors} facilities={facilities} potentials={potentials} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />}
+                </div>
+
+            </main>
+
+            {/* FOOTER */}
+            <footer className="bg-white border-t border-slate-200 py-8 mt-auto flex-shrink-0 shrink-0">
+                <div className="max-w-7xl mx-auto px-6 text-center text-slate-500 text-sm">
+                    <p>© 2024 Command Center Kota Bogor. Hak Cipta Dilindungi.</p>
+                </div>
+            </footer>
+        </div>
+    );
+}
+

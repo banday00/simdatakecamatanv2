@@ -1,0 +1,574 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* ===== GovTech Future Palette ===== */
+    /* Deep Royal Blue — Authority & Trust (Base) */
+    --color-primary-50: #f0fdfa;
+    --color-primary-100: #ccfbf1;
+    --color-primary-200: #99f6e4;
+    --color-primary-300: #5eead4;
+    --color-primary-400: #2dd4bf;
+    --color-primary-500: #14b8a6;
+    --color-primary-600: #0d9488;
+    --color-primary-700: #0f766e;
+    --color-primary-800: #115e59;
+    --color-primary-900: #134e4a;
+    --color-primary-950: #042f2e;
+
+    /* Official Gold — Government Prestige (Accent) */
+    --color-gold-300: #fde047;
+    --color-gold-400: #facc15;
+    --color-gold-500: #eab308;
+    --color-gold-600: #ca8a04;
+
+    /* Cyan / Electric Blue — Future Tech (Highlight) */
+    --color-tech-300: #67e8f9;
+    --color-tech-400: #22d3ee;
+    --color-tech-500: #06b6d4;
+    --color-tech-600: #0891b2;
+    --color-tech-glow: #06b6d4;
+
+    /* Accent (Cyan alias) */
+    --color-accent-50: #ecfeff;
+    --color-accent-100: #cffafe;
+    --color-accent-200: #a5f3fc;
+    --color-accent-300: #67e8f9;
+    --color-accent-400: #22d3ee;
+    --color-accent-500: #06b6d4;
+    --color-accent-600: #0891b2;
+    /* For shadows */
+
+    /* Deep Backgrounds */
+    --color-deep-blue: #0f172a;
+    /* Slate 900 - Darker */
+    --color-royal-blue: #1e3a8a;
+    /* Blue 900 */
+    --color-obsidian: #020617;
+    /* Slate 950 */
+
+    /* Status colors */
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
+    --color-info: #3b82f6;
+
+    /* Sidebar */
+    --color-sidebar-bg: #0f172a;
+    --color-sidebar-hover: #1e293b;
+    --color-sidebar-active: #334155;
+    --color-sidebar-text: #f8fafc;
+    --color-sidebar-muted: #94a3b8;
+
+    /* Typography */
+    --font-sans: "Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+    /* Shadows - Refined */
+    --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-elevated: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-tech-glow: 0 0 20px rgba(6, 182, 212, 0.15);
+    /* Subtle cyan glow */
+    --shadow-gold-glow: 0 0 20px rgba(234, 179, 8, 0.15);
+    /* Subtle gold glow */
+    --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  }
+}
+
+/* ===== Base ===== */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #f8fafc;
+  color: #1e293b;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Custom Scrollbar ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ===== Focus Ring ===== */
+*:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* ===== Animations ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgb(99 102 241 / 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 40px rgb(99 102 241 / 0.4);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes orbit {
+  from {
+    transform: rotate(0deg) translateX(60px) rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg) translateX(60px) rotate(-360deg);
+  }
+}
+
+@keyframes count-up {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hero-gradient {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-count-up {
+  animation: count-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out forwards;
+}
+
+.animate-hero-gradient {
+  animation: hero-gradient 8s ease infinite;
+  background-size: 200% 200%;
+}
+
+/* Staggered animations */
+.stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.stagger-4 {
+  animation-delay: 0.4s;
+}
+
+.stagger-5 {
+  animation-delay: 0.5s;
+}
+
+.stagger-6 {
+  animation-delay: 0.6s;
+}
+
+/* ===== Stat Gradients ===== */
+/* ===== Stat Gradients - Refined ===== */
+.stat-gradient-blue {
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
+}
+
+.stat-gradient-emerald {
+  background: linear-gradient(135deg, #065f46, #10b981);
+}
+
+.stat-gradient-amber {
+  background: linear-gradient(135deg, #ca8a04, #eab308);
+}
+
+.stat-gradient-rose {
+  background: linear-gradient(135deg, #be123c, #f43f5e);
+}
+
+.stat-gradient-cyan {
+  background: linear-gradient(135deg, #0e7490, #06b6d4);
+}
+
+.stat-gradient-purple {
+  background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+}
+
+.stat-gradient-soft-emerald {
+  background: linear-gradient(135deg, #d1fae5, #ecfdf5);
+  color: #065f46;
+}
+
+.stat-gradient-soft-blue {
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+  color: #1e3a8a;
+}
+
+.stat-gradient-soft-indigo {
+  background: linear-gradient(135deg, #e0e7ff, #eef2ff);
+  color: #3730a3;
+}
+
+.stat-gradient-soft-amber {
+  background: linear-gradient(135deg, #fef3c7, #fffbeb);
+  color: #92400e;
+}
+
+.stat-gradient-soft-cyan {
+  background: linear-gradient(135deg, #cffafe, #ecfeff);
+  color: #164e63;
+}
+
+.stat-gradient-soft-rose {
+  background: linear-gradient(135deg, #ffe4e6, #fff1f2);
+  color: #be123c;
+}
+
+.stat-gradient-soft-purple {
+  background: linear-gradient(135deg, #f3e8ff, #faf5ff);
+  color: #6b21a8;
+}
+
+/* ===== Glassmorphism ===== */
+.glass {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 0.06);
+}
+
+.glass-dark {
+  background: rgba(15, 14, 42, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ===== Digital Batik Pattern ===== */
+.bg-digital-batik {
+  background-color: #0f172a;
+  background-image:
+    radial-gradient(circle at 15% 50%, rgba(30, 58, 138, 0.4) 0%, transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+}
+
+/* ===== GovTech Gradients ===== */
+.gradient-gov-blue {
+  background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+}
+
+.gradient-tech-cyan {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+}
+
+.gradient-gold-prestige {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 50%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== Hero Particles ===== */
+.hero-particles::before,
+.hero-particles::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.3;
+  animation: float 8s ease-in-out infinite;
+}
+
+.hero-particles::before {
+  width: 300px;
+  height: 300px;
+  background: var(--color-accent-400);
+  top: 10%;
+  left: 10%;
+}
+
+.hero-particles::after {
+  width: 200px;
+  height: 200px;
+  background: var(--color-gold-400);
+  bottom: 20%;
+  right: 15%;
+  animation-delay: -3s;
+}
+
+/* ===== GovTech Card ===== */
+.card-gov-tech {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-gov-tech::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--color-gold-500), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.card-gov-tech:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-elevated), var(--shadow-tech-glow);
+  border-color: var(--color-tech-300);
+}
+
+.card-gov-tech:hover::before {
+  opacity: 1;
+}
+
+/* ===== Futuristic Card (Modules & Wilayah) ===== */
+.futuristic-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02), 0 1px 0 rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.futuristic-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.08), 0 4px 8px -4px rgba(0, 0, 0, 0.04);
+  border-color: var(--color-primary-200);
+}
+
+/* Glass Panel for Dark Backgrounds */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* ===== Gradient Text ===== */
+.gradient-text {
+  background: linear-gradient(135deg, #6366f1 0%, #06b6d4 50%, #6366f1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-gold {
+  background: linear-gradient(135deg, #eab308, #fde047);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== Neon Glow Border ===== */
+.neon-border {
+  position: relative;
+}
+
+.neon-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--color-primary-500), var(--color-accent-400));
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.neon-border:hover::before {
+  opacity: 1;
+}
+
+/* ===== Shimmer effect on skeleton ===== */
+.shimmer {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ===== Leaflet Fix ===== */
+.leaflet-container {
+  z-index: 1;
+}
+
+/* ===== Form Input ===== */
+.form-input {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #1e293b;
+  background: white;
+  transition: all 0.15s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
+}
+
+.form-input::placeholder {
+  color: #9ca3af;
+}
+
+.form-input:disabled {
+  background: #f9fafb;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
