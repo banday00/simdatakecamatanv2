@@ -29,21 +29,34 @@ export async function proxy(request: NextRequest) {
     // ---- Tenant Detection ----
     const hostname = request.headers.get("host") || "";
     const isLocalhost =
-        hostname.includes("localhost") || hostname.includes("127.0.0.1");
+        hostname.includes("localhost") || hostname.includes("127.0.0.1") || hostname.includes("vercel.app");
 
     let tenantSlug: string;
 
     if (isLocalhost) {
-        // Development: use cookie or default
+        // Development or Default Vercel Domain: use cookie or default env
         tenantSlug =
             request.cookies.get("tenant_slug")?.value ||
             process.env.NEXT_PUBLIC_DEFAULT_TENANT_SLUG ||
             "bogorutara";
     } else {
-        // Production: extract from subdomain
-        // e.g., "bogorutara.kotabogor.go.id" → "bogorutara"
+        // Production with custom domain: extract from subdomain
+        // e.g., "kecbogorutara.kotabogor.go.id" → "kecbogorutara"
         const parts = hostname.split(".");
-        tenantSlug = parts[0];
+        let subdomain = parts[0];
+        
+        // Strip out 'www' if any
+        if (subdomain === "www" && parts.length > 1) {
+            subdomain = parts[1];
+        }
+
+        // SIDAKOTA specific: strip out 'kec' prefix if present
+        // 'kecbogorutara' -> 'bogorutara'
+        if (subdomain.startsWith("kec") && subdomain !== "kecamatan") {
+            subdomain = subdomain.substring(3);
+        }
+
+        tenantSlug = subdomain;
     }
 
     // Resolve tenant from database
