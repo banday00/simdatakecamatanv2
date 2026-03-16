@@ -15,13 +15,15 @@ type Kelurahan = { id: string; nama: string };
 const CHART_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#6366f1", "#a855f7", "#ec4899"];
 
 /* ============= Shared Components ============= */
-function StatCard({ label, value, icon: Icon, colorClass, gradientClass, subtitle }: { label: string; value: string | number; icon: any; colorClass: string; gradientClass: string; subtitle?: string }) {
+function StatCard({ label, value, icon: Icon, colorClass, borderClass, subtitle }: { label: string; value: string | number; icon: any; colorClass: string; borderClass?: string; subtitle?: string }) {
     return (
-        <div className={`relative overflow-hidden rounded-2xl border border-slate-100 shadow-sm p-5 ${gradientClass} flex flex-col items-center text-center group hover:shadow-md transition-all`}>
-            <Icon className={`w-7 h-7 ${colorClass} mb-3 opacity-70 group-hover:scale-110 transition-transform`} />
-            <span className="text-3xl font-black text-slate-800 tracking-tight">{value}</span>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">{label}</span>
-            {subtitle && <span className="text-xs text-slate-400 mt-0.5">{subtitle}</span>}
+        <div className={`bg-white p-4 rounded-2xl border ${borderClass || 'border-slate-100'} shadow-sm hover:shadow-md transition-all`}>
+            <div className={`inline-flex p-2 rounded-xl ${colorClass} mb-3`}>
+                <Icon className="w-4 h-4" />
+            </div>
+            <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{label}</p>
+            <h4 className="text-xl font-extrabold text-slate-800 mt-0.5">{value}</h4>
+            {subtitle && <p className="text-[10px] text-slate-400 mt-0.5">{subtitle}</p>}
         </div>
     );
 }
@@ -45,7 +47,9 @@ function InsidenSection({ incidents, kelurahans, selectedKelurahan }: { incident
     const filteredData = useMemo(() => selectedKelurahan ? incidents.filter(d => d.kelurahan_id === selectedKelurahan) : incidents, [incidents, selectedKelurahan]);
 
     const totalKejadian = filteredData.length;
-    const totalKorban = filteredData.reduce((a, c) => a + (c.korban_meninggal || 0) + (c.korban_luka || 0), 0);
+    const totalMeninggal = filteredData.reduce((a, c) => a + (c.korban_meninggal || 0), 0);
+    const totalLuka = filteredData.reduce((a, c) => a + (c.korban_luka || 0), 0);
+    const totalKorban = totalMeninggal + totalLuka;
     const totalPengungsi = filteredData.reduce((a, c) => a + (c.pengungsi || 0), 0);
     const belumSelesai = filteredData.filter(d => d.status === "open" || d.status === "handling").length;
 
@@ -82,10 +86,10 @@ function InsidenSection({ incidents, kelurahans, selectedKelurahan }: { incident
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Kejadian" value={totalKejadian} icon={Siren} colorClass="text-red-600" gradientClass="bg-red-50" />
-                <StatCard label="Total Korban" value={totalKorban.toLocaleString("id-ID")} icon={Users} colorClass="text-rose-600" gradientClass="bg-rose-50" subtitle="Meninggal & Luka" />
-                <StatCard label="Pengungsi" value={totalPengungsi.toLocaleString("id-ID")} icon={Home} colorClass="text-amber-600" gradientClass="bg-amber-50" />
-                <StatCard label="Belum Selesai" value={belumSelesai} icon={Activity} colorClass="text-orange-600" gradientClass="bg-orange-50" />
+                <StatCard label="Total Kejadian" value={totalKejadian.toLocaleString("id-ID")} icon={Siren} colorClass="bg-red-50 text-red-600" borderClass="border-red-100" subtitle="Seluruh insiden tercatat" />
+                <StatCard label="Total Korban" value={totalKorban.toLocaleString("id-ID")} icon={Users} colorClass="bg-rose-50 text-rose-600" borderClass="border-rose-100" subtitle={`${totalMeninggal.toLocaleString("id-ID")} meninggal · ${totalLuka.toLocaleString("id-ID")} luka`} />
+                <StatCard label="Pengungsi" value={totalPengungsi.toLocaleString("id-ID")} icon={Home} colorClass="bg-amber-50 text-amber-600" borderClass="border-amber-100" subtitle="Jiwa terdampak" />
+                <StatCard label="Belum Selesai" value={belumSelesai.toLocaleString("id-ID")} icon={Activity} colorClass="bg-orange-50 text-orange-600" borderClass="border-orange-100" subtitle="Terbuka & Ditangani" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -97,7 +101,7 @@ function InsidenSection({ incidents, kelurahans, selectedKelurahan }: { incident
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
                                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }} cursor={{ fill: "#f8fafc" }} formatter={(value: number) => [value.toLocaleString("id-ID") + " kejadian", "Jumlah"]} />
                                 <Bar dataKey="value" name="Jumlah" fill="#ef4444" radius={[6, 6, 0, 0]} maxBarSize={50}>
                                     {typeBarData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                                 </Bar>
@@ -113,7 +117,7 @@ function InsidenSection({ incidents, kelurahans, selectedKelurahan }: { incident
                                 <Pie data={statusPieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value">
                                     {statusPieData.map((d, i) => <Cell key={i} fill={d.color} />)}
                                 </Pie>
-                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", fontSize: "12px" }} formatter={(value: number) => [value.toLocaleString("id-ID") + " kejadian", ""]} />
                                 <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                             </PieChart>
                         </ResponsiveContainer>
@@ -132,11 +136,11 @@ function InsidenSection({ incidents, kelurahans, selectedKelurahan }: { incident
                     <h3 className="text-base font-bold text-slate-800 mb-6">Kejadian per Kelurahan</h3>
                     <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart layout="vertical" data={kelBarData} margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
+                            <BarChart layout="vertical" data={kelBarData} margin={{ top: 0, right: 20, left: 20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                                 <XAxis type="number" hide />
-                                <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} cursor={{ fill: "#f8fafc" }} />
+                                <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", fontSize: "12px" }} cursor={{ fill: "#f8fafc" }} formatter={(value: number) => [value.toLocaleString("id-ID") + " kejadian", "Jumlah"]} />
                                 <Bar dataKey="value" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={15} />
                             </BarChart>
                         </ResponsiveContainer>
@@ -155,6 +159,7 @@ function InsidenSection({ incidents, kelurahans, selectedKelurahan }: { incident
                             <tr>
                                 <th className="px-5 py-4">Tanggal</th>
                                 <th className="px-5 py-4">Jenis & Lokasi</th>
+                                <th className="px-5 py-4">Kelurahan</th>
                                 <th className="px-5 py-4">Korban</th>
                                 <th className="px-5 py-4">Status</th>
                             </tr>
@@ -165,13 +170,14 @@ function InsidenSection({ incidents, kelurahans, selectedKelurahan }: { incident
                                     <td className="px-5 py-4 text-slate-500 text-xs whitespace-nowrap">{row.tanggal ? new Date(row.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-"}</td>
                                     <td className="px-5 py-4">
                                         <div className="font-bold text-slate-800">{row.jenis_kejadian || row.jenis}</div>
-                                        <div className="text-xs text-slate-500">{row.lokasi || kelMap.get(row.kelurahan_id) || "-"}</div>
+                                        <div className="text-xs text-slate-500">{row.lokasi || "-"}</div>
                                     </td>
+                                    <td className="px-5 py-4 text-xs text-slate-600 font-medium">{kelMap.get(row.kelurahan_id) || "-"}</td>
                                     <td className="px-5 py-4">
                                         <div className="text-xs space-y-0.5">
-                                            {(row.korban_meninggal || 0) > 0 && <span className="text-red-600 font-bold block">☠ {row.korban_meninggal} Meninggal</span>}
-                                            {(row.korban_luka || 0) > 0 && <span className="text-amber-600 block">🤕 {row.korban_luka} Luka</span>}
-                                            {(row.pengungsi || 0) > 0 && <span className="text-blue-600 block">🏠 {row.pengungsi} Pengungsi</span>}
+                                            {(row.korban_meninggal || 0) > 0 && <span className="text-red-600 font-bold block">☠ {Number(row.korban_meninggal).toLocaleString("id-ID")} Meninggal</span>}
+                                            {(row.korban_luka || 0) > 0 && <span className="text-amber-600 block">🤕 {Number(row.korban_luka).toLocaleString("id-ID")} Luka</span>}
+                                            {(row.pengungsi || 0) > 0 && <span className="text-blue-600 block">🏠 {Number(row.pengungsi).toLocaleString("id-ID")} Pengungsi</span>}
                                             {!row.korban_meninggal && !row.korban_luka && !row.pengungsi && <span className="text-slate-400">— Tidak ada</span>}
                                         </div>
                                     </td>
@@ -182,13 +188,22 @@ function InsidenSection({ incidents, kelurahans, selectedKelurahan }: { incident
                                     </td>
                                 </tr>
                             ))}
-                            {paginatedData.length === 0 && <tr><td colSpan={4} className="text-center py-8 text-slate-500">Tidak ada data kejadian.</td></tr>}
+                            {paginatedData.length === 0 && <tr><td colSpan={5} className="text-center py-8 text-slate-500">Tidak ada data kejadian.</td></tr>}
                         </tbody>
                     </table>
                 </div>
-                <div className="p-4 border-t border-slate-100 bg-white">
-                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                </div>
+                {totalPages > 1 && (
+                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-sm text-slate-500">
+                            Menampilkan {Math.min(sortedData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(sortedData.length, currentPage * ITEMS_PER_PAGE)} dari {sortedData.length}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Sebelumnya</button>
+                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{currentPage} / {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -244,8 +259,8 @@ function BencanaSection({ disasters, kelurahans, selectedKelurahan }: { disaster
     const searchedData = useMemo(() => {
         if (!searchQuery) return filteredData;
         const q = searchQuery.toLowerCase();
-        return filteredData.filter(d => (d.jenis_bencana || "").toLowerCase().includes(q) || (d.lokasi || "").toLowerCase().includes(q));
-    }, [filteredData, searchQuery]);
+        return filteredData.filter(d => (d.jenis_bencana || "").toLowerCase().includes(q) || (d.lokasi || "").toLowerCase().includes(q) || (kelMap.get(d.kelurahan_id) || "").toLowerCase().includes(q));
+    }, [filteredData, searchQuery, kelMap]);
     const totalPages = Math.ceil(searchedData.length / ITEMS_PER_PAGE);
     const paginatedData = useMemo(() => searchedData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE), [searchedData, currentPage]);
 
@@ -255,10 +270,10 @@ function BencanaSection({ disasters, kelurahans, selectedKelurahan }: { disaster
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Zona Rawan" value={totalZona} icon={MapPin} colorClass="text-red-600" gradientClass="bg-red-50" />
-                <StatCard label="Risiko Tinggi" value={risikoTinggi} icon={AlertTriangle} colorClass="text-red-600" gradientClass="bg-red-50" />
-                <StatCard label="Risiko Sedang" value={risikoSedang} icon={AlertTriangle} colorClass="text-amber-600" gradientClass="bg-amber-50" />
-                <StatCard label="Risiko Rendah" value={risikoRendah} icon={AlertTriangle} colorClass="text-emerald-600" gradientClass="bg-emerald-50" />
+                <StatCard label="Total Zona Rawan" value={totalZona.toLocaleString("id-ID")} icon={MapPin} colorClass="bg-red-50 text-red-600" borderClass="border-red-100" subtitle="Titik rawan teridentifikasi" />
+                <StatCard label="Risiko Tinggi" value={risikoTinggi.toLocaleString("id-ID")} icon={AlertTriangle} colorClass="bg-red-50 text-red-600" borderClass="border-red-100" subtitle="Prioritas mitigasi" />
+                <StatCard label="Risiko Sedang" value={risikoSedang.toLocaleString("id-ID")} icon={AlertTriangle} colorClass="bg-amber-50 text-amber-600" borderClass="border-amber-100" subtitle="Perlu pengawasan" />
+                <StatCard label="Risiko Rendah" value={risikoRendah.toLocaleString("id-ID")} icon={AlertTriangle} colorClass="bg-emerald-50 text-emerald-600" borderClass="border-emerald-100" subtitle="Terkendali" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -270,7 +285,7 @@ function BencanaSection({ disasters, kelurahans, selectedKelurahan }: { disaster
                                 <Pie data={typePieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value">
                                     {typePieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                                 </Pie>
-                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", fontSize: "12px" }} formatter={(value: number) => [value.toLocaleString("id-ID") + " zona", ""]} />
                                 <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                             </PieChart>
                         </ResponsiveContainer>
@@ -284,7 +299,7 @@ function BencanaSection({ disasters, kelurahans, selectedKelurahan }: { disaster
                                 <Pie data={riskPieData} cx="50%" cy="50%" innerRadius={0} outerRadius={80} dataKey="value">
                                     {riskPieData.map((d, i) => <Cell key={i} fill={d.color} />)}
                                 </Pie>
-                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", fontSize: "12px" }} formatter={(value: number) => [value.toLocaleString("id-ID") + " zona", ""]} />
                                 <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                             </PieChart>
                         </ResponsiveContainer>
@@ -295,12 +310,12 @@ function BencanaSection({ disasters, kelurahans, selectedKelurahan }: { disaster
                         <h3 className="text-base font-bold text-slate-800 mb-4">Sebaran per Kelurahan</h3>
                         <div className="h-64">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart layout="vertical" data={kelBarData} margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
+                                <BarChart layout="vertical" data={kelBarData} margin={{ top: 0, right: 20, left: 20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                                     <XAxis type="number" hide />
-                                    <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} cursor={{ fill: "#f8fafc" }} />
-                                    <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                    <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", fontSize: "12px" }} cursor={{ fill: "#f8fafc" }} />
+                                    <Legend wrapperStyle={{ fontSize: "11px" }} />
                                     <Bar dataKey="Tinggi" stackId="a" fill="#ef4444" barSize={12} />
                                     <Bar dataKey="Sedang" stackId="a" fill="#f59e0b" barSize={12} />
                                     <Bar dataKey="Rendah" stackId="a" fill="#22c55e" radius={[0, 4, 4, 0]} barSize={12} />
@@ -338,16 +353,25 @@ function BencanaSection({ disasters, kelurahans, selectedKelurahan }: { disaster
                                 </div>
                                 <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
                                     <span>{kelMap.get(item.kelurahan_id) || "-"}</span>
-                                    {item.jumlah_kk_terdampak > 0 && <span className="font-medium bg-red-50 text-red-600 px-2 py-0.5 rounded">{item.jumlah_kk_terdampak} KK Terdampak</span>}
+                                    {item.jumlah_kk_terdampak > 0 && <span className="font-medium bg-red-50 text-red-600 px-2 py-0.5 rounded">{Number(item.jumlah_kk_terdampak).toLocaleString("id-ID")} KK Terdampak</span>}
                                 </div>
                             </div>
                         </div>
                     ))}
                 </div>
                 {paginatedData.length === 0 && <div className="p-8 text-center text-slate-500 bg-slate-50/50">Tidak ada zona rawan yang cocok.</div>}
-                <div className="p-4 border-t border-slate-100 bg-white">
-                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                </div>
+                {totalPages > 1 && (
+                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-sm text-slate-500">
+                            Menampilkan {Math.min(searchedData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(searchedData.length, currentPage * ITEMS_PER_PAGE)} dari {searchedData.length}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Sebelumnya</button>
+                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{currentPage} / {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -412,10 +436,10 @@ function KaderSection({ cadres, kelurahans, selectedKelurahan }: { cadres: any[]
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Linmas" value={totalLinmas.toLocaleString("id-ID")} icon={Shield} colorClass="text-blue-600" gradientClass="bg-blue-50" />
-                <StatCard label="Total Satgas" value={totalSatgas.toLocaleString("id-ID")} icon={Users} colorClass="text-emerald-600" gradientClass="bg-emerald-50" />
-                <StatCard label="Pos Kamling" value={totalPos} icon={Home} colorClass="text-amber-600" gradientClass="bg-amber-50" />
-                <StatCard label="Kegiatan Siskamling" value={totalSiskamling} icon={Award} colorClass="text-indigo-600" gradientClass="bg-indigo-50" />
+                <StatCard label="Total Linmas" value={totalLinmas.toLocaleString("id-ID")} icon={Shield} colorClass="bg-blue-50 text-blue-600" borderClass="border-blue-100" subtitle="Anggota Perlindungan Masyarakat" />
+                <StatCard label="Total Satgas" value={totalSatgas.toLocaleString("id-ID")} icon={Users} colorClass="bg-emerald-50 text-emerald-600" borderClass="border-emerald-100" subtitle="Satuan Tugas Keamanan" />
+                <StatCard label="Pos Kamling" value={totalPos.toLocaleString("id-ID")} icon={Home} colorClass="bg-amber-50 text-amber-600" borderClass="border-amber-100" subtitle="Unit gardu" />
+                <StatCard label="Kegiatan Siskamling" value={totalSiskamling.toLocaleString("id-ID")} icon={Award} colorClass="bg-indigo-50 text-indigo-600" borderClass="border-indigo-100" subtitle="Total kegiatan" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -428,7 +452,7 @@ function KaderSection({ cadres, kelurahans, selectedKelurahan }: { cadres: any[]
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                     <XAxis dataKey="name" tick={{ fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} angle={-30} textAnchor="end" height={60} />
                                     <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }} cursor={{ fill: "#f8fafc" }} formatter={(value: number) => [value.toLocaleString("id-ID"), ""]} />
                                     <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
                                     <Bar dataKey="Linmas" fill="#3b82f6" maxBarSize={20} radius={[4, 4, 0, 0]} />
                                     <Bar dataKey="Satgas" fill="#10b981" maxBarSize={20} radius={[4, 4, 0, 0]} />
@@ -446,13 +470,13 @@ function KaderSection({ cadres, kelurahans, selectedKelurahan }: { cadres: any[]
                                 <Pie data={personnelPieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={3} dataKey="value">
                                     {personnelPieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                                 </Pie>
-                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", fontSize: "12px" }} formatter={(value: number) => [value.toLocaleString("id-ID") + " personel", ""]} />
                                 <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                             </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none pb-6">
                             <div className="text-center">
-                                <span className="block text-xl font-black text-slate-800">{(totalLinmas + totalSatgas).toLocaleString("id-ID")}</span>
+                                <span className="block text-xl font-black text-slate-800">{(totalLinmas + totalSatgas + filteredData.reduce((a, c) => a + (c.jumlah_fkdm || 0), 0)).toLocaleString("id-ID")}</span>
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Personel</span>
                             </div>
                         </div>
@@ -475,6 +499,7 @@ function KaderSection({ cadres, kelurahans, selectedKelurahan }: { cadres: any[]
                                 <th className="px-5 py-4">FKDM</th>
                                 <th className="px-5 py-4">Pos Kamling</th>
                                 <th className="px-5 py-4">Siskamling</th>
+                                <th className="px-5 py-4">Pelatihan</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -484,17 +509,27 @@ function KaderSection({ cadres, kelurahans, selectedKelurahan }: { cadres: any[]
                                     <td className="px-5 py-4 text-blue-600 font-medium">{row.linmas.toLocaleString("id-ID")}</td>
                                     <td className="px-5 py-4 text-emerald-600 font-medium">{row.satgas.toLocaleString("id-ID")}</td>
                                     <td className="px-5 py-4 text-purple-600 font-medium">{row.fkdm.toLocaleString("id-ID")}</td>
-                                    <td className="px-5 py-4">{row.pos}</td>
-                                    <td className="px-5 py-4">{row.siskamling}</td>
+                                    <td className="px-5 py-4 font-medium">{row.pos.toLocaleString("id-ID")}</td>
+                                    <td className="px-5 py-4 font-medium">{row.siskamling.toLocaleString("id-ID")}</td>
+                                    <td className="px-5 py-4 font-medium text-indigo-600">{row.pelatihan.toLocaleString("id-ID")}</td>
                                 </tr>
                             ))}
-                            {paginatedData.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-slate-500">Tidak ada data kader.</td></tr>}
+                            {paginatedData.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-slate-500">Tidak ada data kader.</td></tr>}
                         </tbody>
                     </table>
                 </div>
-                <div className="p-4 border-t border-slate-100 bg-white">
-                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                </div>
+                {totalPages > 1 && (
+                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-sm text-slate-500">
+                            Menampilkan {Math.min(tableData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(tableData.length, currentPage * ITEMS_PER_PAGE)} dari {tableData.length}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Sebelumnya</button>
+                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{currentPage} / {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -506,11 +541,13 @@ function KaderSection({ cadres, kelurahans, selectedKelurahan }: { cadres: any[]
 function AnalisisSection({ incidents, disasters, cadres, kelurahans, selectedKelurahan }: { incidents: any[]; disasters: any[]; cadres: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
     const kelMap = useMemo(() => new Map(kelurahans.map(k => [k.id, k.nama])), [kelurahans]);
 
+    const normalizeRisk = (r: string | null | undefined) => (r || "").toLowerCase();
+
     const radarData = useMemo(() => {
         const kelId = selectedKelurahan || (kelurahans.length > 0 ? (() => {
             const scores: Record<string, number> = {};
             incidents.forEach(d => { scores[d.kelurahan_id] = (scores[d.kelurahan_id] || 0) + 1; });
-            disasters.forEach(d => { if (d.tingkat_risiko === "Tinggi") scores[d.kelurahan_id] = (scores[d.kelurahan_id] || 0) + 3; });
+            disasters.forEach(d => { if (normalizeRisk(d.tingkat_risiko) === "tinggi") scores[d.kelurahan_id] = (scores[d.kelurahan_id] || 0) + 3; });
             return Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] || kelurahans[0]?.id;
         })() : null);
 
@@ -518,15 +555,16 @@ function AnalisisSection({ incidents, disasters, cadres, kelurahans, selectedKel
 
         const kelIncidents = incidents.filter(d => d.kelurahan_id === kelId).length;
         const kelDisasters = disasters.filter(d => d.kelurahan_id === kelId).length;
-        const kelTinggi = disasters.filter(d => d.kelurahan_id === kelId && d.tingkat_risiko === "Tinggi").length;
+        const kelTinggi = disasters.filter(d => d.kelurahan_id === kelId && normalizeRisk(d.tingkat_risiko) === "tinggi").length;
         const kelLinmas = cadres.filter(d => d.kelurahan_id === kelId).reduce((a, c) => a + (c.jumlah_linmas || 0), 0);
 
         const avgIncidents = incidents.length / Math.max(kelurahans.length, 1);
         const avgDisasters = disasters.length / Math.max(kelurahans.length, 1);
-        const avgTinggi = disasters.filter(d => d.tingkat_risiko === "Tinggi").length / Math.max(kelurahans.length, 1);
+        const avgTinggi = disasters.filter(d => normalizeRisk(d.tingkat_risiko) === "tinggi").length / Math.max(kelurahans.length, 1);
         const avgLinmas = cadres.reduce((a, c) => a + (c.jumlah_linmas || 0), 0) / Math.max(kelurahans.length, 1);
 
-        const norm = (v: number, avg: number) => avg > 0 ? Math.min(100, (v / avg) * 50) : 0;
+        // Normalisasi: nilai 50 = rata-rata kota, >50 = di atas rata-rata, <50 = di bawah rata-rata
+        const norm = (v: number, avg: number) => avg > 0 ? Math.min(100, Math.round((v / avg) * 50)) : 0;
 
         return [
             { subject: "Kejadian", A: norm(kelIncidents, avgIncidents), B: 50 },
@@ -536,16 +574,19 @@ function AnalisisSection({ incidents, disasters, cadres, kelurahans, selectedKel
         ];
     }, [incidents, disasters, cadres, kelurahans, selectedKelurahan]);
 
+    // Indeks Kerentanan Keamanan (IKK) — Weighted Composite Score
+    // Bobot: Kejadian (40%) + Zona Rawan (30%) + Risiko Tinggi (30%)
     const leaderboard = useMemo(() => {
         const scores: Record<string, { name: string; incidents: number; disasters: number; tinggi: number; score: number }> = {};
         kelurahans.forEach(k => { scores[k.id] = { name: k.nama, incidents: 0, disasters: 0, tinggi: 0, score: 0 }; });
         incidents.forEach(d => { if (scores[d.kelurahan_id]) scores[d.kelurahan_id].incidents++; });
-        disasters.forEach(d => { if (scores[d.kelurahan_id]) { scores[d.kelurahan_id].disasters++; if (d.tingkat_risiko === "Tinggi") scores[d.kelurahan_id].tinggi++; } });
+        disasters.forEach(d => { if (scores[d.kelurahan_id]) { scores[d.kelurahan_id].disasters++; if (normalizeRisk(d.tingkat_risiko) === "tinggi") scores[d.kelurahan_id].tinggi++; } });
 
         const maxI = Math.max(...Object.values(scores).map(s => s.incidents), 1);
         const maxD = Math.max(...Object.values(scores).map(s => s.disasters), 1);
         const maxT = Math.max(...Object.values(scores).map(s => s.tinggi), 1);
 
+        // IKK = (Kejadian/Max × 40%) + (Zona/Max × 30%) + (Tinggi/Max × 30%)
         Object.values(scores).forEach(s => {
             s.score = Math.round(((s.incidents / maxI) * 40 + (s.disasters / maxD) * 30 + (s.tinggi / maxT) * 30) * 100) / 100;
         });
@@ -558,7 +599,7 @@ function AnalisisSection({ incidents, disasters, cadres, kelurahans, selectedKel
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
                     <h3 className="text-base font-bold text-slate-800 mb-2">Pemetaan Kerentanan Keamanan</h3>
-                    <p className="text-xs text-slate-500 mb-6">Perbandingan metrik keamanan wilayah vs rata-rata kota.</p>
+                    <p className="text-xs text-slate-500 mb-6">Perbandingan metrik keamanan wilayah vs rata-rata kota. Nilai 50 = rata-rata.</p>
                     <div className="flex-1 min-h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
@@ -567,7 +608,7 @@ function AnalisisSection({ incidents, disasters, cadres, kelurahans, selectedKel
                                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                                 <Radar name={selectedKelurahan ? kelMap.get(selectedKelurahan) : "Wilayah Tertinggi"} dataKey="A" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} />
                                 <Radar name="Rata-rata Kota" dataKey="B" stroke="#94a3b8" fill="#cbd5e1" fillOpacity={0.3} />
-                                <Tooltip contentStyle={{ borderRadius: 12, fontSize: "12px", border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }} />
+                                <Tooltip contentStyle={{ borderRadius: 12, fontSize: "12px", border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }} formatter={(value: number) => [`${value}`, ""]} />
                                 <Legend wrapperStyle={{ fontSize: "12px" }} />
                             </RadarChart>
                         </ResponsiveContainer>
@@ -575,8 +616,8 @@ function AnalisisSection({ incidents, disasters, cadres, kelurahans, selectedKel
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
-                    <h3 className="text-base font-bold text-slate-800 mb-2">Indeks Kerentanan Keamanan</h3>
-                    <p className="text-xs text-slate-500 mb-6">Skor komposit dari kejadian, zona rawan, dan risiko tinggi.</p>
+                    <h3 className="text-base font-bold text-slate-800 mb-2">Indeks Kerentanan Keamanan (IKK)</h3>
+                    <p className="text-xs text-slate-500 mb-6">Skor komposit tertimbang dari kejadian, zona rawan, dan risiko tinggi.</p>
                     <div className="flex-1 space-y-3 overflow-y-auto max-h-[400px] pr-2">
                         {leaderboard.map((item, i) => (
                             <div key={i} className={`flex items-center gap-4 p-3 rounded-xl border transition-all ${i === 0 ? "bg-red-50 border-red-200" : "bg-white border-slate-100 hover:bg-slate-50"}`}>
@@ -584,14 +625,48 @@ function AnalisisSection({ incidents, disasters, cadres, kelurahans, selectedKel
                                 <div className="flex-1 min-w-0">
                                     <div className="font-bold text-slate-800 text-sm truncate">{item.name}</div>
                                     <div className="flex gap-3 text-[11px] text-slate-500 mt-0.5">
-                                        <span>Kejadian: <b className="text-red-600">{item.incidents}</b></span>
-                                        <span>Zona: <b className="text-amber-600">{item.disasters}</b></span>
-                                        <span>Tinggi: <b className="text-red-600">{item.tinggi}</b></span>
+                                        <span>Kejadian: <b className="text-red-600">{item.incidents.toLocaleString("id-ID")}</b></span>
+                                        <span>Zona: <b className="text-amber-600">{item.disasters.toLocaleString("id-ID")}</b></span>
+                                        <span>Tinggi: <b className="text-red-600">{item.tinggi.toLocaleString("id-ID")}</b></span>
                                     </div>
                                 </div>
                                 <div className={`text-sm font-black ${i === 0 ? "text-red-600" : "text-slate-600"}`}>Skor: {item.score.toFixed(1)}</div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Catatan Metodologi Perhitungan */}
+            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                <div className="flex items-start gap-3">
+                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl shrink-0 mt-0.5">
+                        <Eye className="w-4 h-4" />
+                    </div>
+                    <div className="space-y-3 text-sm text-slate-600">
+                        <h4 className="font-bold text-slate-800 text-base">Catatan Metodologi Perhitungan</h4>
+
+                        <div>
+                            <p className="font-semibold text-slate-700 mb-1">1. Radar Kerentanan Keamanan</p>
+                            <p className="text-xs leading-relaxed">Setiap dimensi (Kejadian, Zona Rawan, Risiko Tinggi, Personel) dinormalisasi terhadap rata-rata seluruh kelurahan. <strong>Nilai 50</strong> = rata-rata kota, <strong>&gt;50</strong> = di atas rata-rata (lebih rentan/lebih banyak personel), <strong>&lt;50</strong> = di bawah rata-rata. Rumus: <code className="bg-white px-1.5 py-0.5 rounded text-indigo-700 text-[11px]">Skor = min(100, (Nilai Kelurahan / Rata-rata Kota) × 50)</code></p>
+                        </div>
+
+                        <div>
+                            <p className="font-semibold text-slate-700 mb-1">2. Indeks Kerentanan Keamanan (IKK)</p>
+                            <p className="text-xs leading-relaxed">Skor komposit tertimbang yang menggabungkan tiga indikator keamanan. Setiap indikator dinormalisasi ke nilai maksimum antar kelurahan, lalu dikalikan bobot:</p>
+                            <ul className="text-xs mt-1 space-y-0.5 ml-4 list-disc">
+                                <li><strong>Kejadian (40%)</strong> — Frekuensi insiden keamanan tercatat</li>
+                                <li><strong>Zona Rawan (30%)</strong> — Jumlah titik zona rawan bencana</li>
+                                <li><strong>Risiko Tinggi (30%)</strong> — Jumlah zona dengan tingkat risiko tinggi</li>
+                            </ul>
+                            <p className="text-xs mt-1.5">Rumus: <code className="bg-white px-1.5 py-0.5 rounded text-indigo-700 text-[11px]">IKK = (Kejadian/Max × 0.4) + (Zona/Max × 0.3) + (RisikoTinggi/Max × 0.3) × 100</code></p>
+                            <p className="text-xs mt-1 text-slate-500">Skor maksimum = 100. Semakin tinggi skor, semakin rentan wilayah tersebut.</p>
+                        </div>
+
+                        <div>
+                            <p className="font-semibold text-slate-700 mb-1">3. Acuan Regulasi</p>
+                            <p className="text-xs leading-relaxed">Klasifikasi risiko mengacu pada <strong>Perka BNPB No. 2 Tahun 2012</strong> tentang Pedoman Umum Pengkajian Risiko Bencana. Kategori Linmas mengacu pada <strong>Permendagri No. 84 Tahun 2014</strong> tentang Penyelenggaraan Perlindungan Masyarakat.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -609,12 +684,7 @@ const sections = [
     { id: "analisis", label: "Analisis & Insight", icon: TrendingUp },
 ];
 
-const colorMap: Record<string, string> = {
-    insiden: "bg-blue-50 text-blue-700 shadow-sm border border-blue-100",
-    bencana: "bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-100",
-    kader: "bg-sky-50 text-sky-700 shadow-sm border border-sky-100",
-    analisis: "bg-violet-50 text-violet-700 shadow-sm border border-violet-100",
-};
+
 
 export default function KetentaramanPage() {
     const { tenant, kelurahans } = useTenant();
@@ -654,7 +724,7 @@ export default function KetentaramanPage() {
 
     return (
         <div className="min-h-screen bg-[#f8fafc] font-sans">
-            <header className="relative overflow-hidden text-white bg-digital-batik">
+            <header className="relative overflow-x-clip text-white bg-digital-batik">
                 <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-cyan-500/10 to-transparent pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-[#f8fafc] to-transparent z-10" />
 
@@ -695,11 +765,13 @@ export default function KetentaramanPage() {
             </header>
 
             <main className="px-6 max-w-7xl mx-auto -mt-16 relative z-20 pb-16">
-                <div className="bg-white p-2 rounded-2xl md:rounded-full shadow-lg border border-slate-100 flex flex-col md:flex-row gap-2 mb-8 overflow-x-auto hide-scrollbar">
+                <div className="flex items-center gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-8 overflow-x-auto">
                     {sections.map((section) => (
                         <button key={section.id} onClick={() => setActiveSection(section.id)}
-                            className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl md:rounded-full text-sm font-bold transition-all whitespace-nowrap flex-1 ${activeSection === section.id ? colorMap[section.id] : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}`}>
-                            <section.icon className={`w-4 h-4 ${activeSection === section.id ? "" : "opacity-50"}`} />
+                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeSection === section.id
+                                ? section.id === "analisis" ? "bg-slate-800 text-white shadow-md border border-slate-700 ring-1 ring-slate-900/10" : "bg-indigo-50 text-indigo-700 shadow-sm border border-white ring-1 ring-indigo-500/10"
+                                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-transparent"}`}>
+                            <section.icon className="w-4 h-4" />
                             {section.label}
                         </button>
                     ))}

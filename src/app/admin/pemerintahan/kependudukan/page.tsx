@@ -436,11 +436,10 @@ function TabPanel({
 }) {
     const { tenant } = useTenant();
     const { profile } = useAuth();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = useMemo(() => createClient().schema("sidakota"), []);
+    const [db] = useState(() => createClient().schema("sidakota"));
 
     const isKelAdmin = profile?.role === "admin_kelurahan" && !!profile?.kelurahan_id;
-    const kelId = isKelAdmin ? profile.kelurahan_id : null;
+    const kelId = isKelAdmin ? (profile?.kelurahan_id ?? null) : null;
 
     const [data, setData] = useState<Row[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -452,17 +451,23 @@ function TabPanel({
     const fetchData = useCallback(async () => {
         if (!tenant?.id) return;
         setIsLoading(true);
-        let query = db
-            .from(config.table)
-            .select("*")
-            .eq("tenant_id", tenant.id)
-            .order("created_at", { ascending: false });
-        // Auto-filter for admin_kelurahan
-        if (kelId) query = query.eq("kelurahan_id", kelId);
-        const { data: rows } = await query;
-        setData((rows as Row[]) || []);
-        setIsLoading(false);
-    }, [tenant?.id, config.table, db, kelId]);
+        try {
+            let query = db
+                .from(config.table)
+                .select("*")
+                .eq("tenant_id", tenant.id)
+                .order("created_at", { ascending: false });
+            // Auto-filter for admin_kelurahan
+            if (kelId) query = query.eq("kelurahan_id", kelId);
+            const { data: rows, error } = await query;
+            if (error) console.error(`[Kependudukan] fetchData (${config.table}):`, error);
+            setData((rows as Row[]) || []);
+        } catch (err) {
+            console.error(`[Kependudukan] fetchData unexpected error:`, err);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [tenant?.id, config.table, kelId]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -527,40 +532,49 @@ function TabPanel({
             if (config.refKey && payload[config.refKey]) {
                 payload[config.refKey] = Number(payload[config.refKey]);
             }
-            // Auto-inject kelurahan_id for admin_kelurahan
-            if (kelId && !payload.kelurahan_id) payload.kelurahan_id = kelId;
+            // Always enforce kelurahan_id for admin_kelurahan, override any form value
+            if (kelId) payload.kelurahan_id = kelId;
 
-            const tbl = db.from(config.table);
-            let err;
             if (editRow) {
-                const res = await tbl.update(payload).eq("id", editRow.id);
-                err = res.error;
+                // On update: exclude tenant_id from payload (RLS already enforces it)
+                // and add .eq('tenant_id') guard for safety
+                const { tenant_id: _tid, ...updatePayload } = payload;
+                const { error } = await db
+                    .from(config.table)
+                    .update(updatePayload)
+                    .eq("id", editRow.id)
+                    .eq("tenant_id", tenant.id);
+                if (error) throw error;
             } else {
-                const res = await tbl.insert(payload);
-                err = res.error;
+                const { error } = await db.from(config.table).insert(payload);
+                if (error) throw error;
             }
-            if (err) throw err;
             setModalOpen(false);
             setEditRow(null);
             await fetchData();
-        } catch {
-            alert("Gagal menyimpan data");
+        } catch (err: any) {
+            console.error("[Kependudukan] handleSubmit error:", err);
+            alert(`Gagal menyimpan data: ${err?.message || 'Silakan coba lagi.'}`);
         } finally {
             setIsSubmitting(false);
         }
     }
 
     async function handleDelete() {
-        if (!deleteRow) return;
+        if (!deleteRow || !tenant?.id) return;
         setIsSubmitting(true);
         try {
-            const tbl = db.from(config.table);
-            const { error } = await tbl.delete().eq("id", deleteRow.id);
+            const { error } = await db
+                .from(config.table)
+                .delete()
+                .eq("id", deleteRow.id)
+                .eq("tenant_id", tenant.id); // Guard: only delete own tenant's record
             if (error) throw error;
             setDeleteRow(null);
             await fetchData();
-        } catch {
-            alert("Gagal menghapus data");
+        } catch (err: any) {
+            console.error("[Kependudukan] handleDelete error:", err);
+            alert(`Gagal menghapus data: ${err?.message || 'Silakan coba lagi.'}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -616,8 +630,7 @@ export default function KependudukanPage() {
     const [periodes, setPeriodes] = useState<PeriodeOption[]>([]);
     const [refData, setRefData] = useState<Record<string, RefOption[]>>({});
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = useMemo(() => createClient().schema("sidakota"), []);
+    const [db] = useState(() => createClient().schema("sidakota"));
 
     // Load periodes & all ref tables on mount
     useEffect(() => {
@@ -628,7 +641,7 @@ export default function KependudukanPage() {
             const { data: per } = await db.from("gov_ref_periode").select("*").order("tahun", { ascending: false });
             setPeriodes(
                 (per || []).map((p: Record<string, unknown>) => ({
-                    label: `${p.tahun} Semester ${p.semester}${p.keterangan ? ` (${p.keterangan})` : ""}`,
+                    label: `Semester ${p.semester} Tahun ${p.tahun}`,
                     value: Number(p.id),
                 }))
             );

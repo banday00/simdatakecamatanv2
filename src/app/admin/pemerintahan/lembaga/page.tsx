@@ -92,8 +92,9 @@ export default function LembagaPage() {
             }
             setModalOpen(false);
             setEditRow(null);
-        } catch {
-            alert("Gagal menyimpan data");
+        } catch (err: any) {
+            console.error("[Lembaga] handleSubmit error:", err);
+            alert(`Gagal menyimpan data: ${err?.message || 'Silakan coba lagi.'}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -105,8 +106,9 @@ export default function LembagaPage() {
         try {
             await remove(deleteRow.id);
             setDeleteRow(null);
-        } catch {
-            alert("Gagal menghapus data");
+        } catch (err: any) {
+            console.error("[Lembaga] handleDelete error:", err);
+            alert(`Gagal menghapus data: ${err?.message || 'Silakan coba lagi.'}`);
         } finally {
             setIsSubmitting(false);
         }

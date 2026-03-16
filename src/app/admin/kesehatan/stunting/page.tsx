@@ -12,23 +12,26 @@ import { Baby, AlertTriangle, TrendingDown, Target, X, Loader2, Save, MapPin, Ac
 
 type StuntingRow = Record<string, unknown> & {
     id: string;
+    kelurahan_id?: string;
     tahun: number;
-    jumlah_balita: number;
-    jumlah_stunting: number;
-    prevalensi: number;
+    bulan?: number;
+    balita_total: number;
+    balita_stunting: number;
+    balita_gizi_buruk?: number;
+    balita_gizi_kurang?: number;
 };
 
 const columns: Column<StuntingRow>[] = [
     { key: "kelurahan_nama", label: "Kelurahan", sortable: true },
     { key: "tahun", label: "Tahun", sortable: true },
     {
-        key: "jumlah_balita",
+        key: "balita_total",
         label: "Balita",
         sortable: true,
         render: (val) => Number(val ?? 0).toLocaleString("id-ID"),
     },
     {
-        key: "jumlah_stunting",
+        key: "balita_stunting",
         label: "Stunting",
         sortable: true,
         render: (val) => <span className="font-medium text-red-600">{Number(val ?? 0).toLocaleString("id-ID")}</span>,
@@ -47,7 +50,7 @@ const columns: Column<StuntingRow>[] = [
         },
     },
     {
-        key: "status_gizi_buruk",
+        key: "balita_gizi_buruk",
         label: "Gizi Buruk",
         render: (val) => Number(val ?? 0).toLocaleString("id-ID"),
     },
@@ -60,35 +63,56 @@ const bulanOptions = Array.from({ length: 12 }, (_, i) => ({
 
 export default function StuntingPage() {
     const { kelurahans } = useTenant();
-    const { data, isLoading, create, update, remove } = useCrud<StuntingRow>({ table: "health_stunting" });
+    const { data, isLoading, create, update, remove, isKelurahanAdmin, filterKelurahanId } = useCrud<StuntingRow>({ table: "health_stunting" });
 
     const [modalOpen, setModalOpen] = useState(false);
     const [editRow, setEditRow] = useState<StuntingRow | null>(null);
     const [deleteRow, setDeleteRow] = useState<StuntingRow | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const kelurahanOptions = kelurahans.map((k) => ({ label: k.nama, value: k.id }));
+    const kelurahanOptions = isKelurahanAdmin
+        ? kelurahans.filter((k) => k.id === filterKelurahanId).map((k) => ({ label: k.nama, value: k.id }))
+        : kelurahans.map((k) => ({ label: k.nama, value: k.id }));
 
-    const totalBalita = data.reduce((s, r) => s + (r.jumlah_balita || 0), 0);
-    const totalStunting = data.reduce((s, r) => s + (r.jumlah_stunting || 0), 0);
-    const avgPrevalensi = data.length > 0 ? data.reduce((s, r) => s + (r.prevalensi || 0), 0) / data.length : 0;
+    // Enrich data with kelurahan_nama and computed prevalensi for display
+    const enrichedData = data.map((row) => {
+        const total = Number(row.balita_total) || 0;
+        const stunting = Number(row.balita_stunting) || 0;
+        const prevalensi = total > 0 ? (stunting / total) * 100 : 0;
+        return {
+            ...row,
+            kelurahan_nama: kelurahans.find((k) => k.id === row.kelurahan_id)?.nama || "—",
+            prevalensi,
+        };
+    });
+
+    const totalBalita = data.reduce((s, r) => s + (Number(r.balita_total) || 0), 0);
+    const totalStunting = data.reduce((s, r) => s + (Number(r.balita_stunting) || 0), 0);
+    const avgPrevalensi = totalBalita > 0 ? (totalStunting / totalBalita) * 100 : 0;
 
     async function handleSubmit(formData: Record<string, unknown>) {
         setIsSubmitting(true);
         try {
-            if (editRow) await update(editRow.id, formData);
-            else await create(formData);
+            // Strip prevalensi (computed field, not in DB)
+            const { prevalensi: _prev, ...dbPayload } = formData;
+            if (editRow) await update(editRow.id, dbPayload);
+            else await create(dbPayload);
             setModalOpen(false);
             setEditRow(null);
-        } catch { alert("Gagal menyimpan"); }
-        finally { setIsSubmitting(false); }
+        } catch (err: any) {
+            console.error("[Stunting] handleSubmit:", err);
+            alert(`Gagal menyimpan: ${err?.message || 'Silakan coba lagi'}`);
+        } finally { setIsSubmitting(false); }
     }
 
     async function handleDelete() {
         if (!deleteRow) return;
         setIsSubmitting(true);
         try { await remove(deleteRow.id); setDeleteRow(null); }
-        catch { alert("Gagal menghapus"); }
+        catch (err: any) {
+            console.error("[Stunting] handleDelete:", err);
+            alert(`Gagal menghapus: ${err?.message || 'Silakan coba lagi'}`);
+        }
         finally { setIsSubmitting(false); }
     }
 
@@ -112,7 +136,7 @@ export default function StuntingPage() {
             </div>
 
             <DataTable
-                columns={columns} data={data} isLoading={isLoading}
+                columns={columns} data={enrichedData} isLoading={isLoading}
                 onAdd={() => { setEditRow(null); setModalOpen(true); }}
                 onEdit={(row) => { setEditRow(row); setModalOpen(true); }}
                 onDelete={(row) => setDeleteRow(row)}
@@ -126,9 +150,18 @@ export default function StuntingPage() {
                 editRow={editRow}
                 isSubmitting={isSubmitting}
                 kelurahanOptions={kelurahanOptions}
+                isKelurahanAdmin={isKelurahanAdmin}
+                filterKelurahanId={filterKelurahanId}
             />
 
-            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting} />
+            <DeleteConfirm
+                open={!!deleteRow}
+                onClose={() => setDeleteRow(null)}
+                onConfirm={handleDelete}
+                title="Hapus Data Stunting"
+                message={`Apakah Anda yakin ingin menghapus data stunting${deleteRow?.kelurahan_nama ? ` kelurahan ${deleteRow.kelurahan_nama}` : ""}? Tindakan ini tidak dapat dibatalkan.`}
+                isDeleting={isSubmitting}
+            />
         </div>
     );
 }
@@ -138,7 +171,7 @@ export default function StuntingPage() {
    ═══════════════════════════════════════════════════════ */
 
 function StuntingFormModal({
-    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions,
+    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions, isKelurahanAdmin, filterKelurahanId,
 }: {
     open: boolean;
     onClose: () => void;
@@ -146,18 +179,20 @@ function StuntingFormModal({
     editRow: StuntingRow | null;
     isSubmitting: boolean;
     kelurahanOptions: { label: string; value: string }[];
+    isKelurahanAdmin?: boolean;
+    filterKelurahanId?: string | null;
 }) {
     const isEdit = !!editRow;
 
     const [form, setForm] = useState<Record<string, unknown>>({
         kelurahan_id: "",
         tahun: new Date().getFullYear(),
-        bulan: String(new Date().getMonth() + 1),
-        jumlah_balita: 0,
-        jumlah_stunting: 0,
+        bulan: new Date().getMonth() + 1,
+        balita_total: 0,
+        balita_stunting: 0,
         prevalensi: 0,
-        status_gizi_buruk: 0,
-        status_gizi_kurang: 0,
+        balita_gizi_buruk: 0,
+        balita_gizi_kurang: 0,
     });
 
     useEffect(() => {
@@ -166,26 +201,35 @@ function StuntingFormModal({
             setForm({
                 kelurahan_id: editRow.kelurahan_id ?? "",
                 tahun: editRow.tahun ?? new Date().getFullYear(),
-                bulan: editRow.bulan ?? String(new Date().getMonth() + 1),
-                jumlah_balita: editRow.jumlah_balita ?? 0,
-                jumlah_stunting: editRow.jumlah_stunting ?? 0,
-                prevalensi: editRow.prevalensi ?? 0,
-                status_gizi_buruk: editRow.status_gizi_buruk ?? 0,
-                status_gizi_kurang: editRow.status_gizi_kurang ?? 0,
+                bulan: editRow.bulan ?? new Date().getMonth() + 1,
+                balita_total: editRow.balita_total ?? 0,
+                balita_stunting: editRow.balita_stunting ?? 0,
+                prevalensi: 0,
+                balita_gizi_buruk: editRow.balita_gizi_buruk ?? 0,
+                balita_gizi_kurang: editRow.balita_gizi_kurang ?? 0,
             });
         } else {
             setForm({
-                kelurahan_id: "",
+                kelurahan_id: (isKelurahanAdmin && filterKelurahanId) ? filterKelurahanId : "",
                 tahun: new Date().getFullYear(),
-                bulan: String(new Date().getMonth() + 1),
-                jumlah_balita: 0,
-                jumlah_stunting: 0,
+                bulan: new Date().getMonth() + 1,
+                balita_total: 0,
+                balita_stunting: 0,
                 prevalensi: 0,
-                status_gizi_buruk: 0,
-                status_gizi_kurang: 0,
+                balita_gizi_buruk: 0,
+                balita_gizi_kurang: 0,
             });
         }
-    }, [open, editRow]);
+    }, [open, editRow, isKelurahanAdmin, filterKelurahanId]);
+
+    // Auto-calculate prevalensi: (balita_stunting / balita_total) * 100
+    useEffect(() => {
+        const total = Number(form.balita_total) || 0;
+        const stunting = Number(form.balita_stunting) || 0;
+        const calc = total > 0 ? parseFloat(((stunting / total) * 100).toFixed(2)) : 0;
+        setForm((prev) => ({ ...prev, prevalensi: calc }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [form.balita_total, form.balita_stunting]);
 
     function set(field: string, value: string | number) {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -207,12 +251,12 @@ function StuntingFormModal({
                 style={{ animation: "modalSlideIn 0.3s ease-out" }}
             >
                 {/* Gradient accent */}
-                <div className="h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 shrink-0" />
+                <div className="h-1.5 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 shrink-0" />
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-5 md:px-8 border-b border-gray-100 shrink-0 bg-white">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-2xl shadow-sm bg-gradient-to-br from-amber-50 to-orange-100 text-orange-600">
+                        <div className="p-3 rounded-2xl shadow-sm bg-gradient-to-br from-blue-50 to-indigo-100 text-blue-600">
                             <Baby className="w-6 h-6" />
                         </div>
                         <div>
@@ -278,7 +322,7 @@ function StuntingFormModal({
                                     </label>
                                     <select
                                         value={String(form.bulan)}
-                                        onChange={(e) => set("bulan", e.target.value)}
+                                        onChange={(e) => set("bulan", parseInt(e.target.value))}
                                         required
                                         className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all shadow-sm"
                                     >
@@ -304,8 +348,8 @@ function StuntingFormModal({
                                         </label>
                                         <input
                                             type="number"
-                                            value={Number(form.jumlah_balita)}
-                                            onChange={(e) => set("jumlah_balita", parseInt(e.target.value) || 0)}
+                                            value={Number(form.balita_total)}
+                                            onChange={(e) => set("balita_total", parseInt(e.target.value) || 0)}
                                             min={0}
                                             required
                                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all shadow-sm"
@@ -317,8 +361,8 @@ function StuntingFormModal({
                                         </label>
                                         <input
                                             type="number"
-                                            value={Number(form.jumlah_stunting)}
-                                            onChange={(e) => set("jumlah_stunting", parseInt(e.target.value) || 0)}
+                                            value={Number(form.balita_stunting)}
+                                            onChange={(e) => set("balita_stunting", parseInt(e.target.value) || 0)}
                                             min={0}
                                             required
                                             className="w-full px-4 py-2.5 bg-white border border-red-200 rounded-xl text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-sm bg-red-50/30"
@@ -328,21 +372,21 @@ function StuntingFormModal({
                                     <div className="sm:col-span-2">
                                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                                             Prevalensi (%)
+                                            <span className="ml-2 text-[10px] font-normal text-orange-500 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">
+                                                Otomatis
+                                            </span>
                                         </label>
                                         <div className="relative">
-                                            <input
-                                                type="number"
-                                                value={Number(form.prevalensi)}
-                                                onChange={(e) => set("prevalensi", parseFloat(e.target.value) || 0)}
-                                                min={0}
-                                                max={100}
-                                                step={0.1}
-                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all shadow-sm pr-10"
-                                            />
-                                            <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-gray-400 font-medium">
+                                            <div className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 font-semibold pr-10 cursor-not-allowed select-none flex items-center">
+                                                {Number(form.prevalensi).toFixed(2)}
+                                            </div>
+                                            <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-400 font-medium">
                                                 %
                                             </div>
                                         </div>
+                                        <p className="text-[11px] text-slate-400 mt-1.5">
+                                            = Jumlah Stunting ÷ Jumlah Balita × 100
+                                        </p>
                                     </div>
 
 
@@ -353,8 +397,8 @@ function StuntingFormModal({
                                             </label>
                                             <input
                                                 type="number"
-                                                value={Number(form.status_gizi_buruk)}
-                                                onChange={(e) => set("status_gizi_buruk", parseInt(e.target.value) || 0)}
+                                                value={Number(form.balita_gizi_buruk)}
+                                                onChange={(e) => set("balita_gizi_buruk", parseInt(e.target.value) || 0)}
                                                 min={0}
                                                 className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all shadow-sm"
                                             />
@@ -365,8 +409,8 @@ function StuntingFormModal({
                                             </label>
                                             <input
                                                 type="number"
-                                                value={Number(form.status_gizi_kurang)}
-                                                onChange={(e) => set("status_gizi_kurang", parseInt(e.target.value) || 0)}
+                                                value={Number(form.balita_gizi_kurang)}
+                                                onChange={(e) => set("balita_gizi_kurang", parseInt(e.target.value) || 0)}
                                                 min={0}
                                                 className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all shadow-sm"
                                             />
@@ -395,7 +439,7 @@ function StuntingFormModal({
                             <button
                                 type="submit"
                                 disabled={isSubmitting}
-                                className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-2.5 text-sm font-semibold text-white bg-orange-600 hover:bg-orange-700 rounded-xl transition-all shadow-lg shadow-orange-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-lg shadow-blue-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isSubmitting ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />

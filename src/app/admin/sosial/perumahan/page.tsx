@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useTenant } from "@/lib/tenant/context";
 import { useCrud } from "@/hooks/use-crud";
@@ -20,6 +20,7 @@ type Row = Record<string, unknown> & {
 };
 
 const columns: Column<Row>[] = [
+    { key: "kelurahan_nama" as keyof Row, label: "Kelurahan", sortable: true },
     { key: "tahun", label: "Tahun Pendataan", sortable: true },
     { key: "jumlah_rtlh", label: "Total Temuan RTLH", sortable: true, render: (v) => <span className="font-bold text-gray-900">{Number(v ?? 0).toLocaleString("id-ID")}</span> },
     { key: "sudah_direhabilitasi", label: "Telah Direhab", sortable: true, render: (v) => <span className="text-emerald-600 font-medium">{Number(v ?? 0).toLocaleString("id-ID")} Unit</span> },
@@ -40,6 +41,26 @@ export default function PerumahanPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const kelurahanOptions = kelurahans.map((k) => ({ label: k.nama, value: k.id }));
+    const kelMap = useMemo(() => {
+        const m = new Map<string, string>();
+        kelurahans.forEach(k => m.set(k.id, k.nama));
+        return m;
+    }, [kelurahans]);
+
+    // Enrich data with kelurahan name + sort newest first
+    const enrichedData = useMemo(() =>
+        [...data]
+            .sort((a, b) => {
+                const da = (a as any).created_at || '';
+                const db = (b as any).created_at || '';
+                return db.localeCompare(da);
+            })
+            .map(r => ({
+                ...r,
+                kelurahan_nama: kelMap.get(r.kelurahan_id) || '-',
+            })),
+        [data, kelMap]
+    );
 
     const totalRTLH = data.reduce((s, r) => s + (r.jumlah_rtlh || 0), 0);
     const sudahRehab = data.reduce((s, r) => s + (r.sudah_direhabilitasi || 0), 0);
@@ -70,15 +91,16 @@ export default function PerumahanPage() {
                 <StatCard label="Penyerapan Dana" value={`Rp ${(totalAnggaran / 1e9).toFixed(1)} Miliar`} icon={Banknote} gradient="stat-gradient-soft-rose" />
             </div>
 
-            <DataTable columns={columns} data={data} isLoading={isLoading}
+            <DataTable columns={columns} data={enrichedData} isLoading={isLoading}
                 onAdd={() => { setEditRow(null); setModalOpen(true); }} onEdit={(r) => { setEditRow(r); setModalOpen(true); }}
-                onDelete={(r) => setDeleteRow(r)} addLabel="Registrasi Evaluasi Baru" searchPlaceholder="Cari data pendanaan..." />
+                onDelete={(r) => setDeleteRow(r)} addLabel="Registrasi Evaluasi Baru" searchPlaceholder="Cari kelurahan/sumber dana..." />
 
             <PerumahanFormModal
                 open={modalOpen} onClose={() => { setModalOpen(false); setEditRow(null); }} onSubmit={handleSubmit}
                 editRow={editRow} kelurahanOptions={kelurahanOptions} isSubmitting={isSubmitting} />
 
-            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting} />
+            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting}
+                message={deleteRow ? `Hapus data RTLH tahun ${deleteRow.tahun} (${deleteRow.sumber_dana || 'tanpa sumber dana'}) untuk wilayah ini?` : undefined} />
         </div>
     );
 }
@@ -151,7 +173,7 @@ function PerumahanFormModal({
 
     if (!open) return null;
 
-    const sumberDanaOptions = ["APBD", "APBN", "CSR", "Dana Desa", "Swadaya Masyrakat", "Lainnya"];
+    const sumberDanaOptions = ["APBD", "APBN", "CSR", "Dana Desa", "Swadaya Masyarakat", "Lainnya"];
 
     return createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
@@ -302,7 +324,7 @@ function PerumahanFormModal({
 
                                     <div className="space-y-1.5 pt-2">
                                         <label className="block text-sm font-semibold text-gray-700">
-                                            Absorpsi Anggaran Eksekusi
+                                            Realisasi Anggaran Rehabilitasi (Rp)
                                         </label>
                                         <div className="relative">
                                             <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-500">

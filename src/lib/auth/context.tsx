@@ -8,6 +8,7 @@ import {
     type ReactNode,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { logActivity } from "@/lib/activity-logger";
 import type { UserProfile } from "@/types";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -183,6 +184,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 success: true,
             });
 
+            // Log activity with IP + user agent
+            const userProfile = authData.user ? await supabase
+                .schema("sidakota")
+                .from("user_profiles")
+                .select("tenant_id, nama_lengkap")
+                .eq("id", authData.user.id)
+                .single() : null;
+
+            logActivity({
+                action: "login",
+                module: "auth",
+                detail: `Login berhasil: ${email}`,
+                userId: authData.user?.id,
+                userEmail: email,
+                userName: userProfile?.data?.nama_lengkap || email,
+                tenantId: userProfile?.data?.tenant_id || undefined,
+            });
+
             return { error: null, actionRequired: undefined };
         } catch {
             return { error: "Terjadi kesalahan. Coba lagi.", actionRequired: undefined };
@@ -190,6 +209,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     async function signOut() {
+        // Log logout before clearing session
+        if (user && profile) {
+            logActivity({
+                action: "logout",
+                module: "auth",
+                detail: `Logout: ${profile.nama_lengkap || user.email}`,
+                userId: user.id,
+                userEmail: user.email || undefined,
+                userName: profile.nama_lengkap || undefined,
+                tenantId: profile.tenant_id || undefined,
+            });
+        }
         await supabase.auth.signOut();
         setUser(null);
         setProfile(null);

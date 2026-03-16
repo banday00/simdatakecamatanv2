@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useTenant } from "@/lib/tenant/context";
 import { useCrud } from "@/hooks/use-crud";
@@ -26,6 +26,7 @@ const statusColors: Record<string, string> = {
 const statusLabels: Record<string, string> = { open: "Terbuka", handling: "Ditangani", resolved: "Selesai" };
 
 const columns: Column<Row>[] = [
+    { key: "kelurahan_nama" as keyof Row, label: "Kelurahan", sortable: true },
     {
         key: "tanggal", label: "Tgl Kejadian", sortable: true,
         render: (v) => <span className="text-gray-900 font-medium">{v ? new Date(String(v)).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "—"}</span>
@@ -57,6 +58,17 @@ export default function InsidenPage() {
 
     const kelurahanOptions = kelurahans.map((k) => ({ label: k.nama, value: k.id }));
 
+    const kelMap = useMemo(() => new Map(kelurahans.map(k => [k.id, k.nama])), [kelurahans]);
+    const enrichedData = useMemo(() => {
+        return [...data]
+            .map(r => ({ ...r, kelurahan_nama: kelMap.get(r.kelurahan_id) || "-" }))
+            .sort((a, b) => {
+                const ca = (a as any).created_at || "";
+                const cb = (b as any).created_at || "";
+                return cb.localeCompare(ca);
+            });
+    }, [data, kelMap]);
+
     const totalKorban = data.reduce((s, r) => s + (r.korban_meninggal || 0) + (r.korban_luka || 0), 0);
     const totalPengungsi = data.reduce((s, r) => s + (r.pengungsi || 0), 0);
     const openCases = data.filter((r) => r.status === "open" || r.status === "handling").length;
@@ -85,7 +97,7 @@ export default function InsidenPage() {
                 <StatCard label="Kasus Belum Tuntas" value={openCases.toLocaleString("id-ID")} icon={AlertCircle} gradient="stat-gradient-soft-emerald" />
             </div>
 
-            <DataTable columns={columns} data={data} isLoading={isLoading}
+            <DataTable columns={columns} data={enrichedData} isLoading={isLoading}
                 onAdd={() => { setEditRow(null); setModalOpen(true); }} onEdit={(r) => { setEditRow(r); setModalOpen(true); }}
                 onDelete={(r) => setDeleteRow(r)} addLabel="Pelaporan Insiden Baru" searchPlaceholder="Telusuri jenis atau status musibah..." />
 
@@ -93,7 +105,9 @@ export default function InsidenPage() {
                 open={modalOpen} onClose={() => { setModalOpen(false); setEditRow(null); }} onSubmit={handleSubmit}
                 editRow={editRow} kelurahanOptions={kelurahanOptions} isSubmitting={isSubmitting} />
 
-            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting} />
+            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting}
+                title="Hapus Log Insiden"
+                message={deleteRow ? `Hapus data insiden "${deleteRow.jenis_kejadian}" tanggal ${deleteRow.tanggal ? new Date(deleteRow.tanggal).toLocaleDateString("id-ID") : "-"} di kelurahan "${kelMap.get(deleteRow.kelurahan_id) || '-'}"?` : ""} />
         </div>
     );
 }
@@ -117,9 +131,9 @@ function InsidenFormModal({
     const todayDate = new Date().toISOString().split("T")[0];
 
     const [form, setForm] = useState<Record<string, unknown>>({
-        kelurahan_id: "", tanggal: todayDate, jenis_kejadian: "Banjir", lokasi: "",
-        korban_meninggal: 0, korban_luka: 0, pengungsi: 0,
-        kerusakan_rumah: 0, kerugian_material: 0,
+        kelurahan_id: "", tanggal: todayDate, jenis: "Banjir", jenis_kejadian: "Banjir", lokasi: "",
+        korban_meninggal: 0, korban_luka: 0, pengungsi: 0, korban: 0,
+        kerusakan_rumah: 0, kerugian_material: 0, kerugian: 0,
         penanganan: "", status: "open",
     });
 
@@ -129,28 +143,36 @@ function InsidenFormModal({
             setForm({
                 kelurahan_id: editRow.kelurahan_id ?? "",
                 tanggal: editRow.tanggal ? String(editRow.tanggal).split("T")[0] : todayDate,
-                jenis_kejadian: editRow.jenis_kejadian ?? "Banjir",
+                jenis: editRow.jenis_kejadian ?? (editRow as any).jenis ?? "Banjir",
+                jenis_kejadian: editRow.jenis_kejadian ?? (editRow as any).jenis ?? "Banjir",
                 lokasi: editRow.lokasi ?? "",
                 korban_meninggal: editRow.korban_meninggal ?? 0,
                 korban_luka: editRow.korban_luka ?? 0,
                 pengungsi: editRow.pengungsi ?? 0,
+                korban: (editRow.korban_meninggal ?? 0) + (editRow.korban_luka ?? 0),
                 kerusakan_rumah: editRow.kerusakan_rumah ?? 0,
                 kerugian_material: editRow.kerugian_material ?? 0,
+                kerugian: editRow.kerugian_material ?? 0,
                 penanganan: editRow.penanganan ?? "",
                 status: editRow.status ?? "open",
             });
         } else {
             setForm({
-                kelurahan_id: kelurahanOptions[0]?.value || "", tanggal: todayDate, jenis_kejadian: "Banjir", lokasi: "",
-                korban_meninggal: 0, korban_luka: 0, pengungsi: 0,
-                kerusakan_rumah: 0, kerugian_material: 0,
+                kelurahan_id: kelurahanOptions[0]?.value || "", tanggal: todayDate, jenis: "Banjir", jenis_kejadian: "Banjir", lokasi: "",
+                korban_meninggal: 0, korban_luka: 0, pengungsi: 0, korban: 0,
+                kerusakan_rumah: 0, kerugian_material: 0, kerugian: 0,
                 penanganan: "", status: "open",
             });
         }
     }, [open, editRow, kelurahanOptions, todayDate]);
 
     function set(field: string, value: string | number) {
-        setForm((prev) => ({ ...prev, [field]: value }));
+        setForm((prev) => {
+            const next = { ...prev, [field]: value };
+            // Keep jenis and jenis_kejadian in sync
+            if (field === "jenis_kejadian") next.jenis = value;
+            return next;
+        });
     }
 
     function handleFormSubmit(e: React.FormEvent) {
@@ -233,7 +255,7 @@ function InsidenFormModal({
 
                                         <div>
                                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                                Tanggal Persitiwa <span className="text-red-500">*</span>
+                                                Tanggal Peristiwa <span className="text-red-500">*</span>
                                             </label>
                                             <input
                                                 required type="date"
@@ -292,8 +314,8 @@ function InsidenFormModal({
                                                         key={card.id}
                                                         onClick={() => set("status", card.id)}
                                                         className={`relative flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border-2 transition-all ${isActive
-                                                                ? `${card.borderActive} ${card.bgActive} shadow-sm ring-1 ${card.ringProps}`
-                                                                : `border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 opacity-80`
+                                                            ? `${card.borderActive} ${card.bgActive} shadow-sm ring-1 ${card.ringProps}`
+                                                            : `border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 opacity-80`
                                                             }`}
                                                     >
                                                         {isActive && (
@@ -327,7 +349,7 @@ function InsidenFormModal({
                                 <div className="space-y-5">
                                     {/* Korban Manusia Grid */}
                                     <div className="p-4 bg-white border border-gray-100 rounded-2xl shadow-sm space-y-4">
-                                        <h4 className="text-sm font-bold text-gray-900">Dampak Korban Nyawa & Kesurupan Fisik</h4>
+                                        <h4 className="text-sm font-bold text-gray-900">Dampak Korban Jiwa & Cedera Fisik</h4>
                                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                                             <div>
                                                 <label className="block text-xs font-semibold text-rose-800 mb-1.5">Meninggal Dunia</label>
@@ -354,7 +376,7 @@ function InsidenFormModal({
                                                 </div>
                                             </div>
                                             <div className="col-span-2 lg:col-span-1">
-                                                <label className="block text-xs font-semibold text-indigo-800 mb-1.5">Warga Demisioner</label>
+                                                <label className="block text-xs font-semibold text-indigo-800 mb-1.5">Pengungsi</label>
                                                 <div className="relative">
                                                     <input
                                                         type="number" min={0}
@@ -362,7 +384,7 @@ function InsidenFormModal({
                                                         value={(form.pengungsi as number) || 0}
                                                         onChange={(e) => set("pengungsi", Number(e.target.value))}
                                                     />
-                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-indigo-400">Eksil</span>
+                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-indigo-400">Jiwa</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -382,7 +404,7 @@ function InsidenFormModal({
                                             </div>
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="block text-sm font-semibold text-gray-700">Kalkulasi Kerugian Matril</label>
+                                            <label className="block text-sm font-semibold text-gray-700">Estimasi Kerugian Materiel</label>
                                             <div className="relative">
                                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400 pointer-events-none">Rp</span>
                                                 <input
@@ -416,8 +438,7 @@ function InsidenFormModal({
                     {/* Footer / Actions */}
                     <div className="flex items-center justify-between px-6 py-4 md:px-8 border-t border-gray-100 bg-white shrink-0">
                         <p className="text-xs text-gray-400">
-                            Peringatan: Insiden fatal berpotensi memicu alarm pusat kontrol.<br />
-                            <span className="text-red-400 font-bold">*</span> Wajib divalidasi
+                            <span className="text-red-400 font-bold">*</span> Wajib diinformasikan
                         </p>
                         <div className="flex flex-col-reverse sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
                             <button

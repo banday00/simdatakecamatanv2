@@ -33,6 +33,7 @@ import {
     Lock,
     Loader2,
     Save,
+    Activity,
 } from "lucide-react";
 
 const navGroups = [
@@ -99,8 +100,8 @@ const navGroups = [
                 label: "Ketentraman", href: "/admin/ketentraman", icon: Shield,
                 children: [
                     { label: "Kader", href: "/admin/ketentraman/kader" },
-                    { label: "Rawan Bencana", href: "/admin/ketentraman/rawan-bencana" },
-                    { label: "Kejadian", href: "/admin/ketentraman/kejadian" },
+                    { label: "Rawan Bencana", href: "/admin/ketentraman/bencana" },
+                    { label: "Insiden", href: "/admin/ketentraman/insiden" },
                 ],
             },
         ],
@@ -115,9 +116,10 @@ const navGroups = [
         ],
     },
     {
-        title: "PENGGUNA",
+        title: "PENGATURAN",
         items: [
             { label: "Pengguna", href: "/admin/pengguna", icon: Users },
+            { label: "Log Aktivitas", href: "/admin/log-aktivitas", icon: Activity },
         ],
     },
 ];
@@ -352,7 +354,7 @@ export default function AdminLayout({
                     {navGroups.map((group) => {
                         // Filter items based on role
                         const visibleItems = group.items.filter(item => {
-                            if (item.label === "Pengguna") {
+                            if (item.label === "Pengaturan" || item.label === "Log Aktivitas") {
                                 return profile?.role === "admin_kecamatan" || profile?.role === "super_admin";
                             }
                             return true;

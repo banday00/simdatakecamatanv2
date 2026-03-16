@@ -39,7 +39,7 @@ const columns: Column<Row>[] = [
 
 export default function BencanaPage() {
     const { kelurahans } = useTenant();
-    const { data, isLoading, create, update, remove } = useCrud<Row>({ table: "security_disaster_risk" });
+    const { data, isLoading, create, update, remove } = useCrud<Row>({ table: "security_disaster_zones" });
     const [modalOpen, setModalOpen] = useState(false);
     const [editRow, setEditRow] = useState<Row | null>(null);
     const [deleteRow, setDeleteRow] = useState<Row | null>(null);
@@ -309,8 +309,8 @@ function BencanaFormModal({
                                                         key={card.id}
                                                         onClick={() => set("tingkat_risiko", card.id)}
                                                         className={`relative flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border-2 transition-all ${isActive
-                                                                ? `${card.borderActive} ${card.bgActive} shadow-sm ring-1 ${card.ringProps}`
-                                                                : `border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 opacity-80`
+                                                            ? `${card.borderActive} ${card.bgActive} shadow-sm ring-1 ${card.ringProps}`
+                                                            : `border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 opacity-80`
                                                             }`}
                                                     >
                                                         {isActive && (
@@ -331,17 +331,7 @@ function BencanaFormModal({
                                         </div>
                                     </div>
 
-                                    <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 mt-6">
-                                        <div className="flex gap-3">
-                                            <Info className="w-5 h-5 text-blue-500 shrink-0" />
-                                            <div>
-                                                <h5 className="text-xs font-bold text-blue-900">Pedoman Pengisian Risiko</h5>
-                                                <p className="text-[11px] font-medium text-blue-700/80 mt-1 leading-relaxed">
-                                                    Penetapan Status Risiko "Tinggi" akan mengkonstruksikan riwayat log darurat ke halaman beranda pelaporan dashboard pimpinan eksekutif untuk tindak lanjut cepat.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
+
 
                                 </div>
                             </div>

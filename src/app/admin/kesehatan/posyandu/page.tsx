@@ -12,6 +12,7 @@ import { Heart, Activity, Target, ShieldCheck, X, Loader2, Save, MapPin } from "
 
 type PosyanduRow = Record<string, unknown> & {
     id: string;
+    kelurahan_id?: string;
     nama: string;
     strata: string;
     jumlah_kader: number;
@@ -27,6 +28,7 @@ const STRATA_COLORS: Record<string, string> = {
 };
 
 const columns: Column<PosyanduRow>[] = [
+    { key: "kelurahan_nama", label: "Kelurahan", sortable: true },
     { key: "nama", label: "Nama Posyandu", sortable: true },
     {
         key: "strata",
@@ -67,14 +69,22 @@ const strataOptions = [
 
 export default function PosyanduAdminPage() {
     const { kelurahans } = useTenant();
-    const { data, isLoading, create, update, remove } = useCrud<PosyanduRow>({ table: "health_posyandu" });
+    const { data, isLoading, create, update, remove, isKelurahanAdmin, filterKelurahanId } = useCrud<PosyanduRow>({ table: "health_posyandu" });
 
     const [modalOpen, setModalOpen] = useState(false);
     const [editRow, setEditRow] = useState<PosyanduRow | null>(null);
     const [deleteRow, setDeleteRow] = useState<PosyanduRow | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const kelurahanOptions = kelurahans.map((k) => ({ label: k.nama, value: k.id }));
+    const kelurahanOptions = isKelurahanAdmin
+        ? kelurahans.filter((k) => k.id === filterKelurahanId).map((k) => ({ label: k.nama, value: k.id }))
+        : kelurahans.map((k) => ({ label: k.nama, value: k.id }));
+
+    // Enrich data with kelurahan_nama
+    const enrichedData = data.map((row) => ({
+        ...row,
+        kelurahan_nama: kelurahans.find((k) => k.id === row.kelurahan_id)?.nama || "—",
+    }));
 
     const totalPosyandu = data.length;
     const totalMandiri = data.filter((r) => r.strata === "Mandiri").length;
@@ -88,7 +98,10 @@ export default function PosyanduAdminPage() {
             else await create(formData);
             setModalOpen(false);
             setEditRow(null);
-        } catch { alert("Gagal menyimpan data posyandu"); }
+        } catch (err: any) {
+            console.error("[Posyandu] handleSubmit:", err);
+            alert(`Gagal menyimpan: ${err?.message || 'Silakan coba lagi'}`);
+        }
         finally { setIsSubmitting(false); }
     }
 
@@ -96,7 +109,10 @@ export default function PosyanduAdminPage() {
         if (!deleteRow) return;
         setIsSubmitting(true);
         try { await remove(deleteRow.id); setDeleteRow(null); }
-        catch { alert("Gagal menghapus data posyandu"); }
+        catch (err: any) {
+            console.error("[Posyandu] handleDelete:", err);
+            alert(`Gagal menghapus: ${err?.message || 'Silakan coba lagi'}`);
+        }
         finally { setIsSubmitting(false); }
     }
 
@@ -121,7 +137,7 @@ export default function PosyanduAdminPage() {
 
             <DataTable
                 columns={columns}
-                data={data}
+                data={enrichedData}
                 isLoading={isLoading}
                 onAdd={() => { setEditRow(null); setModalOpen(true); }}
                 onEdit={(row) => { setEditRow(row); setModalOpen(true); }}
@@ -137,9 +153,18 @@ export default function PosyanduAdminPage() {
                 editRow={editRow}
                 isSubmitting={isSubmitting}
                 kelurahanOptions={kelurahanOptions}
+                isKelurahanAdmin={isKelurahanAdmin}
+                filterKelurahanId={filterKelurahanId}
             />
 
-            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting} />
+            <DeleteConfirm
+                open={!!deleteRow}
+                onClose={() => setDeleteRow(null)}
+                onConfirm={handleDelete}
+                title="Hapus Data Posyandu"
+                message={`Apakah Anda yakin ingin menghapus posyandu "${deleteRow?.nama}"? Tindakan ini tidak dapat dibatalkan.`}
+                isDeleting={isSubmitting}
+            />
         </div>
     );
 }
@@ -149,7 +174,7 @@ export default function PosyanduAdminPage() {
    ═══════════════════════════════════════════════════════ */
 
 function PosyanduFormModal({
-    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions,
+    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions, isKelurahanAdmin, filterKelurahanId,
 }: {
     open: boolean;
     onClose: () => void;
@@ -157,6 +182,8 @@ function PosyanduFormModal({
     editRow: PosyanduRow | null;
     isSubmitting: boolean;
     kelurahanOptions: { label: string; value: string }[];
+    isKelurahanAdmin?: boolean;
+    filterKelurahanId?: string | null;
 }) {
     const isEdit = !!editRow;
 
@@ -182,7 +209,7 @@ function PosyanduFormModal({
             });
         } else {
             setForm({
-                kelurahan_id: kelurahanOptions[0]?.value || "",
+                kelurahan_id: (isKelurahanAdmin && filterKelurahanId) ? filterKelurahanId : "",
                 nama: "",
                 strata: "Pratama",
                 jumlah_kader: 0,
@@ -190,7 +217,7 @@ function PosyanduFormModal({
                 jumlah_lansia: 0,
             });
         }
-    }, [open, editRow, kelurahanOptions]);
+    }, [open, editRow, isKelurahanAdmin, filterKelurahanId]);
 
     function set(field: string, value: string | number) {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -212,12 +239,12 @@ function PosyanduFormModal({
                 style={{ animation: "modalSlideIn 0.3s ease-out" }}
             >
                 {/* Gradient accent - Emerald/Teal Theme */}
-                <div className="h-1.5 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 shrink-0" />
+                <div className="h-1.5 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 shrink-0" />
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-5 md:px-8 border-b border-gray-100 shrink-0 bg-white">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-2xl shadow-sm bg-gradient-to-br from-emerald-50 to-teal-50 text-emerald-600">
+                        <div className="p-3 rounded-2xl shadow-sm bg-gradient-to-br from-blue-50 to-indigo-100 text-blue-600">
                             <Heart className="w-6 h-6" />
                         </div>
                         <div>
@@ -363,7 +390,7 @@ function PosyanduFormModal({
                             <button
                                 type="submit"
                                 disabled={isSubmitting}
-                                className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all shadow-lg shadow-emerald-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-lg shadow-blue-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isSubmitting ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />

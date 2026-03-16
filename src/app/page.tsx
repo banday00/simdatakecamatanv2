@@ -54,7 +54,7 @@ const modules = [
     { name: "Infrastruktur", href: "/data/infrastruktur", icon: Hammer, desc: "Pembangunan, sanitasi, olahraga", color: "from-amber-500 to-amber-700" },
     { name: "Sosial", href: "/data/sosial", icon: Home, desc: "Bantuan sosial, perumahan, disabilitas", color: "from-purple-500 to-purple-700" },
     { name: "Ketentraman", href: "/data/ketentraman", icon: Shield, desc: "Keamanan, bencana, insiden", color: "from-slate-500 to-slate-700" },
-    { name: "Berita", href: "/berita", icon: Newspaper, desc: "Berita & informasi terkini", color: "from-pink-500 to-pink-700" },
+    // { name: "Berita", href: "/berita", icon: Newspaper, desc: "Berita & informasi terkini", color: "from-pink-500 to-pink-700" },
 ];
 
 /* ============================================================
@@ -252,13 +252,13 @@ export default function HomePage() {
                         <span className="text-cyan-100 tracking-wide">Portal Data Terpadu · Kecamatan & Kelurahan</span>
                     </div>
 
-                    <h2 className="text-4xl md:text-5xl lg:text-7xl font-extrabold leading-[1.1] mb-6 animate-fade-in drop-shadow-sm">
+                    <h2 className="text-3xl md:text-5xl lg:text-6xl font-extrabold leading-[1.1] mb-6 animate-fade-in drop-shadow-sm">
                         {isLoading ? (
                             <span className="inline-block w-96 h-16 shimmer rounded-lg" />
                         ) : (
                             <span>
-                                Sistem Data <br />
-                                <span className="text-gradient-gold drop-shadow-md">{tenant?.nama || "Kota Bogor"}</span>
+                                Sistem Pengelolaan Data Terpadu<br />
+                                <span className="text-gradient-gold drop-shadow-md">{tenant?.nama || "Kecamatan"}</span>
                             </span>
                         )}
                     </h2>
@@ -273,10 +273,10 @@ export default function HomePage() {
                             Jelajahi Data
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         </Link>
-                        <Link href="/peta" className="px-8 py-4 glass-panel font-bold rounded-2xl hover:bg-white/10 transition-all flex items-center gap-2 border border-white/20 hover:border-white/40 text-white">
+                        {/* <Link href="/peta" className="px-8 py-4 glass-panel font-bold rounded-2xl hover:bg-white/10 transition-all flex items-center gap-2 border border-white/20 hover:border-white/40 text-white">
                             <MapPin className="w-5 h-5 text-cyan-300" />
                             Buka Peta
-                        </Link>
+                        </Link> */}
                     </div>
                 </div>
             </header>
@@ -482,7 +482,7 @@ export default function HomePage() {
             }
 
             {/* ========== BERITA ========== */}
-            <section className="px-6 py-16 bg-gradient-to-b from-gray-50 to-white">
+            {/* <section className="px-6 py-16 bg-gradient-to-b from-gray-50 to-white">
                 <div className="max-w-7xl mx-auto">
                     <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-10">
                         <div>
@@ -510,7 +510,8 @@ export default function HomePage() {
                         </div>
                     )}
                 </div>
-            </section>
+            </section> */}
+
 
             {/* ========== INFOGRAFIS / CTA ========== */}
             <section className="px-6 py-20">
@@ -526,7 +527,7 @@ export default function HomePage() {
                                     Data Transparan untuk <span className="gradient-text-gold">Pelayanan Lebih Baik</span>
                                 </h3>
                                 <p className="text-white/50 mb-8 text-lg leading-relaxed">
-                                    SIDAKOTA menyediakan data terpadu dari seluruh kelurahan se-kecamatan.
+                                    SIPADU KECAMATAN menyediakan data terpadu dari seluruh kelurahan se-kecamatan.
                                     Akses data publik kapan saja, mendukung transparansi dan partisipasi masyarakat
                                     dalam pembangunan.
                                 </p>
@@ -534,9 +535,9 @@ export default function HomePage() {
                                     <Link href="#data" className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all shadow-xl">
                                         Jelajahi Data
                                     </Link>
-                                    <Link href="/peta" className="px-6 py-3 glass font-bold rounded-xl hover:bg-white/15 transition-all">
+                                    {/* <Link href="/peta" className="px-6 py-3 glass font-bold rounded-xl hover:bg-white/15 transition-all">
                                         Buka Peta Interaktif
-                                    </Link>
+                                    </Link> */}
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useTenant } from "@/lib/tenant/context";
 import { useCrud } from "@/hooks/use-crud";
@@ -19,6 +19,7 @@ type Row = Record<string, unknown> & {
 };
 
 const columns: Column<Row>[] = [
+    { key: "kelurahan_nama" as keyof Row, label: "Kelurahan", sortable: true },
     { key: "tahun", label: "Tahun", sortable: true },
     {
         key: "jenis_disabilitas", label: "Jenis Disabilitas", sortable: true,
@@ -39,6 +40,26 @@ export default function DisabilitasPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const kelurahanOptions = kelurahans.map((k) => ({ label: k.nama, value: k.id }));
+    const kelMap = useMemo(() => {
+        const m = new Map<string, string>();
+        kelurahans.forEach(k => m.set(k.id, k.nama));
+        return m;
+    }, [kelurahans]);
+
+    // Enrich data with kelurahan name + sort newest first
+    const enrichedData = useMemo(() =>
+        [...data]
+            .sort((a, b) => {
+                const da = (a as any).created_at || '';
+                const db = (b as any).created_at || '';
+                return db.localeCompare(da);
+            })
+            .map(r => ({
+                ...r,
+                kelurahan_nama: kelMap.get(r.kelurahan_id) || '-',
+            })),
+        [data, kelMap]
+    );
 
     // Calculate dynamic stats
     const totalDis = data.reduce((s, r) => s + (r.jumlah || 0), 0);
@@ -69,15 +90,16 @@ export default function DisabilitasPage() {
                 <StatCard label="Cakupan Intervensi" value={`${prosentaseBantuan}%`} icon={Users} gradient="stat-gradient-soft-rose" />
             </div>
 
-            <DataTable columns={columns} data={data} isLoading={isLoading}
+            <DataTable columns={columns} data={enrichedData} isLoading={isLoading}
                 onAdd={() => { setEditRow(null); setModalOpen(true); }} onEdit={(r) => { setEditRow(r); setModalOpen(true); }}
-                onDelete={(r) => setDeleteRow(r)} addLabel="Registrasi Identitas" searchPlaceholder="Cari jenis disabilitas/tahun..." />
+                onDelete={(r) => setDeleteRow(r)} addLabel="Registrasi Identitas" searchPlaceholder="Cari jenis disabilitas/kelurahan..." />
 
             <DisabilitasFormModal
                 open={modalOpen} onClose={() => { setModalOpen(false); setEditRow(null); }} onSubmit={handleSubmit}
                 editRow={editRow} kelurahanOptions={kelurahanOptions} isSubmitting={isSubmitting} />
 
-            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting} />
+            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting}
+                message={deleteRow ? `Hapus data disabilitas "${deleteRow.jenis_disabilitas}" tahun ${deleteRow.tahun}?` : undefined} />
         </div>
     );
 }

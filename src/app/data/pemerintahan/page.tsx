@@ -108,12 +108,16 @@ const LEMBAGA_ICON_MAP: Record<string, string> = {
 };
 
 // Storage URL builder
-const STORAGE_URL = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_URL || '';
+const STORAGE_URL = (
+    process.env.NEXT_PUBLIC_SUPABASE_STORAGE_URL ||
+    (process.env.NEXT_PUBLIC_SUPABASE_URL ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public` : '')
+);
 function buildStorageUrl(path: string | null | undefined, bucket: string): string | null {
     if (!path) return null;
     // Already a full URL
     if (path.startsWith('http')) return path;
     // Relative path in bucket
+    if (!STORAGE_URL) return null;
     return `${STORAGE_URL}/${bucket}/${path}`;
 }
 
@@ -144,12 +148,13 @@ function ProfilSection({ tenant, kelurahans, selectedKelurahan, profiles, organi
 
     const currentKelurahan = selectedKelurahan ? kelurahans.find((k) => k.id === selectedKelurahan) : null;
 
-    // Find Profile
-    // If selectedKelurahan is set, find profile with that kelurahan_id
-    // If not set (Kecamatan), find profile with kelurahan_id IS NULL (or use fallback)
-    const currentProfile = selectedKelurahan
-        ? profiles.find((p) => p.kelurahan_id === selectedKelurahan)
-        : profiles.find((p) => p.kelurahan_id === null);
+    // Find Profile — prefer latest tahun, and among same kelurahan prefer one with peta_wilayah
+    const candidateProfiles = selectedKelurahan
+        ? profiles.filter((p) => p.kelurahan_id === selectedKelurahan)
+        : profiles.filter((p) => p.kelurahan_id === null);
+    // Sort by tahun desc, then pick first with peta_wilayah, else just pick latest
+    const sortedCandidates = [...candidateProfiles].sort((a, b) => b.tahun - a.tahun);
+    const currentProfile = sortedCandidates.find((p) => !!p.peta_wilayah) ?? sortedCandidates[0] ?? null;
 
     // Filter Organisasi for current context
     const currentOrganisasi = organisasi.filter((o) =>
@@ -1240,6 +1245,7 @@ function PemerintahanContent() {
         if (!tenant) return;
         setLoading(true);
         const supabase = createClient();
+        const sid = supabase.schema('sidakota'); // all gov_ and ref_ tables live in sidakota schema
         const tid = tenant.id;
 
         try {
@@ -1256,27 +1262,27 @@ function PemerintahanContent() {
                 { data: dokumenKtp }, { data: dokumenKia }, { data: dokumenAkta },
                 { data: lem }, { data: prof }, { data: orgData },
             ] = await Promise.all([
-                supabase.from('gov_ref_periode').select('id,tahun,semester,keterangan').order('tahun').order('semester'),
-                supabase.from('gov_fact_populasi_summary').select('id,kelurahan_id,periode_id,jml_penduduk_lk,jml_penduduk_pr,jml_penduduk_total,jml_kk_lk,jml_kk_pr,jml_kk_total').eq('tenant_id', tid),
-                supabase.from('gov_fact_populasi_agama').select('id,kelurahan_id,periode_id,agama_id,jml_lk,jml_pr,total').eq('tenant_id', tid),
-                supabase.from('ref_agama').select('id,nama_agama').order('id'),
-                supabase.from('gov_fact_populasi_golongan_darah').select('id,kelurahan_id,periode_id,goldar_id,jml_lk,jml_pr,total').eq('tenant_id', tid),
-                supabase.from('ref_golongan_darah').select('id,nama_goldar').order('id'),
-                supabase.from('gov_fact_populasi_pendidikan').select('id,kelurahan_id,periode_id,pendidikan_id,jml_lk,jml_pr,total').eq('tenant_id', tid),
-                supabase.from('ref_pendidikan').select('id,jenjang_pendidikan').order('id'),
-                supabase.from('gov_fact_populasi_pekerjaan').select('id,kelurahan_id,periode_id,pekerjaan_id,jml_lk,jml_pr,total').eq('tenant_id', tid),
-                supabase.from('ref_pekerjaan').select('id,jenis_pekerjaan').order('id'),
-                supabase.from('gov_fact_populasi_status_kawin').select('id,kelurahan_id,periode_id,status_kawin_id,jml_lk,jml_pr,total').eq('tenant_id', tid),
-                supabase.from('ref_status_kawin').select('id,status').order('id'),
-                supabase.from('gov_fact_populasi_kelompok_umur').select('id,kelurahan_id,periode_id,kelompok_umur_id,jml_lk,jml_pr,total').eq('tenant_id', tid),
-                supabase.from('ref_kelompok_umur').select('id,rentang_umur').order('id'),
-                supabase.from('gov_fact_populasi_umur_tunggal').select('id,kelurahan_id,periode_id,umur,jml_lk,jml_pr,total').eq('tenant_id', tid),
-                supabase.from('gov_fact_dokumen_ktp').select('id,kelurahan_id,periode_id,wajib_ktp_lk,wajib_ktp_pr,wajib_ktp_total,punya_ktp_lk,punya_ktp_pr,punya_ktp_total').eq('tenant_id', tid),
-                supabase.from('gov_fact_dokumen_kia').select('id,kelurahan_id,periode_id,wajib_kia_lk,wajib_kia_pr,wajib_kia_total,punya_kia_lk,punya_kia_pr,punya_kia_total').eq('tenant_id', tid),
-                supabase.from('gov_fact_dokumen_akta_lahir').select('id,kelurahan_id,periode_id,penduduk_0_18_lk,penduduk_0_18_pr,penduduk_0_18_total,punya_akta_lk,punya_akta_pr,punya_akta_total').eq('tenant_id', tid),
-                supabase.from('gov_institutions').select('*').eq('tenant_id', tid).order('jenis').order('nama'),
-                supabase.from('gov_profiles').select('*').eq('tenant_id', tid),
-                supabase.from('gov_organisasi').select('*').eq('tenant_id', tid).eq('is_active', true).order('urutan').order('id'),
+                sid.from('gov_ref_periode').select('id,tahun,semester,keterangan').order('tahun').order('semester'),
+                sid.from('gov_fact_populasi_summary').select('id,kelurahan_id,periode_id,jml_penduduk_lk,jml_penduduk_pr,jml_penduduk_total,jml_kk_lk,jml_kk_pr,jml_kk_total').eq('tenant_id', tid),
+                sid.from('gov_fact_populasi_agama').select('id,kelurahan_id,periode_id,agama_id,jml_lk,jml_pr,total').eq('tenant_id', tid),
+                sid.from('ref_agama').select('id,nama_agama').order('id'),
+                sid.from('gov_fact_populasi_golongan_darah').select('id,kelurahan_id,periode_id,goldar_id,jml_lk,jml_pr,total').eq('tenant_id', tid),
+                sid.from('ref_golongan_darah').select('id,nama_goldar').order('id'),
+                sid.from('gov_fact_populasi_pendidikan').select('id,kelurahan_id,periode_id,pendidikan_id,jml_lk,jml_pr,total').eq('tenant_id', tid),
+                sid.from('ref_pendidikan').select('id,jenjang_pendidikan').order('id'),
+                sid.from('gov_fact_populasi_pekerjaan').select('id,kelurahan_id,periode_id,pekerjaan_id,jml_lk,jml_pr,total').eq('tenant_id', tid),
+                sid.from('ref_pekerjaan').select('id,jenis_pekerjaan').order('id'),
+                sid.from('gov_fact_populasi_status_kawin').select('id,kelurahan_id,periode_id,status_kawin_id,jml_lk,jml_pr,total').eq('tenant_id', tid),
+                sid.from('ref_status_kawin').select('id,status').order('id'),
+                sid.from('gov_fact_populasi_kelompok_umur').select('id,kelurahan_id,periode_id,kelompok_umur_id,jml_lk,jml_pr,total').eq('tenant_id', tid),
+                sid.from('ref_kelompok_umur').select('id,rentang_umur').order('id'),
+                sid.from('gov_fact_populasi_umur_tunggal').select('id,kelurahan_id,periode_id,umur,jml_lk,jml_pr,total').eq('tenant_id', tid),
+                sid.from('gov_fact_dokumen_ktp').select('id,kelurahan_id,periode_id,wajib_ktp_lk,wajib_ktp_pr,wajib_ktp_total,punya_ktp_lk,punya_ktp_pr,punya_ktp_total').eq('tenant_id', tid),
+                sid.from('gov_fact_dokumen_kia').select('id,kelurahan_id,periode_id,wajib_kia_lk,wajib_kia_pr,wajib_kia_total,punya_kia_lk,punya_kia_pr,punya_kia_total').eq('tenant_id', tid),
+                sid.from('gov_fact_dokumen_akta_lahir').select('id,kelurahan_id,periode_id,penduduk_0_18_lk,penduduk_0_18_pr,penduduk_0_18_total,punya_akta_lk,punya_akta_pr,punya_akta_total').eq('tenant_id', tid),
+                sid.from('gov_institutions').select('*').eq('tenant_id', tid).order('jenis').order('nama'),
+                sid.from('gov_profiles').select('*').eq('tenant_id', tid).order('tahun', { ascending: false }),
+                sid.from('gov_organisasi').select('*').eq('tenant_id', tid).eq('is_active', true).order('urutan').order('id'),
             ]);
 
             // Normalize ref tables to {id, nama}
@@ -1333,7 +1339,7 @@ function PemerintahanContent() {
     return (
         <div className="min-h-screen bg-[#f8fafc]">
             {/* Header */}
-            <header className="relative overflow-hidden text-white bg-digital-batik">
+            <header className="relative overflow-x-clip text-white bg-digital-batik">
                 <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-cyan-500/10 to-transparent pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-[#f8fafc] to-transparent z-10" />
 

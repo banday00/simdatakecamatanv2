@@ -93,12 +93,12 @@ function Toast({ message, type, onClose }: { message: string; type: "success" | 
 /* ── Main Page ── */
 
 export default function ProfilPage() {
-    const supabase = createClient();
+    const [supabase] = useState(() => createClient());
     const { tenant, kelurahans } = useTenant();
     const { profile } = useAuth();
 
     const isKelurahanAdmin = profile?.role === "admin_kelurahan" && !!profile?.kelurahan_id;
-    const filterKelurahanId = isKelurahanAdmin ? profile.kelurahan_id : null;
+    const filterKelurahanId = isKelurahanAdmin ? (profile?.kelurahan_id ?? null) : null;
 
     // Tabs — admin_kelurahan only sees "kelurahan" tab
     const [activeTab, setActiveTab] = useState<TabType>(isKelurahanAdmin ? "kelurahan" : "kecamatan");
@@ -123,7 +123,7 @@ export default function ProfilPage() {
         setIsLoading(true);
         try {
             // Kecamatan profiles: kelurahan_id IS NULL
-            const { data: kecData } = await supabase
+            const { data: kecData, error: kecError } = await supabase
                 .schema("sidakota")
                 .from("gov_profiles")
                 .select("*")
@@ -131,6 +131,7 @@ export default function ProfilPage() {
                 .is("kelurahan_id", null)
                 .order("tahun", { ascending: false });
 
+            if (kecError) console.error("[ProfilPage] fetch kecamatan error:", kecError);
             setKecamatanData((kecData as ProfilRow[]) || []);
 
             // Kelurahan profiles: kelurahan_id IS NOT NULL
@@ -146,11 +147,12 @@ export default function ProfilPage() {
                 kelQuery = kelQuery.eq("kelurahan_id", filterKelurahanId);
             }
 
-            const { data: kelData } = await kelQuery;
+            const { data: kelData, error: kelError } = await kelQuery;
+            if (kelError) console.error("[ProfilPage] fetch kelurahan error:", kelError);
             setKelurahanData((kelData as ProfilRow[]) || []);
 
             // Fetch leaders from gov_organisasi (urutan=1)
-            const { data: orgData } = await supabase
+            const { data: orgData, error: orgError } = await supabase
                 .schema("sidakota")
                 .from("gov_organisasi")
                 .select("kelurahan_id, nama_pejabat, nip, foto, jabatan")
@@ -158,11 +160,15 @@ export default function ProfilPage() {
                 .eq("urutan", 1)
                 .eq("is_active", true);
 
+            if (orgError) console.error("[ProfilPage] fetch leaders error:", orgError);
             setLeaders((orgData as OrgLeader[]) || []);
+        } catch (err) {
+            console.error("[ProfilPage] fetchData unexpected error:", err);
         } finally {
             setIsLoading(false);
         }
-    }, [tenant?.id, filterKelurahanId, supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tenant?.id, filterKelurahanId]);
 
     useEffect(() => {
         fetchData();
@@ -171,38 +177,60 @@ export default function ProfilPage() {
     // CRUD operations
     async function handleCreate(formData: ProfilForm) {
         if (!tenant?.id) return;
+
+        // Determine kelurahan_id safely:
+        // - For kecamatan tab: always null
+        // - For admin_kelurahan: always use their own kelurahan_id
+        // - Otherwise: use the selected value from the form
+        let resolvedKelurahanId: string | null = null;
+        if (activeTab === "kelurahan") {
+            resolvedKelurahanId = (filterKelurahanId ?? formData.kelurahan_id) || null;
+        }
+
         const payload: Record<string, unknown> = {
             tenant_id: tenant.id,
-            kelurahan_id: formData.kelurahan_id || null,
+            kelurahan_id: resolvedKelurahanId,
             tahun: Number(formData.tahun),
             visi: formData.visi || null,
             misi: formData.misi || null,
             tentang_wilayah: formData.tentang_wilayah || null,
             peta_wilayah: formData.peta_wilayah || null,
         };
-        // Auto-inject for admin_kelurahan
-        if (filterKelurahanId && activeTab === "kelurahan") {
-            payload.kelurahan_id = filterKelurahanId;
-        }
+
         const { error } = await supabase.schema("sidakota").from("gov_profiles").insert(payload);
         if (error) throw error;
     }
 
     async function handleUpdate(id: string, formData: ProfilForm) {
+        if (!tenant?.id) return;
+
+        // For security, do NOT allow changing kelurahan_id or tenant_id on update.
+        // Only update content fields.
         const payload: Record<string, unknown> = {
-            kelurahan_id: formData.kelurahan_id || null,
             tahun: Number(formData.tahun),
             visi: formData.visi || null,
             misi: formData.misi || null,
             tentang_wilayah: formData.tentang_wilayah || null,
             peta_wilayah: formData.peta_wilayah || null,
         };
-        const { error } = await supabase.schema("sidakota").from("gov_profiles").update(payload).eq("id", id);
+
+        const { error } = await supabase
+            .schema("sidakota")
+            .from("gov_profiles")
+            .update(payload)
+            .eq("id", id)
+            .eq("tenant_id", tenant.id); // Guard: only update own tenant's record
         if (error) throw error;
     }
 
     async function handleDelete(id: string) {
-        const { error } = await supabase.schema("sidakota").from("gov_profiles").delete().eq("id", id);
+        if (!tenant?.id) return;
+        const { error } = await supabase
+            .schema("sidakota")
+            .from("gov_profiles")
+            .delete()
+            .eq("id", id)
+            .eq("tenant_id", tenant.id); // Guard: only delete own tenant's record
         if (error) throw error;
     }
 

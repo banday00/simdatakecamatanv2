@@ -399,7 +399,8 @@ function FormField({ label, required, hint, children }: { label: string; require
 /* ── Main Page Component ── */
 
 export default function OrganisasiPage() {
-    const supabase = createClient();
+    // Stabilize Supabase client for storage upload — createClient() once, not on every render
+    const [supabase] = useState(() => createClient());
     const { tenant, kelurahans } = useTenant();
     const { data, isLoading, create, update, remove, isKelurahanAdmin, filterKelurahanId, fetchData } = useCrud<OrgRow>({
         table: "gov_organisasi",
@@ -412,20 +413,9 @@ export default function OrganisasiPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-    // Restrict kelurahan options for admin_kelurahan
-    const kelurahanOpts = isKelurahanAdmin
-        ? kelurahans.filter((k) => k.id === filterKelurahanId).map((k) => ({ label: k.nama, value: k.id }))
-        : Object.entries(
-            data.reduce((acc, curr) => {
-                if (curr.kelurahan_id) {
-                    acc[curr.kelurahan_id] = true;
-                }
-                return acc;
-            }, {} as Record<string, boolean>)
-        ).length > 0 ? [] : []; // Just a dummy, will override below right away.
-
+    // Kelurahan dropdown options: for kelAdmin show only own kelurahan, else show all + kecamatan option
     const finalKelurahanOpts = isKelurahanAdmin
-        ? kelurahanOpts
+        ? kelurahans.filter((k) => k.id === filterKelurahanId).map((k) => ({ label: k.nama, value: k.id }))
         : [{ label: "— Kecamatan (Umum) —", value: "" }, ...kelurahans.map((k) => ({ label: k.nama, value: k.id }))];
 
 
@@ -483,7 +473,7 @@ export default function OrganisasiPage() {
 
             setModalOpen(false);
             setEditRow(null);
-            fetchData(); // Refresh the datatable
+            await fetchData(); // await so loading state is correct
         } catch (error: any) {
             setToast({ message: `Gagal menyimpan data: ${error.message || 'Silakan coba lagi'}`, type: "error" });
         } finally {
@@ -498,8 +488,8 @@ export default function OrganisasiPage() {
             await remove(deleteRow.id);
             setDeleteRow(null);
             setToast({ message: "Data pejabat berhasil dihapus", type: "success" });
-        } catch {
-            setToast({ message: "Gagal menghapus data", type: "error" });
+        } catch (err: any) {
+            setToast({ message: `Gagal menghapus data: ${err?.message || 'Silakan coba lagi'}`, type: "error" });
         } finally {
             setIsSubmitting(false);
         }

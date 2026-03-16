@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
-    BarChart3, MapPin, Newspaper, Shield, ChevronDown,
+    BarChart3, MapPin, Newspaper, Shield, ChevronDown, HelpCircle,
     Landmark, Heart, GraduationCap, Hammer, HandHeart, ShieldCheck, TrendingUp, LayoutGrid,
+    Car, Home, Users
 } from "lucide-react";
 
 const TOPIK_ITEMS = [
@@ -59,17 +60,55 @@ const TOPIK_ITEMS = [
     },
 ];
 
+const LAYANAN_ITEMS = [
+    {
+        label: "Pajak Kendaraan",
+        href: "/layanan/pajak-kendaraan", // Internal Route
+        icon: Car,
+        desc: "Informasi pajak kendaraan bermotor",
+        color: "from-blue-500 to-indigo-600",
+    },
+    {
+        label: "PBB",
+        href: "/layanan/pbb",
+        icon: Home,
+        desc: "Pajak Bumi dan Bangunan",
+        color: "from-emerald-500 to-teal-600",
+    },
+    {
+        label: "DTSEN",
+        href: "https://dtks.kemensos.go.id/", // Placeholder
+        icon: Users,
+        desc: "Data Terpadu Kesejahteraan Sosial",
+        color: "from-amber-500 to-orange-600",
+    },
+];
+
 export function Navbar() {
     const [topikOpen, setTopikOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    const [layananOpen, setLayananOpen] = useState(false);
+    const dropdownLayananRef = useRef<HTMLDivElement>(null);
+    const timeoutLayananRef = useRef<NodeJS.Timeout | null>(null);
+
     const handleEnter = () => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         setTopikOpen(true);
+        setLayananOpen(false); // Close other menu
     };
     const handleLeave = () => {
         timeoutRef.current = setTimeout(() => setTopikOpen(false), 200);
+    };
+
+    const handleLayananEnter = () => {
+        if (timeoutLayananRef.current) clearTimeout(timeoutLayananRef.current);
+        setLayananOpen(true);
+        setTopikOpen(false); // Close other menu
+    };
+    const handleLayananLeave = () => {
+        timeoutLayananRef.current = setTimeout(() => setLayananOpen(false), 200);
     };
 
     // Close on click outside
@@ -78,13 +117,16 @@ export function Navbar() {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
                 setTopikOpen(false);
             }
+            if (dropdownLayananRef.current && !dropdownLayananRef.current.contains(e.target as Node)) {
+                setLayananOpen(false);
+            }
         };
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, []);
 
     return (
-        <nav className="relative z-20 flex items-center justify-between px-6 py-5 max-w-7xl mx-auto">
+        <nav className="relative z-50 flex items-center justify-between px-6 py-5 max-w-7xl mx-auto">
             <div className="flex items-center gap-3">
                 <Link href="/" className="flex items-center gap-3 group">
                     <img
@@ -94,10 +136,10 @@ export function Navbar() {
                     />
                     <div>
                         <h1 className="text-lg font-extrabold tracking-tight leading-tight text-white group-hover:text-cyan-100 transition-colors">
-                            SIDAKOTA
+                            SIPADU KECAMATAN
                         </h1>
-                        <p className="text-[10px] font-medium text-cyan-200 uppercase tracking-[0.2em] drop-shadow-sm">
-                            Smart City Dashboard
+                        <p className="text-[9px] font-medium text-cyan-200 uppercase tracking-[0.15em] drop-shadow-sm">
+                            Sistem Pengelolaan Data Terpadu
                         </p>
                     </div>
                 </Link>
@@ -165,17 +207,95 @@ export function Navbar() {
                     </div>
                 </div>
 
-                <Link
+                {/* ─── Layanan Data Mega Menu ─── */}
+                <div
+                    ref={dropdownLayananRef}
+                    className="relative hidden sm:block"
+                    onMouseEnter={handleLayananEnter}
+                    onMouseLeave={handleLayananLeave}
+                >
+                    <button
+                        onClick={() => {
+                            setLayananOpen(o => !o);
+                            setTopikOpen(false);
+                        }}
+                        className={`flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg transition-all border ${layananOpen
+                            ? "text-white bg-white/15 border-white/20"
+                            : "text-slate-200 hover:text-white hover:bg-white/10 border-transparent hover:border-white/10"
+                            }`}
+                    >
+                        <BarChart3 className="w-4 h-4" />
+                        Layanan Data
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${layananOpen ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {/* Mega Menu Dropdown */}
+                    <div
+                        className={`absolute right-0 top-full mt-3 w-[520px] rounded-2xl overflow-hidden transition-all duration-200 origin-top-right ${layananOpen
+                            ? "opacity-100 scale-100 pointer-events-auto"
+                            : "opacity-0 scale-95 pointer-events-none"
+                            }`}
+                        style={{ zIndex: 50 }}
+                    >
+                        {/* Glassy backdrop */}
+                        <div className="bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/40 p-2">
+                            <div className="px-4 pt-3 pb-2 flex items-center gap-2">
+                                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Layanan Eksternal</span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-md">{LAYANAN_ITEMS.length} Layanan</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1.5 p-1.5">
+                                {LAYANAN_ITEMS.map((item) => {
+                                    const Icon = item.icon;
+                                    const isExternal = item.href.startsWith("http");
+                                    const Component = isExternal ? "a" : Link;
+                                    const extraProps = isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {};
+                                    
+                                    return (
+                                        <Component
+                                            key={item.href}
+                                            href={item.href}
+                                            {...extraProps}
+                                            onClick={() => setLayananOpen(false)}
+                                            className="group flex items-start gap-3 p-3.5 rounded-xl hover:bg-white/8 transition-all"
+                                        >
+                                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shrink-0 shadow-lg group-hover:scale-110 transition-transform`}>
+                                                <Icon className="w-5 h-5 text-white" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-bold text-white group-hover:text-emerald-200 transition-colors leading-tight">
+                                                    {item.label}
+                                                </p>
+                                                <p className="text-[11px] text-slate-400 leading-snug mt-0.5">
+                                                    {item.desc}
+                                                </p>
+                                            </div>
+                                        </Component>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                {/* <Link
                     href="/peta"
                     className="hidden sm:flex items-center gap-1.5 px-4 py-2 text-sm text-slate-200 hover:text-white rounded-lg hover:bg-white/10 transition-all border border-transparent hover:border-white/10"
                 >
                     <MapPin className="w-4 h-4" /> Peta
-                </Link>
-                <Link
+                </Link> */}
+                {/* <Link
                     href="/berita"
                     className="hidden sm:flex items-center gap-1.5 px-4 py-2 text-sm text-slate-200 hover:text-white rounded-lg hover:bg-white/10 transition-all border border-transparent hover:border-white/10"
                 >
                     <Newspaper className="w-4 h-4" /> Berita
+                </Link> */}
+                <Link
+                    href="/faq"
+                    className="hidden sm:flex items-center gap-1.5 px-4 py-2 text-sm text-slate-200 hover:text-white rounded-lg hover:bg-white/10 transition-all border border-transparent hover:border-white/10"
+                >
+                    <HelpCircle className="w-4 h-4" /> FAQ
                 </Link>
                 <Link
                     href="/login"

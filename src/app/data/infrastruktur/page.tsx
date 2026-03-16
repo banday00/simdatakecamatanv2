@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTenant } from "@/lib/tenant/context";
 import { createClient } from "@/lib/supabase/client";
 import { Navbar } from "@/components/ui/navbar";
+import { Footer } from "@/components/ui/footer";
 import type { Kelurahan } from "@/types";
 import {
     ChevronLeft, TrendingUp, MapPin, Hammer, CheckCircle, Clock, Banknote,
@@ -27,25 +28,7 @@ const THEME = {
 
 const CHART_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4", "#f97316", "#14b8a6", "#ec4899", "#84cc16"];
 
-function StatCard({ label, value, icon: Icon, color = "indigo", subtitle }: { label: string; value: string | number; icon: any; color?: string; subtitle?: string }) {
-    return (
-        <div className="group bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden relative flex flex-col justify-center min-h-[130px]">
-            <div className={`absolute top-0 left-0 w-full h-1.5 bg-${color}-500`} />
-            <div className="flex items-center gap-4">
-                <div className={`p-4 rounded-2xl bg-${color}-50 text-${color}-600`}>
-                    <Icon className="w-7 h-7" />
-                </div>
-                <div className="min-w-0 flex-1">
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1 mt-1">{label}</p>
-                    <div className="flex items-baseline gap-2">
-                        <h4 className="text-3xl font-black text-slate-800 truncate leading-tight">{value}</h4>
-                        {subtitle && <span className="text-xs text-slate-500 font-semibold">{subtitle}</span>}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
+// StatCard removed — using ekonomi-style inline cards directly in each section
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT: SANITASI & LINGKUNGAN
@@ -59,7 +42,12 @@ function SanitasiSection({ sanitation, kelurahans, selectedKelurahan }: { sanita
     const avgAir = latestData.length ? (latestData.reduce((s, r) => s + (r.akses_air_bersih_persen || 0), 0) / latestData.length).toFixed(1) : "0";
     const avgSanitasi = latestData.length ? (latestData.reduce((s, r) => s + (r.akses_sanitasi_persen || 0), 0) / latestData.length).toFixed(1) : "0";
     const totalTPS = latestData.reduce((s, r) => s + (r.tps_jumlah || 0), 0);
-    const totalRTH = latestData.reduce((s, r) => s + (r.ruang_terbuka_hijau_ha || 0), 0);
+    const totalRumahKumuh = latestData.reduce((s, r) => s + (r.rumah_kumuh || 0), 0);
+
+    const [page, setPage] = useState(1);
+    const limit = 10;
+    const totalPages = Math.ceil(latestData.length / limit);
+    const paginatedTable = latestData.slice((page - 1) * limit, page * limit);
 
     const chartData = kelurahans.map(k => {
         const d = latestData.find(x => x.kelurahan_id === k.id);
@@ -68,11 +56,22 @@ function SanitasiSection({ sanitation, kelurahans, selectedKelurahan }: { sanita
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Akses Air Bersih" value={`${avgAir}%`} icon={Droplets} color="blue" />
-                <StatCard label="Sanitasi Layak" value={`${avgSanitasi}%`} icon={Activity} color="emerald" />
-                <StatCard label="Total TPS" value={totalTPS} icon={Trash2} color="amber" />
-                <StatCard label="Ruang Terbuka Hijau" value={`${totalRTH.toFixed(1)} ha`} icon={Trees} color="green" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                    { label: 'Akses Air Bersih', value: `${avgAir}%`, sub: `Tahun ${latestYear}`, icon: Droplets, color: 'bg-blue-50 text-blue-600', border: 'border-blue-100' },
+                    { label: 'Sanitasi Layak', value: `${avgSanitasi}%`, sub: `Tahun ${latestYear}`, icon: Activity, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
+                    { label: 'Total TPS', value: totalTPS, sub: `${latestData.length} kelurahan`, icon: Trash2, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
+                    { label: 'Rumah Kumuh', value: totalRumahKumuh, sub: 'Unit teridentifikasi', icon: Factory, color: 'bg-rose-50 text-rose-600', border: 'border-rose-100' },
+                ].map((item) => (
+                    <div key={item.label} className={`bg-white p-4 rounded-2xl border ${item.border} shadow-sm hover:shadow-md transition-all`}>
+                        <div className={`inline-flex p-2 rounded-xl ${item.color} mb-3`}>
+                            <item.icon className="w-4 h-4" />
+                        </div>
+                        <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{item.label}</p>
+                        <h4 className="text-xl font-extrabold text-slate-800 mt-0.5">{item.value}</h4>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{item.sub}</p>
+                    </div>
+                ))}
             </div>
             <div className="grid lg:grid-cols-2 gap-6">
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
@@ -111,23 +110,34 @@ function SanitasiSection({ sanitation, kelurahans, selectedKelurahan }: { sanita
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100 font-semibold">
-                            <tr><th className="px-6 py-4">Wilayah</th><th className="px-6 py-4">Tahun</th><th className="px-6 py-4">Air Bersih (%)</th><th className="px-6 py-4">Sanitasi (%)</th><th className="px-6 py-4">TPS</th><th className="px-6 py-4">RTH (ha)</th><th className="px-6 py-4">Kumuh (ha)</th></tr>
+                            <tr><th className="px-6 py-4">Wilayah</th><th className="px-6 py-4">Tahun</th><th className="px-6 py-4">Air Bersih (%)</th><th className="px-6 py-4">Sanitasi (%)</th><th className="px-6 py-4">TPS</th><th className="px-6 py-4">Rumah Kumuh</th></tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {latestData.map((row, i) => (
+                            {paginatedTable.map((row, i) => (
                                 <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="px-6 py-4 font-semibold text-slate-800">{kelurahans.find(k => k.id === row.kelurahan_id)?.nama}</td>
                                     <td className="px-6 py-4 text-slate-600">{row.tahun}</td>
-                                    <td className="px-6 py-4 font-bold text-emerald-600">{row.akses_air_bersih_persen}%</td>
-                                    <td className="px-6 py-4 font-bold text-blue-600">{row.akses_sanitasi_persen}%</td>
+                                    <td className="px-6 py-4 font-bold text-emerald-600">{(row.akses_air_bersih_persen || 0).toFixed(1)}%</td>
+                                    <td className="px-6 py-4 font-bold text-blue-600">{(row.akses_sanitasi_persen || 0).toFixed(1)}%</td>
                                     <td className="px-6 py-4 font-medium">{row.tps_jumlah || 0}</td>
-                                    <td className="px-6 py-4 font-medium">{row.ruang_terbuka_hijau_ha || 0}</td>
-                                    <td className="px-6 py-4 font-medium text-rose-600">{row.luas_kawasan_kumuh_ha || 0}</td>
+                                    <td className="px-6 py-4 font-medium text-rose-600">{row.rumah_kumuh || 0}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
+                {totalPages > 1 && (
+                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-sm text-slate-500">
+                            Menampilkan {Math.min(latestData.length, (page - 1) * limit + 1)} - {Math.min(latestData.length, page * limit)} dari {latestData.length}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Sebelumnya</button>
+                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{page} / {totalPages}</span>
+                            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -142,18 +152,28 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
     const latestYear = years[0] || new Date().getFullYear();
     const latestData = filtered.filter(s => s.tahun === latestYear);
 
+    // Normalize legacy status values to standard form values
+    const normalizeStatus = (raw: string | null | undefined): string => {
+        const map: Record<string, string> = {
+            selesai: "Selesai", berjalan: "Proses", terhenti: "Bermasalah",
+            rencana: "Rencana", proses: "Proses", bermasalah: "Bermasalah",
+        };
+        if (!raw) return "Rencana";
+        return map[raw.toLowerCase()] || raw;
+    };
+
     const totalProyek = latestData.length;
-    const selesai = latestData.filter(s => s.status === "Selesai" || s.progress_persen === 100).length;
-    const proses = latestData.filter(s => s.status === "Proses" || (s.progress_persen < 100 && s.progress_persen > 0)).length;
+    const selesai = latestData.filter(s => normalizeStatus(s.status) === "Selesai").length;
+    const proses = latestData.filter(s => normalizeStatus(s.status) === "Proses").length;
     const totalAnggaran = latestData.reduce((s, r) => s + (r.anggaran || 0), 0);
     const [page, setPage] = useState(1);
     const limit = 10;
     const paginationData = latestData.slice((page - 1) * limit, page * limit);
     const totalPages = Math.ceil(totalProyek / limit);
 
-    const jenisMap = new Map<string, number>();
-    latestData.forEach(d => { const key = d.jenis || "Lainnya"; jenisMap.set(key, (jenisMap.get(key) || 0) + 1); });
-    const barData = Array.from(jenisMap.entries()).map(([name, jumlah]) => ({ name, jumlah })).sort((a, b) => b.jumlah - a.jumlah);
+    const statusMap = new Map<string, number>();
+    latestData.forEach(d => { const key = normalizeStatus(d.status); statusMap.set(key, (statusMap.get(key) || 0) + 1); });
+    const barData = Array.from(statusMap.entries()).map(([name, jumlah]) => ({ name, jumlah })).sort((a, b) => b.jumlah - a.jumlah);
 
     const danaMap = new Map<string, number>();
     latestData.forEach(d => { const sum = d.sumber_dana || "Lainnya"; danaMap.set(sum, (danaMap.get(sum) || 0) + 1); });
@@ -163,15 +183,26 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Proyek" value={totalProyek} icon={Hammer} color="indigo" />
-                <StatCard label="Selesai" value={selesai} icon={CheckCircle} color="emerald" />
-                <StatCard label="Dalam Proses" value={proses} icon={Clock} color="amber" />
-                <StatCard label="Total Anggaran" value={`Rp ${(totalAnggaran / 1e9).toFixed(1)} M`} icon={Banknote} color="rose" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                    { label: 'Total Proyek', value: totalProyek, sub: `Tahun ${latestYear}`, icon: Hammer, color: 'bg-indigo-50 text-indigo-600', border: 'border-indigo-100' },
+                    { label: 'Selesai', value: selesai, sub: 'Proyek tuntas', icon: CheckCircle, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
+                    { label: 'Dalam Proses', value: proses, sub: 'Tahap konstruksi', icon: Clock, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
+                    { label: 'Total Anggaran', value: `Rp ${(totalAnggaran / 1e9).toFixed(1)} M`, sub: 'Miliar rupiah', icon: Banknote, color: 'bg-rose-50 text-rose-600', border: 'border-rose-100' },
+                ].map((item) => (
+                    <div key={item.label} className={`bg-white p-4 rounded-2xl border ${item.border} shadow-sm hover:shadow-md transition-all`}>
+                        <div className={`inline-flex p-2 rounded-xl ${item.color} mb-3`}>
+                            <item.icon className="w-4 h-4" />
+                        </div>
+                        <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{item.label}</p>
+                        <h4 className="text-xl font-extrabold text-slate-800 mt-0.5">{item.value}</h4>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{item.sub}</p>
+                    </div>
+                ))}
             </div>
             <div className="grid lg:grid-cols-2 gap-6">
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><Hammer className="w-5 h-5 text-indigo-600" /> Distribusi Proyek per Jenis</h3>
+                    <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><Hammer className="w-5 h-5 text-indigo-600" /> Distribusi Proyek per Status</h3>
                     <div className="h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart layout="vertical" data={barData} margin={{ top: 10, right: 30, left: 40, bottom: 5 }}>
@@ -206,28 +237,31 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100 font-semibold">
-                            <tr><th className="px-6 py-4">Nama Proyek</th><th className="px-6 py-4">Kelurahan</th><th className="px-6 py-4 text-center">Jenis</th><th className="px-6 py-4">Anggaran</th><th className="px-6 py-4">Progress</th><th className="px-6 py-4 text-center">Status</th></tr>
+                            <tr><th className="px-6 py-4">Nama Proyek</th><th className="px-6 py-4">Kelurahan</th><th className="px-6 py-4">Sumber Dana</th><th className="px-6 py-4">Anggaran</th><th className="px-6 py-4">Progress</th><th className="px-6 py-4 text-center">Status</th></tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {paginationData.map((row, i) => (
                                 <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="px-6 py-4"><p className="font-bold text-slate-800">{row.nama_proyek}</p><p className="text-xs text-slate-500 mt-1">{row.kontraktor || "-"}</p></td>
-                                    <td className="px-6 py-4"><p className="font-semibold text-slate-700">{kelurahans.find(k => k.id === row.kelurahan_id)?.nama}</p>{row.lokasi && <p className="text-xs text-slate-500 mt-1 flex items-center gap-1"><MapPin className="w-3 h-3" /> {row.lokasi}</p>}</td>
-                                    <td className="px-6 py-4 text-center"><span className="inline-flex px-2 py-1 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100">{row.jenis}</span></td>
+                                    <td className="px-6 py-4"><p className="font-bold text-slate-800">{row.nama_proyek}</p></td>
+                                    <td className="px-6 py-4"><p className="font-semibold text-slate-700">{kelurahans.find(k => k.id === row.kelurahan_id)?.nama}</p></td>
+                                    <td className="px-6 py-4"><span className="inline-flex px-2 py-1 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100">{row.sumber_dana || "-"}</span></td>
                                     <td className="px-6 py-4"><p className="font-bold text-slate-700">Rp {(row.anggaran || 0).toLocaleString("id-ID")}</p>{row.realisasi > 0 && <p className="text-xs text-emerald-600 font-semibold mt-1">Realisasi: Rp {row.realisasi.toLocaleString("id-ID")}</p>}</td>
                                     <td className="px-6 py-4"><div className="flex items-center gap-2"><div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-indigo-500 rounded-full" style={{ width: `${row.progress_persen || 0}%` }} /></div><span className="text-xs font-bold w-8">{row.progress_persen || 0}%</span></div></td>
-                                    <td className="px-6 py-4 text-center"><span className={`inline-flex items-center px-2 py-1 text-xs font-bold rounded-lg ${statusColors[row.status] || "bg-slate-100 text-slate-700"}`}>{row.status}</span></td>
+                                    <td className="px-6 py-4 text-center"><span className={`inline-flex items-center px-2 py-1 text-xs font-bold rounded-lg ${statusColors[normalizeStatus(row.status)] || "bg-slate-100 text-slate-700"}`}>{normalizeStatus(row.status)}</span></td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
                 {totalPages > 1 && (
-                    <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
-                        <span className="text-sm text-slate-500 font-medium">Halaman <span className="font-bold text-slate-800">{page}</span> dari {totalPages}</span>
-                        <div className="flex gap-2">
-                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 text-sm font-semibold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all">Sebelumnya</button>
-                            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 text-sm font-semibold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all">Selanjutnya</button>
+                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-sm text-slate-500">
+                            Menampilkan {Math.min(latestData.length, (page - 1) * limit + 1)} - {Math.min(latestData.length, page * limit)} dari {latestData.length}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Sebelumnya</button>
+                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{page} / {totalPages}</span>
+                            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
                         </div>
                     </div>
                 )}
@@ -256,7 +290,8 @@ function OlahragaSection({ sports, kelurahans, selectedKelurahan }: { sports: an
 
     const kelMap = new Map<string, { total: number; baik: number }>();
     filtered.forEach(d => {
-        const kelName = kelurahans.find(k => k.id === d.kelurahan_id)?.nama || "Unknown";
+        const kelName = kelurahans.find(k => k.id === d.kelurahan_id)?.nama;
+        if (!kelName) return; // skip records with no matching kelurahan
         const curr = kelMap.get(kelName) || { total: 0, baik: 0 };
         kelMap.set(kelName, { total: curr.total + 1, baik: curr.baik + (d.kondisi === "Baik" ? 1 : 0) });
     });
@@ -265,11 +300,22 @@ function OlahragaSection({ sports, kelurahans, selectedKelurahan }: { sports: an
 
     return (
         <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Fasilitas" value={totalFasilitas} icon={Trophy} color="indigo" />
-                <StatCard label="Kondisi Baik" value={kondisiBaik} icon={CheckCircle} color="emerald" />
-                <StatCard label="Perlu Perbaikan" value={perluPerbaikan} icon={Activity} color="amber" />
-                <StatCard label="Jenis Sarana" value={uniqueTypes} icon={PieChartIcon} color="blue" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                    { label: 'Total Fasilitas', value: totalFasilitas, sub: `${filtered.length} unit terdata`, icon: Trophy, color: 'bg-indigo-50 text-indigo-600', border: 'border-indigo-100' },
+                    { label: 'Kondisi Baik', value: kondisiBaik, sub: 'Layak pakai', icon: CheckCircle, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
+                    { label: 'Perlu Perbaikan', value: perluPerbaikan, sub: 'Rusak ringan / berat', icon: Activity, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
+                    { label: 'Jenis Sarana', value: uniqueTypes, sub: 'Kategori berbeda', icon: PieChartIcon, color: 'bg-blue-50 text-blue-600', border: 'border-blue-100' },
+                ].map((item) => (
+                    <div key={item.label} className={`bg-white p-4 rounded-2xl border ${item.border} shadow-sm hover:shadow-md transition-all`}>
+                        <div className={`inline-flex p-2 rounded-xl ${item.color} mb-3`}>
+                            <item.icon className="w-4 h-4" />
+                        </div>
+                        <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{item.label}</p>
+                        <h4 className="text-xl font-extrabold text-slate-800 mt-0.5">{item.value}</h4>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{item.sub}</p>
+                    </div>
+                ))}
             </div>
             <div className="grid lg:grid-cols-2 gap-6">
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
@@ -316,17 +362,20 @@ function OlahragaSection({ sports, kelurahans, selectedKelurahan }: { sports: an
                             <p className="text-xs text-indigo-600 font-semibold mb-3 tracking-wide uppercase">{f.jenis}</p>
                             <div className="space-y-2 mt-auto text-xs text-slate-500">
                                 <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" /> <span className="truncate">{kelurahans.find(k => k.id === f.kelurahan_id)?.nama}</span></div>
-                                <div className="flex items-center gap-2"><Users className="w-3.5 h-3.5" /> <span className="truncate">{f.pengelola || "Tidak diketahui"}</span></div>
+                                {f.luas > 0 && <div className="flex items-center gap-2"><Activity className="w-3.5 h-3.5" /> <span className="truncate">{Number(f.luas).toLocaleString('id-ID')} m²</span></div>}
                             </div>
                         </div>
                     ))}
                 </div>
                 {totalPages > 1 && (
                     <div className="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-sm text-slate-500 font-medium">Halaman <span className="font-bold text-slate-800">{page}</span> dari {totalPages}</span>
-                        <div className="flex gap-2">
-                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 text-sm font-semibold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all">Sebelumnya</button>
-                            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 text-sm font-semibold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all">Selanjutnya</button>
+                        <span className="text-sm text-slate-500">
+                            Menampilkan {Math.min(filtered.length, (page - 1) * limit + 1)} - {Math.min(filtered.length, page * limit)} dari {filtered.length}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Sebelumnya</button>
+                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{page} / {totalPages}</span>
+                            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
                         </div>
                     </div>
                 )}
@@ -348,9 +397,9 @@ function AnalisisSection({ sanitation, development, sports, kelurahans, selected
         const sanScore = san.akses_sanitasi_persen || 0;
         const devScore = Math.min(devCount * 5, 100);
         const sportScore = Math.min(sportCount * 10, 100);
-        const rthScore = Math.min((san.ruang_terbuka_hijau_ha || 0) * 10, 100);
-        const totalScore = (airScore + sanScore + devScore + sportScore + rthScore) / 5;
-        return { name: k.nama, id: k.id, score: totalScore, air: airScore, sanitasi: sanScore, pembangunan: devScore, olahraga: sportScore, rth: rthScore, rawDev: devCount, rawSport: sportCount };
+        const kumuhPenalty = Math.max(0, 100 - (san.rumah_kumuh || 0) * 10);
+        const totalScore = (airScore + sanScore + devScore + sportScore + kumuhPenalty) / 5;
+        return { name: k.nama, id: k.id, score: totalScore, air: airScore, sanitasi: sanScore, pembangunan: devScore, olahraga: sportScore, kumuh: kumuhPenalty, rawDev: devCount, rawSport: sportCount };
     }).sort((a, b) => b.score - a.score);
     const topPerformer = analysisData.filter(d => d.score > 0).slice(0, 5);
 
@@ -370,6 +419,7 @@ function AnalisisSection({ sanitation, development, sports, kelurahans, selected
                                 <Radar name="Sanitasi" dataKey="sanitasi" stroke="#10b981" fill="#10b981" fillOpacity={0.2} />
                                 <Radar name="Pembangunan" dataKey="pembangunan" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.2} />
                                 <Radar name="Olahraga" dataKey="olahraga" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.2} />
+                                <Radar name="Bebas Kumuh" dataKey="kumuh" stroke="#ef4444" fill="#ef4444" fillOpacity={0.1} />
                                 <Legend wrapperStyle={{ paddingTop: "20px" }} iconType="circle" />
                                 <Tooltip contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} />
                             </RadarChart>
@@ -397,6 +447,40 @@ function AnalisisSection({ sanitation, development, sports, kelurahans, selected
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Catatan Metodologi */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                    <Info className="w-5 h-5 text-slate-400" />
+                    <h4 className="text-sm font-bold text-slate-600">Catatan Metodologi Perhitungan</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs text-slate-500">
+                    <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+                        <p className="font-bold text-blue-700 mb-1">💧 Air Bersih</p>
+                        <p>Langsung dari data survei: <code className="bg-blue-100 px-1 rounded">akses_air_bersih_persen</code> (0–100). Mengacu SDGs Target 6.1.</p>
+                    </div>
+                    <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                        <p className="font-bold text-emerald-700 mb-1">🚰 Sanitasi</p>
+                        <p>Langsung dari data survei: <code className="bg-emerald-100 px-1 rounded">akses_sanitasi_persen</code> (0–100). Mengacu SDGs Target 6.2.</p>
+                    </div>
+                    <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-100">
+                        <p className="font-bold text-amber-700 mb-1">🏗️ Pembangunan</p>
+                        <p>Skor = <code className="bg-amber-100 px-1 rounded">min(jumlah_proyek × 5, 100)</code>. Setiap proyek bernilai 5 poin, maks 100.</p>
+                    </div>
+                    <div className="p-3 bg-violet-50/50 rounded-xl border border-violet-100">
+                        <p className="font-bold text-violet-700 mb-1">🏟️ Olahraga</p>
+                        <p>Skor = <code className="bg-violet-100 px-1 rounded">min(jumlah_fasilitas × 10, 100)</code>. Setiap fasilitas bernilai 10 poin, maks 100.</p>
+                    </div>
+                    <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-100">
+                        <p className="font-bold text-rose-700 mb-1">🏘️ Bebas Kumuh</p>
+                        <p>Skor = <code className="bg-rose-100 px-1 rounded">max(0, 100 − rumah_kumuh × 10)</code>. Semakin sedikit rumah kumuh, skor semakin tinggi.</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                        <p className="font-bold text-slate-700 mb-1">📊 Skor Akhir</p>
+                        <p>Rata-rata dari 5 dimensi di atas. Bukan indeks resmi BPS — hanya untuk perbandingan relatif antar kelurahan.</p>
                     </div>
                 </div>
             </div>
@@ -454,7 +538,7 @@ export default function DataInfrastrukturPage() {
     return (
         <div className="min-h-screen bg-[#f8fafc]">
             {/* Header */}
-            <header className="relative overflow-hidden text-white bg-digital-batik">
+            <header className="relative overflow-x-clip text-white bg-digital-batik">
                 <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-cyan-500/10 to-transparent pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-[#f8fafc] to-transparent z-10" />
 
@@ -523,11 +607,7 @@ export default function DataInfrastrukturPage() {
                 </div>
             </main>
 
-            <footer className="bg-white border-t border-slate-200 py-8 mt-auto flex-shrink-0 shrink-0">
-                <div className="max-w-7xl mx-auto px-6 text-center text-slate-500 text-sm">
-                    <p>&copy; 2024 Command Center Kota Bogor. Hak Cipta Dilindungi.</p>
-                </div>
-            </footer>
+            <Footer />
         </div>
     );
 }

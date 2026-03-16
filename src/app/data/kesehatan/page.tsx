@@ -198,7 +198,7 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
                                         {styleInfo.icon}
                                     </div>
                                     <span className="inline-flex px-2 py-1 rounded-md text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-100 uppercase tracking-widest">
-                                        {row.status_operasional || "Aktif"}
+                                        {row.jenis || "Faskes"}
                                     </span>
                                 </div>
                                 <h4 className="font-bold text-slate-800 text-sm mb-1 line-clamp-1">{row.nama}</h4>
@@ -597,16 +597,18 @@ function MaternalSection({ data, kelurahans, selectedKelurahan }: { data: any[];
     const trendData = useMemo(() => {
         const aggs: Record<number, any> = {};
         selectedData.forEach(d => {
-            if (!aggs[d.tahun]) aggs[d.tahun] = { tahun: d.tahun, ibu_hamil: 0, ibu_bersalin: 0, bayi_lahir_hidup: 0, kb_aktif: 0 };
+            if (!aggs[d.tahun]) aggs[d.tahun] = { tahun: d.tahun, ibu_hamil: 0, ibu_bersalin: 0, bayi_lahir_hidup: 0, kematian_ibu: 0, kematian_bayi: 0, kb_aktif: 0 };
             aggs[d.tahun].ibu_hamil += (d.ibu_hamil || 0);
             aggs[d.tahun].ibu_bersalin += (d.ibu_bersalin || 0);
             aggs[d.tahun].bayi_lahir_hidup += (d.bayi_lahir_hidup || 0);
+            aggs[d.tahun].kematian_ibu += (d.kematian_ibu || 0);
+            aggs[d.tahun].kematian_bayi += (d.kematian_bayi || 0);
             aggs[d.tahun].kb_aktif += (d.kb_aktif || 0);
         });
         return Object.values(aggs).sort((a, b) => a.tahun - b.tahun);
     }, [selectedData]);
 
-    const latestAgg = trendData[trendData.length - 1] || { ibu_hamil: 0, ibu_bersalin: 0, bayi_lahir_hidup: 0, kb_aktif: 0 };
+    const latestAgg = trendData[trendData.length - 1] || { ibu_hamil: 0, ibu_bersalin: 0, bayi_lahir_hidup: 0, kematian_ibu: 0, kematian_bayi: 0, kb_aktif: 0 };
 
     return (
         <section className="space-y-6">
@@ -620,17 +622,19 @@ function MaternalSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
                     { label: "Ibu Hamil", value: latestAgg.ibu_hamil, icon: "🤰", bg: "bg-blue-50" },
                     { label: "Ibu Bersalin", value: latestAgg.ibu_bersalin, icon: "🤱", bg: "bg-indigo-50" },
                     { label: "Bayi Lahir Hidup", value: latestAgg.bayi_lahir_hidup, icon: "👼", bg: "bg-blue-50" },
                     { label: "Akseptor KB Aktif", value: latestAgg.kb_aktif, icon: "💊", bg: "bg-emerald-50" },
+                    { label: "Kematian Ibu", value: latestAgg.kematian_ibu, icon: "⚠️", bg: latestAgg.kematian_ibu > 0 ? "bg-red-50" : "bg-slate-50" },
+                    { label: "Kematian Bayi", value: latestAgg.kematian_bayi, icon: "⚠️", bg: latestAgg.kematian_bayi > 0 ? "bg-red-50" : "bg-slate-50" },
                 ].map((stat, i) => (
                     <div key={i} className={`p-6 rounded-2xl border border-slate-100 shadow-sm ${stat.bg} relative overflow-hidden group`}>
                         <div className="absolute -right-4 -top-4 text-6xl opacity-20 transform group-hover:scale-110 transition-transform">{stat.icon}</div>
                         <div className="relative z-10">
-                            <span className="text-3xl font-black text-slate-800 block mb-1">{stat.value.toLocaleString("id-ID")}</span>
+                            <span className={`text-3xl font-black block mb-1 ${stat.label.startsWith("Kematian") && stat.value > 0 ? "text-red-600" : "text-slate-800"}`}>{stat.value.toLocaleString("id-ID")}</span>
                             <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">{stat.label}</span>
                         </div>
                     </div>
@@ -686,10 +690,10 @@ export default function KesehatanPage() {
 
         try {
             const [faskesRes, stuntingRes, posyanduRes, maternalRes] = await Promise.all([
-                supabase.from("health_facilities").select("*").eq("tenant_id", tid),
-                supabase.from("health_stunting").select("*").eq("tenant_id", tid),
-                supabase.from("health_posyandu").select("*").eq("tenant_id", tid),
-                supabase.from("health_maternal").select("*").eq("tenant_id", tid)
+                supabase.schema("sidakota").from("health_facilities").select("*").eq("tenant_id", tid),
+                supabase.schema("sidakota").from("health_stunting").select("*").eq("tenant_id", tid),
+                supabase.schema("sidakota").from("health_posyandu").select("*").eq("tenant_id", tid),
+                supabase.schema("sidakota").from("health_maternal").select("*").eq("tenant_id", tid)
             ]);
 
             setData({
@@ -719,7 +723,7 @@ export default function KesehatanPage() {
     return (
         <div className="min-h-screen bg-[#f8fafc]">
             {/* Header */}
-            <header className="relative overflow-hidden text-white bg-digital-batik">
+            <header className="relative overflow-x-clip text-white bg-digital-batik">
                 <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-cyan-500/10 to-transparent pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-[#f8fafc] to-transparent z-10" />
 
@@ -798,7 +802,7 @@ export default function KesehatanPage() {
                 {(loading || isLoading) ? (
                     <div className="py-24 text-center">
                         <Activity className="w-10 h-10 mx-auto animate-spin text-indigo-400 mb-4" />
-                        <p className="text-slate-500 font-medium">Mempindigos data kesehatan...</p>
+                        <p className="text-slate-500 font-medium">Memuat data kesehatan...</p>
                     </div>
                 ) : (
                     <div className="animate-fade-in">

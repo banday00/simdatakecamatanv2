@@ -12,14 +12,18 @@ import { Hospital, AlertTriangle, Heart, Stethoscope, X, Loader2, Save, MapPin, 
 
 type FasilitasRow = Record<string, unknown> & {
     id: string;
+    kelurahan_id?: string;
     nama: string;
     jenis: string;
-    alamat: string;
-    kapasitas: number;
-    status_operasional: string;
+    alamat: string | null;
+    penanggung_jawab: string | null;
+    jumlah_tenaga_medis: number | null;
+    koordinat_lat: number | null;
+    koordinat_lng: number | null;
 };
 
 const columns: Column<FasilitasRow>[] = [
+    { key: "kelurahan_nama", label: "Kelurahan", sortable: true },
     { key: "nama", label: "Nama Fasilitas", sortable: true },
     {
         key: "jenis",
@@ -32,48 +36,50 @@ const columns: Column<FasilitasRow>[] = [
         ),
     },
     { key: "alamat", label: "Alamat" },
+    { key: "penanggung_jawab", label: "Penanggung Jawab" },
     {
-        key: "kapasitas",
-        label: "Kapasitas",
+        key: "jumlah_tenaga_medis",
+        label: "Tenaga Medis",
         sortable: true,
         render: (val) => <span className="font-medium">{Number(val ?? 0).toLocaleString("id-ID")}</span>,
-    },
-    {
-        key: "status_operasional",
-        label: "Status",
-        render: (val) => (
-            <span
-                className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${val === "beroperasi" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
-                    }`}
-            >
-                {String(val ?? "beroperasi")}
-            </span>
-        ),
     },
 ];
 
 const jenisOptions = [
     { label: "Rumah Sakit", value: "Rumah Sakit" },
     { label: "Puskesmas", value: "Puskesmas" },
+    { label: "Puskesmas Pembantu", value: "Puskesmas Pembantu" },
     { label: "Klinik", value: "Klinik" },
     { label: "Posyandu", value: "Posyandu" },
     { label: "Apotek", value: "Apotek" },
     { label: "Bidan Praktek", value: "Bidan Praktek" },
+    { label: "Praktek Dokter", value: "Praktek Dokter" },
+    { label: "Bidan", value: "Bidan" },
+    { label: "Lainnya", value: "Lainnya" },
 ];
 
 export default function FasilitasKesehatanPage() {
     const { kelurahans } = useTenant();
-    const { data, isLoading, create, update, remove } = useCrud<FasilitasRow>({ table: "health_facilities" });
+    const { data, isLoading, create, update, remove, isKelurahanAdmin, filterKelurahanId } = useCrud<FasilitasRow>({ table: "health_facilities" });
 
     const [modalOpen, setModalOpen] = useState(false);
     const [editRow, setEditRow] = useState<FasilitasRow | null>(null);
     const [deleteRow, setDeleteRow] = useState<FasilitasRow | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const kelurahanOptions = kelurahans.map((k) => ({ label: k.nama, value: k.id }));
+    // Restrict kelurahan options for admin_kelurahan
+    const kelurahanOptions = isKelurahanAdmin
+        ? kelurahans.filter((k) => k.id === filterKelurahanId).map((k) => ({ label: k.nama, value: k.id }))
+        : kelurahans.map((k) => ({ label: k.nama, value: k.id }));
+
+    // Enrich data with kelurahan name for display in table
+    const enrichedData = data.map((row) => ({
+        ...row,
+        kelurahan_nama: kelurahans.find((k) => k.id === row.kelurahan_id)?.nama || "—",
+    }));
 
     const totalFasilitas = data.length;
-    const beroperasi = data.filter((r) => r.status_operasional === "beroperasi").length;
+    const totalTenagaMedis = data.reduce((s, r) => s + (Number(r.jumlah_tenaga_medis) || 0), 0);
     const puskesmas = data.filter((r) => r.jenis === "Puskesmas").length;
     const rs = data.filter((r) => r.jenis === "Rumah Sakit").length;
 
@@ -84,7 +90,10 @@ export default function FasilitasKesehatanPage() {
             else await create(formData);
             setModalOpen(false);
             setEditRow(null);
-        } catch { alert("Gagal menyimpan"); }
+        } catch (err: any) {
+            console.error("[Fasilitas] handleSubmit:", err);
+            alert(`Gagal menyimpan: ${err?.message || 'Silakan coba lagi'}`);
+        }
         finally { setIsSubmitting(false); }
     }
 
@@ -92,7 +101,10 @@ export default function FasilitasKesehatanPage() {
         if (!deleteRow) return;
         setIsSubmitting(true);
         try { await remove(deleteRow.id); setDeleteRow(null); }
-        catch { alert("Gagal menghapus"); }
+        catch (err: any) {
+            console.error("[Fasilitas] handleDelete:", err);
+            alert(`Gagal menghapus: ${err?.message || 'Silakan coba lagi'}`);
+        }
         finally { setIsSubmitting(false); }
     }
 
@@ -110,14 +122,14 @@ export default function FasilitasKesehatanPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard label="Total Fasilitas" value={totalFasilitas} icon={Hospital} gradient="stat-gradient-blue" />
-                <StatCard label="Beroperasi" value={beroperasi} icon={Heart} gradient="stat-gradient-emerald" />
+                <StatCard label="Tenaga Medis" value={totalTenagaMedis} icon={Heart} gradient="stat-gradient-emerald" />
                 <StatCard label="Puskesmas" value={puskesmas} icon={Stethoscope} gradient="stat-gradient-amber" />
                 <StatCard label="Rumah Sakit" value={rs} icon={AlertTriangle} gradient="stat-gradient-rose" />
             </div>
 
             <DataTable
                 columns={columns}
-                data={data}
+                data={enrichedData}
                 isLoading={isLoading}
                 onAdd={() => { setEditRow(null); setModalOpen(true); }}
                 onEdit={(row) => { setEditRow(row); setModalOpen(true); }}
@@ -133,9 +145,14 @@ export default function FasilitasKesehatanPage() {
                 editRow={editRow}
                 isSubmitting={isSubmitting}
                 kelurahanOptions={kelurahanOptions}
+                isKelurahanAdmin={isKelurahanAdmin}
+                filterKelurahanId={filterKelurahanId}
             />
 
-            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting} />
+            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete}
+                title="Hapus Fasilitas"
+                message={`Apakah Anda yakin ingin menghapus "${deleteRow?.nama}"?`}
+                isDeleting={isSubmitting} />
         </div>
     );
 }
@@ -145,7 +162,7 @@ export default function FasilitasKesehatanPage() {
    ═══════════════════════════════════════════════════════ */
 
 function FasilitasFormModal({
-    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions,
+    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions, isKelurahanAdmin, filterKelurahanId,
 }: {
     open: boolean;
     onClose: () => void;
@@ -153,6 +170,8 @@ function FasilitasFormModal({
     editRow: FasilitasRow | null;
     isSubmitting: boolean;
     kelurahanOptions: { label: string; value: string }[];
+    isKelurahanAdmin?: boolean;
+    filterKelurahanId?: string | null;
 }) {
     const isEdit = !!editRow;
 
@@ -161,11 +180,10 @@ function FasilitasFormModal({
         nama: "",
         jenis: "Rumah Sakit",
         alamat: "",
-        telepon: "",
-        kapasitas: 0,
-        jumlah_dokter: 0,
-        jumlah_perawat: 0,
-        status_operasional: "beroperasi",
+        penanggung_jawab: "",
+        jumlah_tenaga_medis: 0,
+        koordinat_lat: "",
+        koordinat_lng: "",
     });
 
     useEffect(() => {
@@ -176,26 +194,24 @@ function FasilitasFormModal({
                 nama: editRow.nama ?? "",
                 jenis: editRow.jenis ?? "Rumah Sakit",
                 alamat: editRow.alamat ?? "",
-                telepon: editRow.telepon ?? "",
-                kapasitas: editRow.kapasitas ?? 0,
-                jumlah_dokter: editRow.jumlah_dokter ?? 0,
-                jumlah_perawat: editRow.jumlah_perawat ?? 0,
-                status_operasional: editRow.status_operasional ?? "beroperasi",
+                penanggung_jawab: editRow.penanggung_jawab ?? "",
+                jumlah_tenaga_medis: editRow.jumlah_tenaga_medis ?? 0,
+                koordinat_lat: editRow.koordinat_lat ?? "",
+                koordinat_lng: editRow.koordinat_lng ?? "",
             });
         } else {
             setForm({
-                kelurahan_id: "",
+                kelurahan_id: (isKelurahanAdmin && filterKelurahanId) ? filterKelurahanId : "",
                 nama: "",
                 jenis: "Rumah Sakit",
                 alamat: "",
-                telepon: "",
-                kapasitas: 0,
-                jumlah_dokter: 0,
-                jumlah_perawat: 0,
-                status_operasional: "beroperasi",
+                penanggung_jawab: "",
+                jumlah_tenaga_medis: 0,
+                koordinat_lat: "",
+                koordinat_lng: "",
             });
         }
-    }, [open, editRow]);
+    }, [open, editRow, isKelurahanAdmin, filterKelurahanId]);
 
     function set(field: string, value: string | number) {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -324,24 +340,24 @@ function FasilitasFormModal({
 
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                            Nomor Telepon
+                                            Penanggung Jawab
                                         </label>
                                         <input
                                             type="text"
-                                            value={String(form.telepon || "")}
-                                            onChange={(e) => set("telepon", e.target.value)}
-                                            placeholder="Contoh: 021-XXXX"
+                                            value={String(form.penanggung_jawab || "")}
+                                            onChange={(e) => set("penanggung_jawab", e.target.value)}
+                                            placeholder="Nama penanggung jawab"
                                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm"
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                            Kapasitas (Orang/Tempat Tidur)
+                                            Jumlah Tenaga Medis
                                         </label>
                                         <input
                                             type="number"
-                                            value={Number(form.kapasitas)}
-                                            onChange={(e) => set("kapasitas", parseInt(e.target.value) || 0)}
+                                            value={Number(form.jumlah_tenaga_medis)}
+                                            onChange={(e) => set("jumlah_tenaga_medis", parseInt(e.target.value) || 0)}
                                             min={0}
                                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm"
                                         />
@@ -349,42 +365,27 @@ function FasilitasFormModal({
 
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                            Jumlah Dokter
+                                            Koordinat Latitude
                                         </label>
                                         <input
-                                            type="number"
-                                            value={Number(form.jumlah_dokter)}
-                                            onChange={(e) => set("jumlah_dokter", parseInt(e.target.value) || 0)}
-                                            min={0}
+                                            type="text"
+                                            value={String(form.koordinat_lat || "")}
+                                            onChange={(e) => set("koordinat_lat", e.target.value)}
+                                            placeholder="Contoh: -6.175392"
                                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm"
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                            Jumlah Perawat
+                                            Koordinat Longitude
                                         </label>
                                         <input
-                                            type="number"
-                                            value={Number(form.jumlah_perawat)}
-                                            onChange={(e) => set("jumlah_perawat", parseInt(e.target.value) || 0)}
-                                            min={0}
+                                            type="text"
+                                            value={String(form.koordinat_lng || "")}
+                                            onChange={(e) => set("koordinat_lng", e.target.value)}
+                                            placeholder="Contoh: 106.827153"
                                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm"
                                         />
-                                    </div>
-
-                                    <div className="sm:col-span-2 mt-2 pt-6 border-t border-gray-100">
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                            Status Operasional <span className="text-red-500">*</span>
-                                        </label>
-                                        <select
-                                            value={String(form.status_operasional)}
-                                            onChange={(e) => set("status_operasional", e.target.value)}
-                                            required
-                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm"
-                                        >
-                                            <option value="beroperasi">🟢 Beroperasi</option>
-                                            <option value="tidak_beroperasi">🔴 Tidak Beroperasi</option>
-                                        </select>
                                     </div>
 
                                 </div>

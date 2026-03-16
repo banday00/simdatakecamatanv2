@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useTenant } from "@/lib/tenant/context";
 import { useCrud } from "@/hooks/use-crud";
@@ -8,7 +8,7 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import { DeleteConfirm } from "@/components/ui/delete-confirm";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
-import { HandHeart, Users, Banknote, BarChart3, X, Loader2, Save, BadgeCheck, Clock, XCircle, HeartHandshake } from "lucide-react";
+import { HandHeart, Users, Banknote, BarChart3, X, Loader2, Save, BadgeCheck, Clock, XCircle, HeartHandshake, MapPin } from "lucide-react";
 
 type Row = Record<string, unknown> & {
     id: string; kelurahan_id: string; tahun: number; bulan: string;
@@ -19,6 +19,7 @@ type Row = Record<string, unknown> & {
 const bulanList = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
 const columns: Column<Row>[] = [
+    { key: "kelurahan_nama" as keyof Row, label: "Kelurahan", sortable: true },
     { key: "tahun", label: "Tahun", sortable: true },
     {
         key: "bulan", label: "Bulan", sortable: true, render: (v) => {
@@ -59,6 +60,26 @@ export default function BantuanSosialPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const kelurahanOptions = kelurahans.map((k) => ({ label: k.nama, value: k.id }));
+    const kelMap = useMemo(() => {
+        const m = new Map<string, string>();
+        kelurahans.forEach(k => m.set(k.id, k.nama));
+        return m;
+    }, [kelurahans]);
+
+    // Enrich data with kelurahan name + sort newest first
+    const enrichedData = useMemo(() =>
+        [...data]
+            .sort((a, b) => {
+                const da = (a as any).created_at || '';
+                const db = (b as any).created_at || '';
+                return db.localeCompare(da);
+            })
+            .map(r => ({
+                ...r,
+                kelurahan_nama: kelMap.get(r.kelurahan_id) || '-',
+            })),
+        [data, kelMap]
+    );
 
     const totalPenerima = data.reduce((s, r) => s + (r.jumlah_penerima || 0), 0);
     const totalAnggaran = data.reduce((s, r) => s + (r.total_anggaran || 0), 0);
@@ -88,15 +109,16 @@ export default function BantuanSosialPage() {
                 <StatCard label="Bantuan Tersalurkan" value={tersalurkan} icon={HandHeart} gradient="stat-gradient-soft-rose" />
             </div>
 
-            <DataTable columns={columns} data={data} isLoading={isLoading}
+            <DataTable columns={columns} data={enrichedData} isLoading={isLoading}
                 onAdd={() => { setEditRow(null); setModalOpen(true); }} onEdit={(r) => { setEditRow(r); setModalOpen(true); }}
-                onDelete={(r) => setDeleteRow(r)} addLabel="Catat Bantuan Baru" searchPlaceholder="Cari jenis bantuan/tahun..." />
+                onDelete={(r) => setDeleteRow(r)} addLabel="Catat Bantuan Baru" searchPlaceholder="Cari jenis bantuan/kelurahan..." />
 
             <BantuanFormModal
                 open={modalOpen} onClose={() => { setModalOpen(false); setEditRow(null); }} onSubmit={handleSubmit}
                 editRow={editRow} kelurahanOptions={kelurahanOptions} isSubmitting={isSubmitting} />
 
-            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting} />
+            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting}
+                message={deleteRow ? `Hapus data bantuan "${deleteRow.jenis_bantuan}" tahun ${deleteRow.tahun} bulan ${bulanList[Number(deleteRow.bulan)] || deleteRow.bulan}?` : undefined} />
         </div>
     );
 }
@@ -168,7 +190,7 @@ function BantuanFormModal({
                 className="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
                 style={{ animation: "modalSlideIn 0.3s ease-out" }}
             >
-                {/* Gradient accent - Blue/Sky/Indigo Theme */}
+                {/* Gradient accent - Blue Theme */}
                 <div className="h-1.5 bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 shrink-0" />
 
                 {/* Header */}
@@ -342,7 +364,7 @@ function BantuanFormModal({
                                                 <input
                                                     type="radio" name="status_penyaluran" className="sr-only" value="Belum"
                                                     checked={form.status_penyaluran === "Belum"}
-                                                    onChange={() => set("status_penyaluran", "Belum")}
+                                                    onChange={() => { set("status_penyaluran", "Belum"); set("pct_tersalurkan", 0); }}
                                                 />
                                                 <XCircle className={`w-5 h-5 mb-1 ${form.status_penyaluran === "Belum" ? "text-gray-500" : "text-gray-400"}`} />
                                                 <span className={`text-xs font-semibold ${form.status_penyaluran === "Belum" ? "text-gray-700" : "text-gray-500"}`}>Belum Tersalur</span>
@@ -370,7 +392,7 @@ function BantuanFormModal({
                                                 <input
                                                     type="radio" name="status_penyaluran" className="sr-only" value="Tersalurkan"
                                                     checked={form.status_penyaluran === "Tersalurkan"}
-                                                    onChange={() => set("status_penyaluran", "Tersalurkan")}
+                                                    onChange={() => { set("status_penyaluran", "Tersalurkan"); set("pct_tersalurkan", 100); }}
                                                 />
                                                 <BadgeCheck className={`w-5 h-5 mb-1 ${form.status_penyaluran === "Tersalurkan" ? "text-emerald-500" : "text-emerald-300"}`} />
                                                 <span className={`text-xs font-semibold ${form.status_penyaluran === "Tersalurkan" ? "text-emerald-700" : "text-gray-500"}`}>Tersalurkan</span>
@@ -391,7 +413,8 @@ function BantuanFormModal({
                                             </div>
                                             <input
                                                 type="range" min="0" max="100" step="0.1"
-                                                className="w-full h-2 mt-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                                                disabled={form.status_penyaluran === "Tersalurkan"}
+                                                className={`w-full h-2 mt-2 bg-indigo-200 rounded-lg appearance-none accent-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${form.status_penyaluran === "Tersalurkan" ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
                                                 value={(form.pct_tersalurkan as number) || 0}
                                                 onChange={(e) => set("pct_tersalurkan", Number(e.target.value))}
                                             />
@@ -405,7 +428,7 @@ function BantuanFormModal({
                                     <div className="mt-4 p-4 rounded-xl bg-blue-50/50 border border-blue-100 flex items-start gap-3">
                                         <HeartHandshake className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
                                         <p className="text-xs text-blue-800 leading-relaxed font-medium">
-                                            Pastikan program distribusi dikonfirmasi oleh kepala instansi penyalur setebum menetapkannya menjadi "Tersalurkan".
+                                            Pastikan program distribusi dikonfirmasi oleh kepala instansi penyalur sebelum menetapkannya menjadi &quot;Tersalurkan&quot;.
                                         </p>
                                     </div>
 

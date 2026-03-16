@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useTenant } from "@/lib/tenant/context";
 import { useCrud } from "@/hooks/use-crud";
@@ -22,7 +22,7 @@ const columns: Column<Row>[] = [
         key: "jenis", label: "Kategori", sortable: true,
         render: (v) => <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700 border border-blue-200">{String(v)}</span>
     },
-    { key: "alamat", label: "Lokasi" },
+    { key: "kelurahan_nama" as keyof Row, label: "Kelurahan", sortable: true },
     { key: "kapasitas", label: "Kapasitas Jamaah", render: (v) => v ? <span className="font-medium text-gray-900">{Number(v).toLocaleString("id-ID")}</span> : "—" },
     {
         key: "kondisi", label: "Kondisi Fisik", render: (v) => {
@@ -42,6 +42,26 @@ export default function KeagamaanPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const kelurahanOptions = kelurahans.map((k) => ({ label: k.nama, value: k.id }));
+    const kelMap = useMemo(() => {
+        const m = new Map<string, string>();
+        kelurahans.forEach(k => m.set(k.id, k.nama));
+        return m;
+    }, [kelurahans]);
+
+    // Enrich data with kelurahan name + sort newest first
+    const enrichedData = useMemo(() =>
+        [...data]
+            .sort((a, b) => {
+                const da = (a as any).created_at || '';
+                const db = (b as any).created_at || '';
+                return db.localeCompare(da);
+            })
+            .map(r => ({
+                ...r,
+                kelurahan_nama: kelMap.get(r.kelurahan_id) || '-',
+            })),
+        [data, kelMap]
+    );
 
     const masjid = data.filter((r) => r.jenis === "Masjid" || r.jenis === "Musholla").length;
     const gereja = data.filter((r) => r.jenis === "Gereja").length;
@@ -71,15 +91,16 @@ export default function KeagamaanPage() {
                 <StatCard label="Cakupan Kelurahan" value={totalKelurahan} icon={BarChart3} gradient="stat-gradient-soft-rose" />
             </div>
 
-            <DataTable columns={columns} data={data} isLoading={isLoading}
+            <DataTable columns={columns} data={enrichedData} isLoading={isLoading}
                 onAdd={() => { setEditRow(null); setModalOpen(true); }} onEdit={(r) => { setEditRow(r); setModalOpen(true); }}
-                onDelete={(r) => setDeleteRow(r)} addLabel="Registrasi Baru" searchPlaceholder="Cari tempat ibadah..." />
+                onDelete={(r) => setDeleteRow(r)} addLabel="Registrasi Baru" searchPlaceholder="Cari nama/kelurahan..." />
 
             <KeagamaanFormModal
                 open={modalOpen} onClose={() => { setModalOpen(false); setEditRow(null); }} onSubmit={handleSubmit}
                 editRow={editRow} kelurahanOptions={kelurahanOptions} isSubmitting={isSubmitting} />
 
-            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting} />
+            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting}
+                message={deleteRow ? `Hapus data "${deleteRow.nama}" (${deleteRow.jenis})?` : undefined} />
         </div>
     );
 }

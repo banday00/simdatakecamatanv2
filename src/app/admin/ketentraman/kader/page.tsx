@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useTenant } from "@/lib/tenant/context";
 import { useCrud } from "@/hooks/use-crud";
@@ -21,6 +21,7 @@ type Row = Record<string, unknown> & {
 };
 
 const columns: Column<Row>[] = [
+    { key: "kelurahan_nama" as keyof Row, label: "Kelurahan", sortable: true },
     { key: "tahun", label: "Periode", sortable: true },
     { key: "jumlah_linmas", label: "Anggota Linmas", sortable: true, render: (v) => <span className="font-semibold text-blue-700">{Number(v ?? 0).toLocaleString("id-ID")} Orang</span> },
     { key: "jumlah_satgas", label: "Satgas Linmas", render: (v) => <span className="font-medium text-emerald-600">{Number(v ?? 0).toLocaleString("id-ID")} Orang</span> },
@@ -39,6 +40,17 @@ export default function KaderPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const kelurahanOptions = kelurahans.map((k) => ({ label: k.nama, value: k.id }));
+
+    const kelMap = useMemo(() => new Map(kelurahans.map(k => [k.id, k.nama])), [kelurahans]);
+    const enrichedData = useMemo(() => {
+        return [...data]
+            .map(r => ({ ...r, kelurahan_nama: kelMap.get(r.kelurahan_id) || "-" }))
+            .sort((a, b) => {
+                const ca = (a as any).created_at || "";
+                const cb = (b as any).created_at || "";
+                return cb.localeCompare(ca);
+            });
+    }, [data, kelMap]);
 
     const totalLinmas = data.reduce((s, r) => s + (r.jumlah_linmas || 0), 0);
     const totalSatgas = data.reduce((s, r) => s + (r.jumlah_satgas || 0), 0);
@@ -69,7 +81,7 @@ export default function KaderPage() {
                 <StatCard label="Frekuensi Siskamling" value={totalSiskamling.toLocaleString("id-ID")} icon={Award} gradient="stat-gradient-soft-rose" />
             </div>
 
-            <DataTable columns={columns} data={data} isLoading={isLoading}
+            <DataTable columns={columns} data={enrichedData} isLoading={isLoading}
                 onAdd={() => { setEditRow(null); setModalOpen(true); }} onEdit={(r) => { setEditRow(r); setModalOpen(true); }}
                 onDelete={(r) => setDeleteRow(r)} addLabel="Registrasi Evaluasi Keamanan" searchPlaceholder="Cari riwayat siskamling..." />
 
@@ -77,7 +89,9 @@ export default function KaderPage() {
                 open={modalOpen} onClose={() => { setModalOpen(false); setEditRow(null); }} onSubmit={handleSubmit}
                 editRow={editRow} kelurahanOptions={kelurahanOptions} isSubmitting={isSubmitting} />
 
-            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting} />
+            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting}
+                title="Hapus Data Kader"
+                message={deleteRow ? `Hapus data kader keamanan tahun ${deleteRow.tahun} untuk kelurahan "${kelMap.get(deleteRow.kelurahan_id) || '-'}"?` : ""} />
         </div>
     );
 }
@@ -100,6 +114,7 @@ function KaderFormModal({
 
     const [form, setForm] = useState<Record<string, unknown>>({
         kelurahan_id: "", tahun: new Date().getFullYear(),
+        jenis: "Kader Keamanan", jumlah: 0,
         jumlah_linmas: 0, jumlah_satgas: 0, jumlah_fkdm: 0,
         pelatihan_dilaksanakan: 0,
         kegiatan_siskamling: 0,
@@ -111,6 +126,8 @@ function KaderFormModal({
         if (editRow) {
             setForm({
                 kelurahan_id: editRow.kelurahan_id ?? "", tahun: editRow.tahun ?? new Date().getFullYear(),
+                jenis: (editRow as any).jenis ?? "Kader Keamanan",
+                jumlah: (editRow as any).jumlah ?? 0,
                 jumlah_linmas: editRow.jumlah_linmas ?? 0,
                 jumlah_satgas: editRow.jumlah_satgas ?? 0,
                 jumlah_fkdm: editRow.jumlah_fkdm ?? 0,
@@ -121,6 +138,7 @@ function KaderFormModal({
         } else {
             setForm({
                 kelurahan_id: kelurahanOptions[0]?.value || "", tahun: new Date().getFullYear(),
+                jenis: "Kader Keamanan", jumlah: 0,
                 jumlah_linmas: 0, jumlah_satgas: 0, jumlah_fkdm: 0,
                 pelatihan_dilaksanakan: 0,
                 kegiatan_siskamling: 0,
@@ -219,30 +237,30 @@ function KaderFormModal({
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-sm font-semibold text-blue-900 mb-2">
-                                                    Kepadatan Pasukan Linmas <span className="text-red-500">*</span>
+                                                    Jumlah Anggota Linmas <span className="text-red-500">*</span>
                                                 </label>
-                                                <div className="relative">
+                                                <div className="flex">
                                                     <input
                                                         required type="number" min={0}
-                                                        className="w-full pl-4 pr-12 py-2.5 bg-blue-50 border border-blue-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm text-blue-900 placeholder-blue-300"
+                                                        className="w-full pl-4 pr-3 py-2.5 bg-blue-50 border border-blue-200 rounded-l-xl text-sm font-bold focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm text-blue-900 placeholder-blue-300"
                                                         value={(form.jumlah_linmas as number) || 0}
                                                         onChange={(e) => set("jumlah_linmas", Number(e.target.value))}
                                                     />
-                                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-400 pointer-events-none">Personel</span>
+                                                    <span className="inline-flex items-center px-3 text-xs font-semibold text-blue-500 bg-blue-100 border border-l-0 border-blue-200 rounded-r-xl whitespace-nowrap">Personel</span>
                                                 </div>
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-semibold text-indigo-900 mb-2">
-                                                    Tim Satgas Taktis <span className="text-red-500">*</span>
+                                                    Jumlah Satgas Linmas <span className="text-red-500">*</span>
                                                 </label>
-                                                <div className="relative">
+                                                <div className="flex">
                                                     <input
                                                         required type="number" min={0}
-                                                        className="w-full pl-4 pr-12 py-2.5 bg-indigo-50 border border-indigo-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm text-indigo-900 placeholder-indigo-300"
+                                                        className="w-full pl-4 pr-3 py-2.5 bg-indigo-50 border border-indigo-200 rounded-l-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm text-indigo-900 placeholder-indigo-300"
                                                         value={(form.jumlah_satgas as number) || 0}
                                                         onChange={(e) => set("jumlah_satgas", Number(e.target.value))}
                                                     />
-                                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-indigo-400 pointer-events-none">Personel</span>
+                                                    <span className="inline-flex items-center px-3 text-xs font-semibold text-indigo-500 bg-indigo-100 border border-l-0 border-indigo-200 rounded-r-xl whitespace-nowrap">Personel</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -278,14 +296,14 @@ function KaderFormModal({
                                             </label>
                                             <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">Infrastruktur</span>
                                         </div>
-                                        <div className="relative">
+                                        <div className="flex">
                                             <input
                                                 type="number" min={0}
-                                                className="w-full pl-4 pr-10 py-3 bg-white border-2 border-emerald-200 rounded-xl text-lg font-bold focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm text-center text-emerald-800"
+                                                className="w-full pl-4 pr-3 py-3 bg-white border-2 border-emerald-200 rounded-l-xl text-lg font-bold focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm text-center text-emerald-800"
                                                 value={(form.pos_kamling as number) || 0}
                                                 onChange={(e) => set("pos_kamling", Number(e.target.value))}
                                             />
-                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-emerald-400 pointer-events-none">Unit Gardu</span>
+                                            <span className="inline-flex items-center px-3 text-sm font-bold text-emerald-500 bg-emerald-100 border-2 border-l-0 border-emerald-200 rounded-r-xl whitespace-nowrap">Unit Gardu</span>
                                         </div>
                                     </div>
 
@@ -307,7 +325,7 @@ function KaderFormModal({
 
                                         <div className="space-y-1.5">
                                             <label className="block text-sm font-semibold text-gray-700">
-                                                Pelatihan Bimbingan Terksekusi
+                                                Pelatihan Bimbingan Tereksekusi
                                             </label>
                                             <div className="relative">
                                                 <input
@@ -330,7 +348,7 @@ function KaderFormModal({
                     {/* Footer / Actions */}
                     <div className="flex items-center justify-between px-6 py-4 md:px-8 border-t border-gray-100 bg-white shrink-0">
                         <p className="text-xs text-gray-400">
-                            <span className="text-red-400">*</span> Instrumen kritis yang dipersyaatkan
+                            <span className="text-red-400">*</span> Instrumen kritis yang dipersyaratkan
                         </p>
                         <div className="flex flex-col-reverse sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
                             <button
