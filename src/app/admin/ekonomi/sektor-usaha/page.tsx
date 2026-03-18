@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { createClient } from "@/lib/supabase/client";
 import { useTenant } from "@/lib/tenant/context";
 import { useAuth } from "@/lib/auth/context";
 import { useCrud } from "@/hooks/use-crud";
@@ -19,7 +20,8 @@ type Row = Record<string, unknown> & {
     kelurahan_id?: string;
     kelurahan_nama?: string;
     tahun: number;
-    sektor: string;
+    sektor_id: number;
+    sektor?: string; // mapped locally for display
     jumlah_usaha: number;
     jumlah_tenaga_kerja: number;
     created_at?: string;
@@ -77,10 +79,28 @@ export default function SektorUsahaPage() {
     const filterKelurahanId = isKelurahanAdmin ? (user as any)?.kelurahan_id : null;
 
     const { data, isLoading, create, update, remove } = useCrud<Row>({ table: "econ_business_sectors" });
+    const [sektorOptionsDynamic, setSektorOptionsDynamic] = useState<{ id: number, nama: string }[]>(
+        SEKTOR_OPTIONS.map((nama, idx) => ({ id: idx + 1, nama }))
+    );
+
+    useEffect(() => {
+        const fetchRef = async () => {
+            const supabase = createClient();
+            const { data: refData } = await supabase.schema("sidakota").from("ref_lapangan_usaha").select("id, nama").order("id", { ascending: true });
+            if (refData && refData.length > 0) {
+                setSektorOptionsDynamic(refData);
+            }
+        };
+        fetchRef();
+    }, []);
 
     // Enrich + filter + sort newest first
     const enrichedData = data
-        .map(r => ({ ...r, kelurahan_nama: kelurahans.find(k => k.id === r.kelurahan_id)?.nama || "-" }))
+        .map(r => ({ 
+            ...r, 
+            kelurahan_nama: kelurahans.find(k => k.id === r.kelurahan_id)?.nama || "-",
+            sektor: sektorOptionsDynamic.find(s => s.id === r.sektor_id)?.nama || "Unknown"
+        }))
         .filter(r => !filterKelurahanId || r.kelurahan_id === filterKelurahanId)
         .sort((a, b) => {
             const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -145,7 +165,8 @@ export default function SektorUsahaPage() {
             <SektorUsahaFormModal
                 open={modalOpen} onClose={() => { setModalOpen(false); setEditRow(null); }} onSubmit={handleSubmit}
                 editRow={editRow} kelurahanOptions={kelurahanOptions} isSubmitting={isSubmitting}
-                isKelurahanAdmin={isKelurahanAdmin} filterKelurahanId={filterKelurahanId} />
+                isKelurahanAdmin={isKelurahanAdmin} filterKelurahanId={filterKelurahanId}
+                sektorOptions={sektorOptionsDynamic} />
 
             <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting}
                 title="Hapus Data Sektor Usaha?" message={`Yakin ingin menghapus sektor "${deleteRow?.sektor || ""}" tahun ${deleteRow?.tahun || ""}? Data tidak dapat dikembalikan.`} />
@@ -158,7 +179,7 @@ export default function SektorUsahaPage() {
    ═══════════════════════════════════════════════════════ */
 
 function SektorUsahaFormModal({
-    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions, isKelurahanAdmin, filterKelurahanId,
+    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions, isKelurahanAdmin, filterKelurahanId, sektorOptions,
 }: {
     open: boolean;
     onClose: () => void;
@@ -168,24 +189,26 @@ function SektorUsahaFormModal({
     kelurahanOptions: { label: string; value: string }[];
     isKelurahanAdmin?: boolean;
     filterKelurahanId?: string | null;
+    sektorOptions: { id: number, nama: string }[];
 }) {
     const isEdit = !!editRow;
 
     const [form, setForm] = useState<Record<string, unknown>>({
         kelurahan_id: "",
         tahun: new Date().getFullYear(),
-        sektor: "Perdagangan",
+        sektor_id: 1,
         jumlah_usaha: 0,
         jumlah_tenaga_kerja: 0,
     });
 
     useEffect(() => {
         if (!open) return;
+        const defaultSektorId = sektorOptions.length > 0 ? sektorOptions[0].id : 1;
         if (editRow) {
             setForm({
                 kelurahan_id: editRow.kelurahan_id ?? "",
                 tahun: editRow.tahun ?? new Date().getFullYear(),
-                sektor: editRow.sektor ?? "Perdagangan",
+                sektor_id: editRow.sektor_id ?? defaultSektorId,
                 jumlah_usaha: editRow.jumlah_usaha ?? 0,
                 jumlah_tenaga_kerja: editRow.jumlah_tenaga_kerja ?? 0,
             });
@@ -193,12 +216,12 @@ function SektorUsahaFormModal({
             setForm({
                 kelurahan_id: (isKelurahanAdmin && filterKelurahanId) ? filterKelurahanId : (kelurahanOptions[0]?.value || ""),
                 tahun: new Date().getFullYear(),
-                sektor: "Perdagangan",
+                sektor_id: defaultSektorId,
                 jumlah_usaha: 0,
                 jumlah_tenaga_kerja: 0,
             });
         }
-    }, [open, editRow, kelurahanOptions, isKelurahanAdmin, filterKelurahanId]);
+    }, [open, editRow, kelurahanOptions, isKelurahanAdmin, filterKelurahanId, sektorOptions]);
 
     function set(field: string, value: string | number) {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -296,11 +319,11 @@ function SektorUsahaFormModal({
                                         <select
                                             required
                                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                                            value={(form.sektor as string) || "Perdagangan"}
-                                            onChange={(e) => set("sektor", e.target.value)}
+                                            value={(form.sektor_id as number) || (sektorOptions[0]?.id || 1)}
+                                            onChange={(e) => set("sektor_id", Number(e.target.value))}
                                         >
-                                            {SEKTOR_OPTIONS.map((opt) => (
-                                                <option key={opt} value={opt}>{opt}</option>
+                                            {sektorOptions.map((opt) => (
+                                                <option key={opt.id} value={opt.id}>{opt.nama}</option>
                                             ))}
                                         </select>
                                     </div>
