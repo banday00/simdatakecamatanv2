@@ -721,13 +721,22 @@ export default function EkonomiPage() {
         try {
             const supabase = createClient();
 
-            const [secRes, facRes, potRes] = await Promise.all([
+            const [secRes, facRes, potRes, refRes] = await Promise.all([
                 supabase.from("econ_business_sectors").select("*").eq("tenant_id", tenant.id),
                 supabase.from("econ_facilities").select("*").eq("tenant_id", tenant.id),
                 supabase.from("econ_potential").select("*").eq("tenant_id", tenant.id),
+                supabase.schema("sidakota").from("ref_lapangan_usaha").select("id, nama")
             ]);
 
-            setSectors(secRes.data || []);
+            const refMap = new Map<number, string>();
+            (refRes.data || []).forEach(r => refMap.set(r.id, r.nama));
+
+            const mappedSectors = (secRes.data || []).map(s => ({
+                ...s,
+                sektor: refMap.get(s.sektor_id) || "Lainnya"
+            }));
+
+            setSectors(mappedSectors);
             setFacilities(facRes.data || []);
             setPotentials(potRes.data || []);
 
