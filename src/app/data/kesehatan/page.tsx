@@ -275,6 +275,32 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
     const kelMap = new Map<string, string>();
     kelurahans.forEach(k => kelMap.set(k.id, k.nama));
 
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedKelurahan, searchQuery]);
+
+    const filteredTableData = useMemo(() => {
+        return data.filter(s => {
+            if (selectedKelurahan && s.kelurahan_id !== selectedKelurahan) return false;
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                const kelName = kelMap.get(s.kelurahan_id)?.toLowerCase() || "";
+                return (s.tahun?.toString().includes(q)) || (kelName.includes(q));
+            }
+            return true;
+        }).sort((a,b) => b.tahun - a.tahun || a.kelurahan_id.localeCompare(b.kelurahan_id));
+    }, [data, selectedKelurahan, searchQuery, kelMap]);
+
+    const totalPages = Math.ceil(filteredTableData.length / ITEMS_PER_PAGE);
+    const paginatedData = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredTableData.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredTableData, currentPage]);
+
     const selectedData = useMemo(() => {
         let result = data;
         if (selectedKelurahan) {
@@ -398,6 +424,90 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Data Table Stunting */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mt-6">
+                <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <h3 className="text-base font-bold text-slate-800">Daftar Data Stunting & Gizi</h3>
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Cari kelurahan, tahun..."
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm whitespace-nowrap">
+                        <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-200">
+                            <tr>
+                                <th className="px-6 py-4 font-bold">Wilayah</th>
+                                <th className="px-6 py-4 font-bold text-center">Tahun</th>
+                                <th className="px-6 py-4 font-bold text-right">Total Balita</th>
+                                <th className="px-6 py-4 font-bold text-right">Stunting</th>
+                                <th className="px-6 py-4 font-bold text-right">Gizi Buruk & Kurang</th>
+                                <th className="px-6 py-4 font-bold text-right">Prevalensi (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {paginatedData.map((row, i) => {
+                                const prevalensi = row.balita_total > 0 ? ((row.balita_stunting / row.balita_total) * 100).toFixed(1) : "0.0";
+                                const isHigh = Number(prevalensi) > 10;
+                                return (
+                                    <tr key={row.id || i} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <MapPin className="w-4 h-4 text-indigo-500" />
+                                                <span className="font-semibold text-slate-700">{kelMap.get(row.kelurahan_id) || "-"}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className="font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded text-xs">{row.tahun}</span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-bold text-slate-600">
+                                            {(row.balita_total || 0).toLocaleString('id-ID')}
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-bold text-red-500">
+                                            {(row.balita_stunting || 0).toLocaleString('id-ID')}
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-semibold text-amber-500">
+                                            {((row.balita_gizi_buruk || 0) + (row.balita_gizi_kurang || 0)).toLocaleString('id-ID')}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <span className={`inline-block px-2.5 py-1 text-[11px] font-bold rounded-lg border ${isHigh ? 'bg-red-50 text-red-700 border-red-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
+                                                {prevalensi}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {filteredTableData.length === 0 && (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                                        <Search className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                                        <p className="text-sm">Data tidak ditemukan</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                {totalPages > 1 && (
+                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-sm text-slate-500">
+                            Menampilkan {Math.min(filteredTableData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(filteredTableData.length, currentPage * ITEMS_PER_PAGE)} dari {filteredTableData.length}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">Sebelumnya</button>
+                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">{currentPage} / {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">Selanjutnya</button>
                         </div>
                     </div>
                 )}
@@ -580,6 +690,32 @@ function MaternalSection({ data, kelurahans, selectedKelurahan }: { data: any[];
     const kelMap = new Map<string, string>();
     kelurahans.forEach(k => kelMap.set(k.id, k.nama));
 
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedKelurahan, searchQuery]);
+
+    const filteredTableData = useMemo(() => {
+        return data.filter(s => {
+            if (selectedKelurahan && s.kelurahan_id !== selectedKelurahan) return false;
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                const kelName = kelMap.get(s.kelurahan_id)?.toLowerCase() || "";
+                return (s.tahun?.toString().includes(q)) || (kelName.includes(q));
+            }
+            return true;
+        }).sort((a,b) => b.tahun - a.tahun || a.kelurahan_id.localeCompare(b.kelurahan_id));
+    }, [data, selectedKelurahan, searchQuery, kelMap]);
+
+    const totalPages = Math.ceil(filteredTableData.length / ITEMS_PER_PAGE);
+    const paginatedData = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredTableData.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredTableData, currentPage]);
+
     const selectedData = useMemo(() => {
         let result = data;
         if (selectedKelurahan) {
@@ -666,6 +802,88 @@ function MaternalSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
+            </div>
+
+            {/* Data Table Maternal */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mt-6">
+                <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <h3 className="text-base font-bold text-slate-800">Daftar Data Kesehatan Ibu & Anak</h3>
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Cari kelurahan, tahun..."
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm whitespace-nowrap">
+                        <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-200">
+                            <tr>
+                                <th className="px-6 py-4 font-bold">Wilayah</th>
+                                <th className="px-6 py-4 font-bold text-center">Tahun</th>
+                                <th className="px-6 py-4 font-bold text-right">Ibu Hamil</th>
+                                <th className="px-6 py-4 font-bold text-right">Ibu Bersalin</th>
+                                <th className="px-6 py-4 font-bold text-right">Bayi Lahir</th>
+                                <th className="px-6 py-4 font-bold text-right">Meninggal (Ibu/Bayi)</th>
+                                <th className="px-6 py-4 font-bold text-right">Akseptor KB</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {paginatedData.map((row, i) => (
+                                <tr key={row.id || i} className="hover:bg-slate-50/50 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="w-4 h-4 text-indigo-500" />
+                                            <span className="font-semibold text-slate-700">{kelMap.get(row.kelurahan_id) || "-"}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className="font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded text-xs">{row.tahun}</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right font-semibold text-slate-600">
+                                        {(row.ibu_hamil || 0).toLocaleString('id-ID')}
+                                    </td>
+                                    <td className="px-6 py-4 text-right font-semibold text-slate-600">
+                                        {(row.ibu_bersalin || 0).toLocaleString('id-ID')}
+                                    </td>
+                                    <td className="px-6 py-4 text-right font-semibold text-slate-600">
+                                        {(row.bayi_lahir_hidup || 0).toLocaleString('id-ID')}
+                                    </td>
+                                    <td className="px-6 py-4 text-right font-bold text-red-500">
+                                        {(row.kematian_ibu || 0).toLocaleString('id-ID')} / {(row.kematian_bayi || 0).toLocaleString('id-ID')}
+                                    </td>
+                                    <td className="px-6 py-4 text-right font-bold text-emerald-600">
+                                        {(row.kb_aktif || 0).toLocaleString('id-ID')}
+                                    </td>
+                                </tr>
+                            ))}
+                            {filteredTableData.length === 0 && (
+                                <tr>
+                                    <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                                        <Search className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                                        <p className="text-sm">Data tidak ditemukan</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                {totalPages > 1 && (
+                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-sm text-slate-500">
+                            Menampilkan {Math.min(filteredTableData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(filteredTableData.length, currentPage * ITEMS_PER_PAGE)} dari {filteredTableData.length}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">Sebelumnya</button>
+                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">{currentPage} / {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">Selanjutnya</button>
+                        </div>
+                    </div>
+                )}
             </div>
         </section>
     );

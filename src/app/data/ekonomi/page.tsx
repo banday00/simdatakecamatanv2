@@ -57,6 +57,32 @@ function SektorSection({ sectors, kelurahans, selectedKelurahan }: { sectors: an
     const kelMap = new Map<string, string>();
     kelurahans.forEach(k => kelMap.set(k.id, k.nama));
 
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedKelurahan, searchQuery]);
+
+    const filteredTableData = useMemo(() => {
+        return sectors.filter(s => {
+            if (selectedKelurahan && s.kelurahan_id !== selectedKelurahan) return false;
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                const kelName = kelMap.get(s.kelurahan_id)?.toLowerCase() || "";
+                return (s.sektor?.toLowerCase().includes(q)) || (s.tahun?.toString().includes(q)) || (kelName.includes(q));
+            }
+            return true;
+        }).sort((a,b) => b.tahun - a.tahun || (b.jumlah_usaha || 0) - (a.jumlah_usaha || 0));
+    }, [sectors, selectedKelurahan, searchQuery, kelMap]);
+
+    const totalPages = Math.ceil(filteredTableData.length / ITEMS_PER_PAGE);
+    const paginatedData = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredTableData.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredTableData, currentPage]);
+
     // Filter by kelurahan & get latest year data
     const filteredByKelurahan = selectedKelurahan ? sectors.filter(s => s.kelurahan_id === selectedKelurahan) : sectors;
     const years = Array.from(new Set(filteredByKelurahan.map(s => s.tahun))).sort((a, b) => b - a);
@@ -200,6 +226,82 @@ function SektorSection({ sectors, kelurahans, selectedKelurahan }: { sectors: an
                     )}
                 </div>
             </div>
+
+            {/* Data Table Sektor Usaha */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mt-6">
+                <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <h3 className="text-base font-bold text-slate-800">Daftar Data Sektor Usaha</h3>
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Cari sektor, tahun, kelurahan..."
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm whitespace-nowrap">
+                        <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-200">
+                            <tr>
+                                <th className="px-6 py-4 font-bold">Wilayah</th>
+                                <th className="px-6 py-4 font-bold">Sektor Usaha</th>
+                                <th className="px-6 py-4 font-bold text-center">Tahun</th>
+                                <th className="px-6 py-4 font-bold text-right">Jumlah Usaha</th>
+                                <th className="px-6 py-4 font-bold text-right">Tenaga Kerja</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {paginatedData.map((row, i) => (
+                                <tr key={row.id || i} className="hover:bg-slate-50/50 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="w-4 h-4 text-indigo-500" />
+                                            <span className="font-semibold text-slate-700">{kelMap.get(row.kelurahan_id) || "-"}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className="inline-block px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-100">
+                                            {row.sektor || "Lainnya"}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className="font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded text-xs">{row.tahun}</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right font-bold text-emerald-600">
+                                        {(row.jumlah_usaha || 0).toLocaleString('id-ID')}
+                                    </td>
+                                    <td className="px-6 py-4 text-right font-semibold text-slate-600">
+                                        {row.jumlah_tenaga_kerja ? row.jumlah_tenaga_kerja.toLocaleString('id-ID') : "-"}
+                                    </td>
+                                </tr>
+                            ))}
+                            {filteredTableData.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                                        <Search className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                                        <p className="text-sm">Data tidak ditemukan</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                {totalPages > 1 && (
+                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-sm text-slate-500">
+                            Menampilkan {Math.min(filteredTableData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(filteredTableData.length, currentPage * ITEMS_PER_PAGE)} dari {filteredTableData.length}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">Sebelumnya</button>
+                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">{currentPage} / {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">Selanjutnya</button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
@@ -327,19 +429,48 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                         />
                     </div>
                 </div>
-                <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {paginatedData.map((row, i) => (
-                        <div key={row.id || i} className="p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-white hover:border-indigo-200 hover:shadow-md transition-all">
-                            <h4 className="font-bold text-slate-800 mb-1">{row.nama || "Tanpa Nama"}</h4>
-                            <span className="inline-block px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded mb-2">
-                                {row.jenis || "Lainnya"}
-                            </span>
-                            <p className="text-xs text-slate-500 flex items-start gap-1.5 line-clamp-2">
-                                <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                                {row.alamat || kelMap.get(row.kelurahan_id) || "Tidak ada alamat lengkap"}
-                            </p>
-                        </div>
-                    ))}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm whitespace-nowrap">
+                        <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-200">
+                            <tr>
+                                <th className="px-6 py-4 font-bold">Wilayah</th>
+                                <th className="px-6 py-4 font-bold">Nama Sarana</th>
+                                <th className="px-6 py-4 font-bold">Jenis Sarana</th>
+                                <th className="px-6 py-4 font-bold max-w-sm">Alamat Lengkap</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {paginatedData.map((row, i) => (
+                                <tr key={row.id || i} className="hover:bg-slate-50/50 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="w-4 h-4 text-indigo-500" />
+                                            <span className="font-semibold text-slate-700">{kelMap.get(row.kelurahan_id) || "-"}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 font-bold text-slate-800">
+                                        {row.nama || "Tanpa Nama"}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className="inline-block px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-100">
+                                            {row.jenis || "Lainnya"}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-slate-500 max-w-sm truncate">
+                                        {row.alamat || "-"}
+                                    </td>
+                                </tr>
+                            ))}
+                            {filteredData.length === 0 && (
+                                <tr>
+                                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
+                                        <Search className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                                        <p className="text-sm">Data tidak ditemukan</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
                 </div>
                 {totalPages > 1 && (
                     <div className="p-5 border-t border-slate-100 flex items-center justify-between">
@@ -347,16 +478,10 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                             Menampilkan {Math.min(filteredData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(filteredData.length, currentPage * ITEMS_PER_PAGE)} dari {filteredData.length}
                         </span>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Sebelumnya</button>
-                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{currentPage} / {totalPages}</span>
-                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">Sebelumnya</button>
+                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">{currentPage} / {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">Selanjutnya</button>
                         </div>
-                    </div>
-                )}
-                {filteredData.length === 0 && (
-                    <div className="py-12 text-center text-slate-400">
-                        <Search className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                        <p className="text-sm">Data sarana tidak ditemukan</p>
                     </div>
                 )}
             </div>
@@ -722,9 +847,9 @@ export default function EkonomiPage() {
             const supabase = createClient();
 
             const [secRes, facRes, potRes, refRes] = await Promise.all([
-                supabase.from("econ_business_sectors").select("*").eq("tenant_id", tenant.id),
-                supabase.from("econ_facilities").select("*").eq("tenant_id", tenant.id),
-                supabase.from("econ_potential").select("*").eq("tenant_id", tenant.id),
+                supabase.schema("sidakota").from("econ_business_sectors").select("*").eq("tenant_id", tenant.id),
+                supabase.schema("sidakota").from("econ_facilities").select("*").eq("tenant_id", tenant.id),
+                supabase.schema("sidakota").from("econ_potential").select("*").eq("tenant_id", tenant.id),
                 supabase.schema("sidakota").from("ref_lapangan_usaha").select("id, nama")
             ]);
 

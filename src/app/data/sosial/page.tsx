@@ -254,6 +254,32 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
     const kelMap = useMemo(() => new Map(kelurahans.map(k => [k.id, k.nama])), [kelurahans]);
     const filteredData = useMemo(() => selectedKelurahan ? disability.filter(d => d.kelurahan_id === selectedKelurahan) : disability, [disability, selectedKelurahan]);
 
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedKelurahan, searchQuery]);
+
+    const filteredTableData = useMemo(() => {
+        return disability.filter(s => {
+            if (selectedKelurahan && s.kelurahan_id !== selectedKelurahan) return false;
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                const kelName = kelMap.get(s.kelurahan_id)?.toLowerCase() || "";
+                return (s.tahun?.toString().includes(q)) || (kelName.includes(q)) || (s.jenis_disabilitas?.toLowerCase().includes(q));
+            }
+            return true;
+        }).sort((a,b) => b.tahun - a.tahun || a.kelurahan_id.localeCompare(b.kelurahan_id));
+    }, [disability, selectedKelurahan, searchQuery, kelMap]);
+
+    const totalPages = Math.ceil(filteredTableData.length / ITEMS_PER_PAGE);
+    const paginatedData = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredTableData.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredTableData, currentPage]);
+
     const totalPenyandang = filteredData.reduce((acc, curr) => acc + (curr.jumlah || 0), 0);
     const totalBantuan = filteredData.reduce((acc, curr) => acc + (curr.penerima_bantuan || 0), 0);
     const persentaseBantuan = totalPenyandang > 0 ? (totalBantuan / totalPenyandang * 100).toFixed(1) : "0.0";
@@ -293,7 +319,7 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
         filteredData.forEach(d => {
             const nama = kelMap.get(d.kelurahan_id);
             if (!nama) return;
-            if (!kelData[nama]) kelData[nama] = { name: nama.substring(0, 10) + "...", L: 0, P: 0, Total: 0 };
+            if (!kelData[nama]) kelData[nama] = { name: nama, L: 0, P: 0, Total: 0 };
             kelData[nama].L += (d.laki_laki || 0);
             kelData[nama].P += (d.perempuan || 0);
             kelData[nama].Total += (d.jumlah || 0);
@@ -366,7 +392,7 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={kelTimelineData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
+                                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} angle={-45} textAnchor="end" axisLine={false} tickLine={false} dy={10} height={60} interval={0} />
                                     <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                     <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Orang"]} />
                                     <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
@@ -374,6 +400,86 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
                                     <Bar dataKey="P" name="Perempuan" stackId="a" fill="#ec4899" radius={[6, 6, 0, 0]} maxBarSize={40} />
                                 </BarChart>
                             </ResponsiveContainer>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Data Table Disabilitas */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mt-6">
+                <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <h3 className="text-base font-bold text-slate-800">Daftar Data Penyandang Disabilitas</h3>
+                    <div className="relative w-full md:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Cari kelurahan, jenis..."
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left whitespace-nowrap">
+                        <thead className="text-xs text-slate-500 uppercase bg-slate-50/80 border-b border-slate-200 font-semibold">
+                            <tr>
+                                <th className="px-6 py-4 text-center">Tahun</th>
+                                <th className="px-6 py-4">Kelurahan</th>
+                                <th className="px-6 py-4">Jenis Disabilitas</th>
+                                <th className="px-6 py-4 text-right">Anak/Dewasa/Lansia</th>
+                                <th className="px-6 py-4 text-right">L / P</th>
+                                <th className="px-6 py-4 text-right">Total Kasus</th>
+                                <th className="px-6 py-4 text-right">Penerima Bantuan</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {paginatedData.map((row, i) => (
+                                <tr key={row.id || i} className="hover:bg-slate-50/50 transition-colors">
+                                    <td className="px-6 py-4 text-center">
+                                        <span className="font-mono text-slate-600 bg-slate-100 px-2.5 py-1 rounded text-xs">{row.tahun}</span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="w-4 h-4 text-indigo-500" />
+                                            <span className="font-semibold text-slate-800">{kelMap.get(row.kelurahan_id) || "-"}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 font-bold text-slate-700">{row.jenis_disabilitas || "-"}</td>
+                                    <td className="px-6 py-4 text-right font-medium text-slate-600">
+                                        {(row.usia_anak || 0)} / {(row.usia_dewasa || 0)} / {(row.usia_lansia || 0)}
+                                    </td>
+                                    <td className="px-6 py-4 text-right font-medium text-slate-600">
+                                        <span className="text-blue-600">{(row.laki_laki || 0)} L</span> / <span className="text-pink-600">{(row.perempuan || 0)} P</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right font-black text-rose-600">
+                                        {(row.jumlah || 0).toLocaleString('id-ID')}
+                                    </td>
+                                    <td className="px-6 py-4 text-right font-bold text-emerald-600">
+                                        {(row.penerima_bantuan || 0).toLocaleString('id-ID')}
+                                    </td>
+                                </tr>
+                            ))}
+                            {filteredTableData.length === 0 && (
+                                <tr>
+                                    <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                                        <Search className="w-8 h-8 mx-auto mb-3 text-slate-300" />
+                                        <p className="text-sm">Tidak ada data disabilitas</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                {totalPages > 1 && (
+                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-sm text-slate-500">
+                            Menampilkan {Math.min(filteredTableData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(filteredTableData.length, currentPage * ITEMS_PER_PAGE)} dari {filteredTableData.length}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">Sebelumnya</button>
+                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">{currentPage} / {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">Selanjutnya</button>
                         </div>
                     </div>
                 )}
@@ -415,7 +521,7 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
         filteredData.forEach(d => {
             const nama = kelMap.get(d.kelurahan_id);
             if (!nama) return;
-            if (!c[nama]) c[nama] = { name: nama.length > 10 ? nama.substring(0, 10) + "..." : nama, Sudah: 0, Belum: 0, Total: 0 };
+            if (!c[nama]) c[nama] = { name: nama, Sudah: 0, Belum: 0, Total: 0 };
             c[nama].Sudah += (d.sudah_direhabilitasi || 0);
             c[nama].Belum += (d.belum_direhabilitasi || 0);
             c[nama].Total += (d.jumlah_rtlh || 0);
@@ -440,7 +546,7 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
+                                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} angle={-45} textAnchor="end" axisLine={false} tickLine={false} dy={10} height={60} interval={0} />
                                     <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toLocaleString("id-ID")} />
                                     <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Unit"]} />
                                     <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
