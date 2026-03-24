@@ -41,27 +41,44 @@ function SanitasiSection({ sanitation, kelurahans, selectedKelurahan }: { sanita
 
     const avgAir = latestData.length ? (latestData.reduce((s, r) => s + (r.akses_air_bersih_persen || 0), 0) / latestData.length).toFixed(1) : "0";
     const avgSanitasi = latestData.length ? (latestData.reduce((s, r) => s + (r.akses_sanitasi_persen || 0), 0) / latestData.length).toFixed(1) : "0";
-    const totalTPS = latestData.reduce((s, r) => s + (r.tps_jumlah || 0), 0);
-    const totalRumahKumuh = latestData.reduce((s, r) => s + (r.rumah_kumuh || 0), 0);
+    const totalJamban = latestData.reduce((s, r) => s + (r.rt_jamban_sehat || 0), 0);
+    const odfCount = latestData.filter(r => r.status_odf === "ODF").length;
 
     const [page, setPage] = useState(1);
     const limit = 10;
     const totalPages = Math.ceil(latestData.length / limit);
     const paginatedTable = latestData.slice((page - 1) * limit, page * limit);
 
+    // Chart: Cakupan per Kelurahan
     const chartData = kelurahans.map(k => {
         const d = latestData.find(x => x.kelurahan_id === k.id);
-        return { name: k.nama, AirBersih: d?.akses_air_bersih_persen || 0, Sanitasi: d?.akses_sanitasi_persen || 0, TPS: d?.tps_jumlah || 0 };
+        return { name: k.nama, AirBersih: d?.akses_air_bersih_persen || 0, Sanitasi: d?.akses_sanitasi_persen || 0 };
     }).sort((a, b) => b.AirBersih - a.AirBersih).filter(c => c.AirBersih > 0 || c.Sanitasi > 0).slice(0, 10);
+
+    // Radar: Agregat 5 Pilar STBM
+    const totalRT = latestData.reduce((s, r) => s + (r.rt_jamban_sehat || 0) + (r.rt_tanpa_jamban || 0), 0) || 1;
+    const radarData = [
+        { pilar: "SBS/ODF", value: Math.min(100, Math.round((latestData.reduce((s, r) => s + (r.rt_jamban_sehat || 0), 0) / totalRT) * 100)) },
+        { pilar: "CTPS", value: Math.min(100, Math.round((latestData.reduce((s, r) => s + (r.rt_ctps || 0), 0) / totalRT) * 100)) },
+        { pilar: "Air Minum", value: Math.round(Number(avgAir)) },
+        { pilar: "Sampah", value: Math.min(100, Math.round((latestData.reduce((s, r) => s + (r.rt_pemilahan_sampah || 0), 0) / totalRT) * 100)) },
+        { pilar: "Limbah Cair", value: Math.round(Number(avgSanitasi)) },
+    ];
+
+    const statusOdfColors: Record<string, string> = {
+        ODF: "bg-emerald-100 text-emerald-700",
+        "Proses Verifikasi": "bg-amber-100 text-amber-700",
+        "Belum ODF": "bg-red-100 text-red-700",
+    };
 
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { label: 'Akses Air Bersih', value: `${avgAir}%`, sub: `Tahun ${latestYear}`, icon: Droplets, color: 'bg-blue-50 text-blue-600', border: 'border-blue-100' },
-                    { label: 'Sanitasi Layak', value: `${avgSanitasi}%`, sub: `Tahun ${latestYear}`, icon: Activity, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
-                    { label: 'Total TPS', value: totalTPS, sub: `${latestData.length} kelurahan`, icon: Trash2, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
-                    { label: 'Rumah Kumuh', value: totalRumahKumuh, sub: 'Unit teridentifikasi', icon: Factory, color: 'bg-rose-50 text-rose-600', border: 'border-rose-100' },
+                    { label: 'Akses Air Bersih', value: `${avgAir}%`, sub: `SDGs 6.1.1 • ${latestYear}`, icon: Droplets, color: 'bg-blue-50 text-blue-600', border: 'border-blue-100' },
+                    { label: 'Sanitasi Layak', value: `${avgSanitasi}%`, sub: `SDGs 6.2.1 • ${latestYear}`, icon: Activity, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
+                    { label: 'RT Jamban Sehat', value: totalJamban.toLocaleString('id-ID'), sub: 'STBM Pilar 1', icon: CheckCircle, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
+                    { label: 'Kelurahan ODF', value: `${odfCount} / ${latestData.length}`, sub: 'Open Defecation Free', icon: Trophy, color: 'bg-rose-50 text-rose-600', border: 'border-rose-100' },
                 ].map((item) => (
                     <div key={item.label} className={`bg-white p-4 rounded-2xl border ${item.border} shadow-sm hover:shadow-md transition-all`}>
                         <div className={`inline-flex p-2 rounded-xl ${item.color} mb-3`}>
@@ -75,7 +92,7 @@ function SanitasiSection({ sanitation, kelurahans, selectedKelurahan }: { sanita
             </div>
             <div className="grid lg:grid-cols-2 gap-6">
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><Droplets className="w-5 h-5 text-indigo-600" /> Akses Air Bersih & Sanitasi (%)</h3>
+                    <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><Droplets className="w-5 h-5 text-indigo-600" /> Cakupan Air Bersih & Sanitasi (%)</h3>
                     <div className="h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
@@ -91,36 +108,61 @@ function SanitasiSection({ sanitation, kelurahans, selectedKelurahan }: { sanita
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><Trash2 className="w-5 h-5 text-indigo-600" /> Distribusi TPS per Wilayah</h3>
+                    <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><PieChartIcon className="w-5 h-5 text-indigo-600" /> Radar 5 Pilar STBM</h3>
                     <div className="h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie data={chartData.filter(d => d.TPS > 0)} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="TPS" label={false}>
-                                    {chartData.map((_, index) => <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
-                                </Pie>
+                            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                                <PolarGrid stroke="#e2e8f0" />
+                                <PolarAngleAxis dataKey="pilar" tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }} />
+                                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10, fill: "#94a3b8" }} />
+                                <Radar name="Capaian (%)" dataKey="value" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
                                 <Tooltip contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} />
-                                <Legend layout="vertical" verticalAlign="middle" align="right" iconType="circle" wrapperStyle={{ fontSize: "12px" }} />
-                            </PieChart>
+                            </RadarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
             </div>
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-slate-100 bg-slate-50/50"><h3 className="font-bold text-slate-800">Detail Sanitasi Wilayah</h3></div>
+                <div className="p-5 border-b border-slate-100 bg-slate-50/50"><h3 className="font-bold text-slate-800">Detail Sanitasi per Kelurahan</h3></div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100 font-semibold">
-                            <tr><th className="px-6 py-4">Wilayah</th><th className="px-6 py-4">Tahun</th><th className="px-6 py-4">Air Bersih (%)</th><th className="px-6 py-4">Sanitasi (%)</th><th className="px-6 py-4">TPS</th><th className="px-6 py-4">Rumah Kumuh</th></tr>
+                            <tr>
+                                <th className="px-5 py-4">Kelurahan</th>
+                                <th className="px-5 py-4">Air Bersih</th>
+                                <th className="px-5 py-4">Sanitasi</th>
+                                <th className="px-5 py-4">Jamban Sehat</th>
+                                <th className="px-5 py-4">Air Minum Layak</th>
+                                <th className="px-5 py-4">TPS</th>
+                                <th className="px-5 py-4">Petugas</th>
+                                <th className="px-5 py-4 text-center">Status ODF</th>
+                            </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {paginatedTable.map((row, i) => (
                                 <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="px-6 py-4 font-semibold text-slate-800">{kelurahans.find(k => k.id === row.kelurahan_id)?.nama}</td>
-                                    <td className="px-6 py-4 text-slate-600">{row.tahun}</td>
-                                    <td className="px-6 py-4 font-bold text-emerald-600">{(row.akses_air_bersih_persen || 0).toFixed(1)}%</td>
-                                    <td className="px-6 py-4 font-bold text-blue-600">{(row.akses_sanitasi_persen || 0).toFixed(1)}%</td>
-                                    <td className="px-6 py-4 font-medium">{row.tps_jumlah || 0}</td>
-                                    <td className="px-6 py-4 font-medium text-rose-600">{row.rumah_kumuh || 0}</td>
+                                    <td className="px-5 py-4 font-semibold text-slate-800">{kelurahans.find(k => k.id === row.kelurahan_id)?.nama}</td>
+                                    <td className="px-5 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-16 h-2 bg-blue-100 rounded-full overflow-hidden"><div className="h-full bg-blue-500 rounded-full" style={{ width: `${row.akses_air_bersih_persen || 0}%` }} /></div>
+                                            <span className="text-xs font-bold text-blue-700">{(row.akses_air_bersih_persen || 0).toFixed(1)}%</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-5 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-16 h-2 bg-emerald-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${row.akses_sanitasi_persen || 0}%` }} /></div>
+                                            <span className="text-xs font-bold text-emerald-700">{(row.akses_sanitasi_persen || 0).toFixed(1)}%</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-5 py-4 font-medium text-slate-700">{(row.rt_jamban_sehat || 0).toLocaleString('id-ID')} <span className="text-slate-400 text-xs">KK</span></td>
+                                    <td className="px-5 py-4 font-medium text-slate-700">{(row.rt_air_minum_layak || 0).toLocaleString('id-ID')} <span className="text-slate-400 text-xs">KK</span></td>
+                                    <td className="px-5 py-4 font-medium">{row.tps_sementara || row.tps_jumlah || 0}</td>
+                                    <td className="px-5 py-4 font-medium">{row.petugas_kebersihan || 0} <span className="text-slate-400 text-xs">org</span></td>
+                                    <td className="px-5 py-4 text-center">
+                                        <span className={`inline-flex px-2 py-0.5 text-xs font-bold rounded-full ${statusOdfColors[row.status_odf] || statusOdfColors["Belum ODF"]}`}>
+                                            {row.status_odf || "Belum ODF"}
+                                        </span>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -165,7 +207,7 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
     const totalProyek = latestData.length;
     const selesai = latestData.filter(s => normalizeStatus(s.status) === "Selesai").length;
     const proses = latestData.filter(s => normalizeStatus(s.status) === "Proses").length;
-    const totalAnggaran = latestData.reduce((s, r) => s + (r.anggaran || 0), 0);
+    const avgProgress = latestData.length ? Math.round(latestData.reduce((s, r) => s + (r.progress_persen || 0), 0) / latestData.length) : 0;
     const [page, setPage] = useState(1);
     const limit = 10;
     const paginationData = latestData.slice((page - 1) * limit, page * limit);
@@ -188,7 +230,7 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
                     { label: 'Total Proyek', value: totalProyek, sub: `Tahun ${latestYear}`, icon: Hammer, color: 'bg-indigo-50 text-indigo-600', border: 'border-indigo-100' },
                     { label: 'Selesai', value: selesai, sub: 'Proyek tuntas', icon: CheckCircle, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
                     { label: 'Dalam Proses', value: proses, sub: 'Tahap konstruksi', icon: Clock, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
-                    { label: 'Total Anggaran', value: `Rp ${(totalAnggaran / 1e9).toFixed(1)} M`, sub: 'Miliar rupiah', icon: Banknote, color: 'bg-rose-50 text-rose-600', border: 'border-rose-100' },
+                    { label: 'Rata-rata Progress', value: `${avgProgress}%`, sub: 'Realisasi lapangan', icon: BarChart3, color: 'bg-rose-50 text-rose-600', border: 'border-rose-100' },
                 ].map((item) => (
                     <div key={item.label} className={`bg-white p-4 rounded-2xl border ${item.border} shadow-sm hover:shadow-md transition-all`}>
                         <div className={`inline-flex p-2 rounded-xl ${item.color} mb-3`}>
@@ -237,15 +279,23 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100 font-semibold">
-                            <tr><th className="px-6 py-4">Nama Proyek</th><th className="px-6 py-4">Kelurahan</th><th className="px-6 py-4">Sumber Dana</th><th className="px-6 py-4">Anggaran</th><th className="px-6 py-4">Progress</th><th className="px-6 py-4 text-center">Status</th></tr>
+                            <tr><th className="px-6 py-4">Nama Proyek</th><th className="px-6 py-4">Kelurahan</th><th className="px-6 py-4">Instansi Pelaksana</th><th className="px-6 py-4">Sumber Dana</th><th className="px-6 py-4">Volume</th><th className="px-6 py-4">Progress</th><th className="px-6 py-4 text-center">Status</th></tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {paginationData.map((row, i) => (
                                 <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="px-6 py-4"><p className="font-bold text-slate-800">{row.nama_proyek}</p></td>
+                                    <td className="px-6 py-4">
+                                        <p className="font-bold text-slate-800">{row.nama_proyek}</p>
+                                        {row.keterangan && <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{row.keterangan}</p>}
+                                    </td>
                                     <td className="px-6 py-4"><p className="font-semibold text-slate-700">{kelurahans.find(k => k.id === row.kelurahan_id)?.nama}</p></td>
+                                    <td className="px-6 py-4"><span className="text-sm text-slate-600">{row.instansi_pelaksana || "-"}</span></td>
                                     <td className="px-6 py-4"><span className="inline-flex px-2 py-1 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100">{row.sumber_dana || "-"}</span></td>
-                                    <td className="px-6 py-4"><p className="font-bold text-slate-700">Rp {(row.anggaran || 0).toLocaleString("id-ID")}</p>{row.realisasi > 0 && <p className="text-xs text-emerald-600 font-semibold mt-1">Realisasi: Rp {row.realisasi.toLocaleString("id-ID")}</p>}</td>
+                                    <td className="px-6 py-4">
+                                        {row.volume != null
+                                            ? <span className="text-sm font-medium text-slate-700">{Number(row.volume).toLocaleString('id-ID')} <span className="text-slate-400 text-xs">{row.satuan || ''}</span></span>
+                                            : <span className="text-slate-400 text-xs">-</span>}
+                                    </td>
                                     <td className="px-6 py-4"><div className="flex items-center gap-2"><div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-indigo-500 rounded-full" style={{ width: `${row.progress_persen || 0}%` }} /></div><span className="text-xs font-bold w-8">{row.progress_persen || 0}%</span></div></td>
                                     <td className="px-6 py-4 text-center"><span className={`inline-flex items-center px-2 py-1 text-xs font-bold rounded-lg ${statusColors[normalizeStatus(row.status)] || "bg-slate-100 text-slate-700"}`}>{normalizeStatus(row.status)}</span></td>
                                 </tr>
@@ -278,14 +328,14 @@ function OlahragaSection({ sports, kelurahans, selectedKelurahan }: { sports: an
     const totalFasilitas = filtered.length;
     const kondisiBaik = filtered.filter(s => s.kondisi === "Baik").length;
     const perluPerbaikan = totalFasilitas - kondisiBaik;
-    const uniqueTypes = new Set(filtered.map(s => s.jenis)).size;
+    const uniqueTypes = new Set(filtered.map(s => s.jenis_nama)).size;
     const [page, setPage] = useState(1);
     const limit = 12;
     const paginationData = filtered.slice((page - 1) * limit, page * limit);
     const totalPages = Math.ceil(totalFasilitas / limit);
 
     const jenisMap = new Map<string, number>();
-    filtered.forEach(d => { jenisMap.set(d.jenis || "Lainnya", (jenisMap.get(d.jenis || "Lainnya") || 0) + 1); });
+    filtered.forEach(d => { jenisMap.set(d.jenis_nama || "Lainnya", (jenisMap.get(d.jenis_nama || "Lainnya") || 0) + 1); });
     const pieData = Array.from(jenisMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 
     const kelMap = new Map<string, { total: number; baik: number }>();
@@ -359,9 +409,10 @@ function OlahragaSection({ sports, kelurahans, selectedKelurahan }: { sports: an
                                 <h4 className="font-bold text-slate-800 line-clamp-2 pr-2 leading-tight">{f.nama}</h4>
                                 <span className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full ${kondisiColors[f.kondisi] || "bg-slate-200 text-slate-700"}`}>{f.kondisi}</span>
                             </div>
-                            <p className="text-xs text-indigo-600 font-semibold mb-3 tracking-wide uppercase">{f.jenis}</p>
+                            <p className="text-xs text-indigo-600 font-semibold mb-3 tracking-wide uppercase">{f.jenis_nama || "-"}</p>
                             <div className="space-y-2 mt-auto text-xs text-slate-500">
                                 <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" /> <span className="truncate">{kelurahans.find(k => k.id === f.kelurahan_id)?.nama}</span></div>
+                                {f.status_kepemilikan && <div className="flex items-center gap-2"><span className="inline-flex px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 font-bold text-[10px]">{f.status_kepemilikan}</span></div>}
                                 {f.luas > 0 && <div className="flex items-center gap-2"><Activity className="w-3.5 h-3.5" /> <span className="truncate">{Number(f.luas).toLocaleString('id-ID')} m²</span></div>}
                             </div>
                         </div>
@@ -393,13 +444,31 @@ function AnalisisSection({ sanitation, development, sports, kelurahans, selected
         const san = sanitation.filter(s => s.kelurahan_id === k.id).sort((a, b) => b.tahun - a.tahun)[0] || {};
         const devCount = development.filter(s => s.kelurahan_id === k.id).length;
         const sportCount = sports.filter(s => s.kelurahan_id === k.id).length;
+
+        // Skor per dimensi (0–100)
         const airScore = san.akses_air_bersih_persen || 0;
         const sanScore = san.akses_sanitasi_persen || 0;
+
+        // Jamban: % KK yang punya jamban sehat (Pilar 1 STBM)
+        const totalKK = (san.rt_jamban_sehat || 0) + (san.rt_tanpa_jamban || 0);
+        const jambanScore = totalKK > 0 ? Math.min(100, Math.round(((san.rt_jamban_sehat || 0) / totalKK) * 100)) : 0;
+
         const devScore = Math.min(devCount * 5, 100);
         const sportScore = Math.min(sportCount * 10, 100);
         const kumuhPenalty = Math.max(0, 100 - (san.rumah_kumuh || 0) * 10);
-        const totalScore = (airScore + sanScore + devScore + sportScore + kumuhPenalty) / 5;
-        return { name: k.nama, id: k.id, score: totalScore, air: airScore, sanitasi: sanScore, pembangunan: devScore, olahraga: sportScore, kumuh: kumuhPenalty, rawDev: devCount, rawSport: sportCount };
+
+        // ODF bonus
+        const odfBonus = san.status_odf === "ODF" ? 100 : san.status_odf === "Proses Verifikasi" ? 50 : 0;
+
+        // Komposit 7 dimensi → rata-rata
+        const totalScore = (airScore + sanScore + jambanScore + devScore + sportScore + kumuhPenalty + odfBonus) / 7;
+
+        return {
+            name: k.nama, id: k.id, score: totalScore,
+            air: airScore, sanitasi: sanScore, jamban: jambanScore,
+            pembangunan: devScore, olahraga: sportScore, kumuh: kumuhPenalty, odf: odfBonus,
+            rawDev: devCount, rawSport: sportCount, statusOdf: san.status_odf || "Belum ODF",
+        };
     }).sort((a, b) => b.score - a.score);
     const topPerformer = analysisData.filter(d => d.score > 0).slice(0, 5);
 
@@ -408,17 +477,18 @@ function AnalisisSection({ sanitation, development, sports, kelurahans, selected
             <div className="grid lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                     <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2"><Activity className="w-5 h-5 text-indigo-600" /> Analisis Kapasitas Infrastruktur (Top 5)</h3>
-                    <p className="text-sm text-slate-500 mb-6">Indeks komposit ketersediaan sarana prasarana per wilayah</p>
+                    <p className="text-sm text-slate-500 mb-6">Indeks komposit 7 dimensi: Air Bersih, Sanitasi, Jamban, Pembangunan, Olahraga, Bebas Kumuh, ODF</p>
                     <div className="h-[400px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <RadarChart outerRadius="70%" data={topPerformer}>
                                 <PolarGrid stroke="#e2e8f0" />
                                 <PolarAngleAxis dataKey="name" tick={{ fill: "#64748b", fontSize: 12, fontWeight: 600 }} />
                                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: "#94a3b8", fontSize: 10 }} />
-                                <Radar name="Air Bersih" dataKey="air" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
-                                <Radar name="Sanitasi" dataKey="sanitasi" stroke="#10b981" fill="#10b981" fillOpacity={0.2} />
-                                <Radar name="Pembangunan" dataKey="pembangunan" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.2} />
-                                <Radar name="Olahraga" dataKey="olahraga" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.2} />
+                                <Radar name="Air Bersih" dataKey="air" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.15} />
+                                <Radar name="Sanitasi" dataKey="sanitasi" stroke="#10b981" fill="#10b981" fillOpacity={0.15} />
+                                <Radar name="Jamban (STBM)" dataKey="jamban" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.15} />
+                                <Radar name="Pembangunan" dataKey="pembangunan" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.15} />
+                                <Radar name="Olahraga" dataKey="olahraga" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.15} />
                                 <Radar name="Bebas Kumuh" dataKey="kumuh" stroke="#ef4444" fill="#ef4444" fillOpacity={0.1} />
                                 <Legend wrapperStyle={{ paddingTop: "20px" }} iconType="circle" />
                                 <Tooltip contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} />
@@ -429,7 +499,7 @@ function AnalisisSection({ sanitation, development, sports, kelurahans, selected
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
                     <div className="p-6 border-b border-slate-100 bg-slate-50">
                         <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Trophy className="w-5 h-5 text-amber-500" /> Leaderboard Wilayah</h3>
-                        <p className="text-xs text-slate-500 mt-1">Berdasarkan komposit ketersediaan infrastruktur</p>
+                        <p className="text-xs text-slate-500 mt-1">Komposit 7 dimensi infrastruktur & sanitasi</p>
                     </div>
                     <div className="flex-1 overflow-y-auto p-2" style={{ maxHeight: "400px" }}>
                         {analysisData.slice(0, 10).map((kel, index) => (
@@ -439,7 +509,10 @@ function AnalisisSection({ sanitation, development, sports, kelurahans, selected
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <h4 className="font-bold text-slate-800 truncate">{kel.name}</h4>
-                                    <p className="text-xs text-slate-500 truncate">Pembangunan: <span className="font-semibold text-slate-700">{kel.rawDev}</span> | Olahraga: <span className="font-semibold text-slate-700">{kel.rawSport}</span></p>
+                                    <p className="text-xs text-slate-500 truncate">
+                                        ODF: <span className={`font-semibold ${kel.statusOdf === "ODF" ? "text-emerald-600" : "text-slate-500"}`}>{kel.statusOdf}</span>
+                                        {" | "}Proyek: <span className="font-semibold text-slate-700">{kel.rawDev}</span>
+                                    </p>
                                 </div>
                                 <div className="text-right shrink-0">
                                     <div className="text-indigo-600 font-extrabold text-xl">{kel.score.toFixed(1)}</div>
@@ -459,12 +532,16 @@ function AnalisisSection({ sanitation, development, sports, kelurahans, selected
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs text-slate-500">
                     <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
-                        <p className="font-bold text-blue-700 mb-1">💧 Air Bersih</p>
-                        <p>Langsung dari data survei: <code className="bg-blue-100 px-1 rounded">akses_air_bersih_persen</code> (0–100). Mengacu SDGs Target 6.1.</p>
+                        <p className="font-bold text-blue-700 mb-1">💧 Air Bersih (SDGs 6.1.1)</p>
+                        <p>Data survei <code className="bg-blue-100 px-1 rounded">akses_air_bersih_persen</code> (0–100). Target SDGs 100% tahun 2030.</p>
                     </div>
                     <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
-                        <p className="font-bold text-emerald-700 mb-1">🚰 Sanitasi</p>
-                        <p>Langsung dari data survei: <code className="bg-emerald-100 px-1 rounded">akses_sanitasi_persen</code> (0–100). Mengacu SDGs Target 6.2.</p>
+                        <p className="font-bold text-emerald-700 mb-1">🚰 Sanitasi (SDGs 6.2.1)</p>
+                        <p>Data survei <code className="bg-emerald-100 px-1 rounded">akses_sanitasi_persen</code> (0–100). Target SDGs 100% tahun 2030.</p>
+                    </div>
+                    <div className="p-3 bg-cyan-50/50 rounded-xl border border-cyan-100">
+                        <p className="font-bold text-cyan-700 mb-1">🚽 Jamban Sehat (STBM Pilar 1)</p>
+                        <p>Skor = <code className="bg-cyan-100 px-1 rounded">rt_jamban_sehat / (rt_jamban + rt_tanpa_jamban) × 100</code>. Standar STBM.</p>
                     </div>
                     <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-100">
                         <p className="font-bold text-amber-700 mb-1">🏗️ Pembangunan</p>
@@ -475,12 +552,16 @@ function AnalisisSection({ sanitation, development, sports, kelurahans, selected
                         <p>Skor = <code className="bg-violet-100 px-1 rounded">min(jumlah_fasilitas × 10, 100)</code>. Setiap fasilitas bernilai 10 poin, maks 100.</p>
                     </div>
                     <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-100">
-                        <p className="font-bold text-rose-700 mb-1">🏘️ Bebas Kumuh</p>
-                        <p>Skor = <code className="bg-rose-100 px-1 rounded">max(0, 100 − rumah_kumuh × 10)</code>. Semakin sedikit rumah kumuh, skor semakin tinggi.</p>
+                        <p className="font-bold text-rose-700 mb-1">🏘️ Bebas Kumuh (BPS)</p>
+                        <p>Skor = <code className="bg-rose-100 px-1 rounded">max(0, 100 − rumah_kumuh × 10)</code>. Standar BPS Podes.</p>
                     </div>
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="p-3 bg-teal-50/50 rounded-xl border border-teal-100">
+                        <p className="font-bold text-teal-700 mb-1">✅ Status ODF (STBM)</p>
+                        <p>ODF = 100, Proses = 50, Belum = 0. Berdasarkan verifikasi status Open Defecation Free.</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 md:col-span-2 lg:col-span-2">
                         <p className="font-bold text-slate-700 mb-1">📊 Skor Akhir</p>
-                        <p>Rata-rata dari 5 dimensi di atas. Bukan indeks resmi BPS — hanya untuk perbandingan relatif antar kelurahan.</p>
+                        <p>Rata-rata dari 7 dimensi di atas. Bukan indeks resmi BPS — hanya untuk perbandingan relatif antar kelurahan berdasarkan standar STBM, SDGs, dan Prodeskel.</p>
                     </div>
                 </div>
             </div>
@@ -507,11 +588,16 @@ export default function DataInfrastrukturPage() {
             const [sanRes, devRes, sportsRes] = await Promise.all([
                 supabase.from("infra_sanitation").select("*"),
                 supabase.from("infra_development").select("*"),
-                supabase.from("infra_sports").select("*")
+                (supabase as any).schema("sidakota").from("infra_sports").select("*, ref_jenis_sarana_olahraga:jenis_id(id, nama)")
             ]);
             setSanitation(sanRes.data || []);
             setDevelopment(devRes.data || []);
-            setSports(sportsRes.data || []);
+            setSports(
+                (sportsRes.data || []).map((s: any) => ({
+                    ...s,
+                    jenis_nama: s.ref_jenis_sarana_olahraga?.nama ?? "-",
+                }))
+            );
         } catch (error) {
             console.error("Error fetching data:", error);
         } finally {

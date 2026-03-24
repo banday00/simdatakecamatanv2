@@ -327,7 +327,7 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
             if (selectedKelurahan && f.kelurahan_id !== selectedKelurahan) return false;
             if (searchQuery) {
                 const q = searchQuery.toLowerCase();
-                return (f.nama?.toLowerCase().includes(q)) || (f.jenis?.toLowerCase().includes(q));
+                return (f.nama?.toLowerCase().includes(q)) || (f.jenis_nama?.toLowerCase().includes(q));
             }
             return true;
         });
@@ -341,7 +341,7 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
 
     const jenisCount = new Map<string, number>();
     filteredData.forEach(d => {
-        const j = d.jenis || "Lainnya";
+        const j = d.jenis_nama || "Lainnya";
         jenisCount.set(j, (jenisCount.get(j) || 0) + 1);
     });
     const jenisChartData = Array.from(jenisCount.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
@@ -453,7 +453,7 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className="inline-block px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-100">
-                                            {row.jenis || "Lainnya"}
+                                            {row.jenis_nama || "Lainnya"}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-slate-500 max-w-sm truncate">
@@ -522,7 +522,7 @@ function UmkmSection({ potentials, kelurahans, selectedKelurahan }: { potentials
         return filteredData.slice(start, start + ITEMS_PER_PAGE);
     }, [filteredData, currentPage]);
 
-    const totalActive = filteredData.filter(d => d.status === 'aktif').length;
+    const totalActive = filteredData.filter(d => d.status?.toString().toLowerCase() === 'aktif').length;
     const totalOmzet = filteredData.reduce((acc, curr) => acc + (Number(curr.omzet_per_bulan) || 0), 0);
     const totalPekerja = filteredData.reduce((acc, curr) => acc + (curr.jumlah_tenaga_kerja || 0), 0);
     const prcActive = filteredData.length > 0 ? Math.round((totalActive / filteredData.length) * 100) : 0;
@@ -650,11 +650,21 @@ function UmkmSection({ potentials, kelurahans, selectedKelurahan }: { potentials
                                         <div className="font-bold text-slate-800">{row.nama_usaha || "-"}</div>
                                         <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Users className="w-3 h-3" /> {row.pemilik || "Tanpa data pemilik"}</div>
                                     </td>
-                                    <td className="px-5 py-3 text-slate-600">{row.jenis_usaha || "-"}</td>
+                                    <td className="px-5 py-3">
+                                        <span className="inline-flex px-2 py-0.5 text-xs font-bold rounded-md border bg-indigo-50 text-indigo-700 border-indigo-200">
+                                            {row.jenis_usaha || "-"}
+                                        </span>
+                                    </td>
                                     <td className="px-5 py-3 font-medium text-indigo-600">{formatRupiah(Number(row.omzet_per_bulan) || 0)}</td>
                                     <td className="px-5 py-3 text-center text-slate-600">{row.jumlah_tenaga_kerja || 0}</td>
                                     <td className="px-5 py-3 text-center">
-                                        <div className={`px-2 py-0.5 rounded text-[10px] font-bold inline-block ${row.status === 'aktif' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                                        <div className={`px-2 py-0.5 rounded text-[10px] font-bold inline-block ${
+                                            row.status?.toString().toLowerCase() === 'aktif'
+                                                ? 'bg-emerald-100 text-emerald-700'
+                                                : row.status?.toString().toLowerCase() === 'tutup'
+                                                ? 'bg-slate-100 text-slate-600'
+                                                : 'bg-red-100 text-red-700'
+                                        }`}>
                                             {(row.status || 'tdk diketahui').toUpperCase()}
                                         </div>
                                     </td>
@@ -848,8 +858,8 @@ export default function EkonomiPage() {
 
             const [secRes, facRes, potRes, refRes] = await Promise.all([
                 supabase.schema("sidakota").from("econ_business_sectors").select("*").eq("tenant_id", tenant.id),
-                supabase.schema("sidakota").from("econ_facilities").select("*").eq("tenant_id", tenant.id),
-                supabase.schema("sidakota").from("econ_potential").select("*").eq("tenant_id", tenant.id),
+                (supabase as any).schema("sidakota").from("econ_facilities").select("*, ref_ekonomi_sarana:jenis_id(id, nama)").eq("tenant_id", tenant.id),
+                (supabase as any).schema("sidakota").from("econ_potential").select("*, ref_lapangan_usaha:jenis_usaha_id(id, nama)").eq("tenant_id", tenant.id),
                 supabase.schema("sidakota").from("ref_lapangan_usaha").select("id, nama")
             ]);
 
@@ -862,8 +872,18 @@ export default function EkonomiPage() {
             }));
 
             setSectors(mappedSectors);
-            setFacilities(facRes.data || []);
-            setPotentials(potRes.data || []);
+            setFacilities(
+                (facRes.data || []).map((f: any) => ({
+                    ...f,
+                    jenis_nama: f.ref_ekonomi_sarana?.nama ?? "-",
+                }))
+            );
+            setPotentials(
+                (potRes.data || []).map((p: any) => ({
+                    ...p,
+                    jenis_usaha: p.ref_lapangan_usaha?.nama ?? "-",
+                }))
+            );
 
         } catch (e) {
             console.error("Failed fetching ekonomi data", e);

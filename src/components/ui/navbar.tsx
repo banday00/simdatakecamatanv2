@@ -75,13 +75,7 @@ const LAYANAN_ITEMS = [
         desc: "Pajak Bumi dan Bangunan",
         color: "from-emerald-500 to-teal-600",
     },
-    {
-        label: "DTSEN",
-        href: "https://dtks.kemensos.go.id/", // Placeholder
-        icon: Users,
-        desc: "Data Terpadu Kesejahteraan Sosial",
-        color: "from-amber-500 to-orange-600",
-    },
+
 ];
 
 export function Navbar() {
@@ -249,7 +243,7 @@ export function Navbar() {
                                     const isExternal = item.href.startsWith("http");
                                     const Component = isExternal ? "a" : Link;
                                     const extraProps = isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {};
-                                    
+
                                     return (
                                         <Component
                                             key={item.href}

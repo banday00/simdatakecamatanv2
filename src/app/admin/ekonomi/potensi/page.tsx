@@ -1,30 +1,37 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useTenant } from "@/lib/tenant/context";
 import { useAuth } from "@/lib/auth/context";
-import { useCrud } from "@/hooks/use-crud";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { DeleteConfirm } from "@/components/ui/delete-confirm";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
+import { createClient } from "@/lib/supabase/client";
 import { Store, Users, Banknote, TrendingUp, X, Loader2, Save, Tags, PiggyBank } from "lucide-react";
 
-/* ── Type matching DB table sidakota.econ_potential ── */
-type Row = Record<string, unknown> & {
+/* ── Types ── */
+type RefLapanganUsaha = { id: number; nama: string };
+
+type Row = {
     id: string;
+    tenant_id?: string;
     kelurahan_id?: string;
     kelurahan_nama?: string;
     nama_usaha: string;
-    jenis_usaha: string;
-    pemilik: string;
-    jumlah_tenaga_kerja: number;
-    omzet_per_bulan: number;
-    status: string;
+    alamat_usaha?: string;
+    jenis_usaha_id?: number | null;
+    jenis_usaha_nama?: string;     // resolved from join
+    pemilik?: string;
+    jumlah_tenaga_kerja?: number;
+    omzet_per_bulan?: number;
+    status?: string;
+    created_at?: string;
+    [key: string]: unknown;
 };
 
-/* ── Column definitions ── */
+/* ── Badge ── */
 const STATUS_COLORS: Record<string, string> = {
     "aktif": "bg-emerald-50 text-emerald-700 border-emerald-200",
     "tidak aktif": "bg-red-50 text-red-700 border-red-200",
@@ -34,8 +41,8 @@ const STATUS_COLORS: Record<string, string> = {
 const columns: Column<Row>[] = [
     { key: "nama_usaha", label: "Nama Usaha", sortable: true },
     {
-        key: "jenis_usaha", label: "Jenis", sortable: true,
-        render: (v) => <span className="inline-flex px-2 py-0.5 text-xs font-bold uppercase tracking-widest rounded-md border bg-blue-50 text-blue-700 border-blue-200">{String(v)}</span>
+        key: "jenis_usaha_nama", label: "Jenis", sortable: true,
+        render: (v) => <span className="inline-flex px-2 py-0.5 text-xs font-bold uppercase tracking-widest rounded-md border bg-blue-50 text-blue-700 border-blue-200">{String(v || "-")}</span>
     },
     {
         key: "pemilik", label: "Pemilik", sortable: true,
@@ -63,21 +70,69 @@ const columns: Column<Row>[] = [
     },
 ];
 
-const JENIS_OPTIONS = [
-    "Kuliner", "Fashion", "Kerajinan", "Perdagangan", "Jasa", "Pertanian", "Peternakan", "Lainnya"
-];
 const STATUS_OPTIONS = ["Aktif", "Tidak Aktif", "Tutup"];
 
+/* ── Hook: fetch ref_lapangan_usaha ── */
+function useRefLapanganUsaha() {
+    const [items, setItems] = useState<RefLapanganUsaha[]>([]);
+
+    useEffect(() => {
+        async function load() {
+            const supabase = createClient();
+            const { data } = await (supabase as any)
+                .schema("sidakota")
+                .from("ref_lapangan_usaha")
+                .select("id, nama")
+                .order("id", { ascending: true });
+            setItems(data ?? []);
+        }
+        load();
+    }, []);
+
+    return items;
+}
+
+/* ── Hook: fetch econ_potential with join ── */
+function useEconPotential(tenantId: string | undefined) {
+    const [data, setData] = useState<Row[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const load = useCallback(async () => {
+        if (!tenantId) return;
+        setIsLoading(true);
+        const supabase = createClient();
+        const { data: rows } = await (supabase as any)
+            .schema("sidakota")
+            .from("econ_potential")
+            .select("*, ref_lapangan_usaha:jenis_usaha_id(id, nama)")
+            .eq("tenant_id", tenantId)
+            .order("created_at", { ascending: false });
+
+        setData(
+            (rows ?? []).map((r: any) => ({
+                ...r,
+                jenis_usaha_nama: r.ref_lapangan_usaha?.nama ?? "-",
+            }))
+        );
+        setIsLoading(false);
+    }, [tenantId]);
+
+    useEffect(() => { load(); }, [load]);
+
+    return { data, isLoading, reload: load };
+}
+
 export default function PotensiPage() {
-    const { kelurahans } = useTenant();
+    const { tenant, kelurahans } = useTenant();
     const { user } = useAuth();
     const isKelurahanAdmin = user?.role === "admin_kelurahan";
     const filterKelurahanId = isKelurahanAdmin ? (user as any)?.kelurahan_id : null;
 
-    const { data, isLoading, create, update, remove } = useCrud<Row>({ table: "econ_potential" });
+    const { data: rawData, isLoading, reload } = useEconPotential(tenant?.id);
+    const refLapanganUsaha = useRefLapanganUsaha();
 
-    // Enrich data with kelurahan_nama + filter for admin_kelurahan
-    const enrichedData = data
+    // Enrich with kelurahan_nama + filter
+    const enrichedData = rawData
         .map(r => ({ ...r, kelurahan_nama: kelurahans.find(k => k.id === r.kelurahan_id)?.nama || "-" }))
         .filter(r => !filterKelurahanId || r.kelurahan_id === filterKelurahanId);
 
@@ -96,13 +151,25 @@ export default function PotensiPage() {
     const totalOmzet = enrichedData.reduce((s, r) => s + (Number(r.omzet_per_bulan) || 0), 0);
 
     async function handleSubmit(fd: Record<string, unknown>) {
+        if (!tenant?.id) return;
         setIsSubmitting(true);
         try {
-            editRow ? await update(editRow.id, fd) : await create(fd);
+            const supabase = createClient();
+            const payload = {
+                ...fd,
+                tenant_id: tenant.id,
+                jenis_usaha_id: Number(fd.jenis_usaha_id) || null,
+            };
+            if (editRow) {
+                await (supabase as any).schema("sidakota").from("econ_potential").update(payload).eq("id", editRow.id);
+            } else {
+                await (supabase as any).schema("sidakota").from("econ_potential").insert(payload);
+            }
             setModalOpen(false);
             setEditRow(null);
+            await reload();
         } catch {
-            alert(editRow ? "Gagal memperbarui data UMKM. Pastikan data sudah lengkap." : "Gagal menyimpan data UMKM. Pastikan data sudah lengkap.");
+            alert(editRow ? "Gagal memperbarui data UMKM." : "Gagal menyimpan data UMKM.");
         } finally {
             setIsSubmitting(false);
         }
@@ -112,10 +179,12 @@ export default function PotensiPage() {
         if (!deleteRow) return;
         setIsSubmitting(true);
         try {
-            await remove(deleteRow.id);
+            const supabase = createClient();
+            await (supabase as any).schema("sidakota").from("econ_potential").delete().eq("id", deleteRow.id);
             setDeleteRow(null);
+            await reload();
         } catch {
-            alert("Gagal menghapus data UMKM. Silakan coba lagi.");
+            alert("Gagal menghapus data UMKM.");
         } finally {
             setIsSubmitting(false);
         }
@@ -134,13 +203,22 @@ export default function PotensiPage() {
             </div>
 
             <DataTable columns={columns} data={enrichedData} isLoading={isLoading}
-                onAdd={() => { setEditRow(null); setModalOpen(true); }} onEdit={(r) => { setEditRow(r); setModalOpen(true); }}
-                onDelete={(r) => setDeleteRow(r)} addLabel="Tambah UMKM" searchPlaceholder="Cari nama usaha, jenis, pemilik..." />
+                onAdd={() => { setEditRow(null); setModalOpen(true); }}
+                onEdit={(r) => { setEditRow(r); setModalOpen(true); }}
+                onDelete={(r) => setDeleteRow(r)}
+                addLabel="Tambah UMKM" searchPlaceholder="Cari nama usaha, jenis, pemilik..." />
 
             <PotensiEkonomiFormModal
-                open={modalOpen} onClose={() => { setModalOpen(false); setEditRow(null); }} onSubmit={handleSubmit}
-                editRow={editRow} kelurahanOptions={kelurahanOptions} isSubmitting={isSubmitting}
-                filterKelurahanId={filterKelurahanId} isKelurahanAdmin={isKelurahanAdmin} />
+                open={modalOpen}
+                onClose={() => { setModalOpen(false); setEditRow(null); }}
+                onSubmit={handleSubmit}
+                editRow={editRow}
+                kelurahanOptions={kelurahanOptions}
+                isSubmitting={isSubmitting}
+                filterKelurahanId={filterKelurahanId}
+                isKelurahanAdmin={isKelurahanAdmin}
+                refLapanganUsaha={refLapanganUsaha}
+            />
 
             <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting}
                 title="Hapus Data UMKM?" message={`Yakin ingin menghapus "${deleteRow?.nama_usaha || ""}"? Data tidak dapat dikembalikan.`} />
@@ -151,9 +229,8 @@ export default function PotensiPage() {
 /* ═══════════════════════════════════════════════════════
    PotensiEkonomiFormModal — Blue Theme
    ═══════════════════════════════════════════════════════ */
-
 function PotensiEkonomiFormModal({
-    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions, filterKelurahanId, isKelurahanAdmin,
+    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions, filterKelurahanId, isKelurahanAdmin, refLapanganUsaha,
 }: {
     open: boolean;
     onClose: () => void;
@@ -163,14 +240,16 @@ function PotensiEkonomiFormModal({
     kelurahanOptions: { label: string; value: string }[];
     filterKelurahanId?: string | null;
     isKelurahanAdmin?: boolean;
+    refLapanganUsaha: RefLapanganUsaha[];
 }) {
     const isEdit = !!editRow;
 
     const [form, setForm] = useState<Record<string, unknown>>({
         kelurahan_id: "",
         nama_usaha: "",
-        jenis_usaha: "Kuliner",
+        jenis_usaha_id: "",
         pemilik: "",
+        alamat_usaha: "",
         jumlah_tenaga_kerja: 0,
         omzet_per_bulan: 0,
         status: "Aktif",
@@ -178,12 +257,14 @@ function PotensiEkonomiFormModal({
 
     useEffect(() => {
         if (!open) return;
+        const firstId = refLapanganUsaha[0]?.id ?? "";
         if (editRow) {
             setForm({
                 kelurahan_id: editRow.kelurahan_id ?? "",
                 nama_usaha: editRow.nama_usaha ?? "",
-                jenis_usaha: editRow.jenis_usaha ?? "Kuliner",
+                jenis_usaha_id: editRow.jenis_usaha_id ?? firstId,
                 pemilik: editRow.pemilik ?? "",
+                alamat_usaha: editRow.alamat_usaha ?? "",
                 jumlah_tenaga_kerja: editRow.jumlah_tenaga_kerja ?? 0,
                 omzet_per_bulan: editRow.omzet_per_bulan ?? 0,
                 status: editRow.status ?? "Aktif",
@@ -192,14 +273,15 @@ function PotensiEkonomiFormModal({
             setForm({
                 kelurahan_id: (isKelurahanAdmin && filterKelurahanId) ? filterKelurahanId : (kelurahanOptions[0]?.value || ""),
                 nama_usaha: "",
-                jenis_usaha: "Kuliner",
+                jenis_usaha_id: firstId,
                 pemilik: "",
+                alamat_usaha: "",
                 jumlah_tenaga_kerja: 0,
                 omzet_per_bulan: 0,
                 status: "Aktif",
             });
         }
-    }, [open, editRow, kelurahanOptions, filterKelurahanId, isKelurahanAdmin]);
+    }, [open, editRow, kelurahanOptions, filterKelurahanId, isKelurahanAdmin, refLapanganUsaha]);
 
     function set(field: string, value: string | number) {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -220,10 +302,8 @@ function PotensiEkonomiFormModal({
                 className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
                 style={{ animation: "modalSlideIn 0.3s ease-out" }}
             >
-                {/* Gradient accent — Blue Theme */}
                 <div className="h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 shrink-0" />
 
-                {/* Header */}
                 <div className="flex items-center justify-between px-6 py-5 md:px-8 border-b border-gray-100 shrink-0 bg-white">
                     <div className="flex items-center gap-4">
                         <div className="p-3 rounded-2xl shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600">
@@ -243,12 +323,11 @@ function PotensiEkonomiFormModal({
                     </button>
                 </div>
 
-                {/* Form Body */}
                 <form onSubmit={handleFormSubmit} className="flex flex-col flex-1 overflow-hidden">
                     <div className="p-6 md:p-8 overflow-y-auto bg-slate-50/30">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-                            {/* Left Column: Profil Usaha */}
+                            {/* Left: Profil Usaha */}
                             <div className="space-y-6">
                                 <div className="flex items-center gap-2 pb-2 border-b border-blue-100">
                                     <Tags className="w-4 h-4 text-blue-500" />
@@ -312,11 +391,12 @@ function PotensiEkonomiFormModal({
                                         <select
                                             required
                                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                                            value={(form.jenis_usaha as string) || "Kuliner"}
-                                            onChange={(e) => set("jenis_usaha", e.target.value)}
+                                            value={(form.jenis_usaha_id as number | string) || ""}
+                                            onChange={(e) => set("jenis_usaha_id", Number(e.target.value))}
                                         >
-                                            {JENIS_OPTIONS.map((opt) => (
-                                                <option key={opt} value={opt}>{opt}</option>
+                                            <option value="" disabled>— Pilih Bidang Usaha —</option>
+                                            {refLapanganUsaha.map((opt) => (
+                                                <option key={opt.id} value={opt.id}>{opt.nama}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -336,11 +416,11 @@ function PotensiEkonomiFormModal({
                                 </div>
                             </div>
 
-                            {/* Right Column: Kapasitas & Finansial */}
+                            {/* Right: Kapasitas & Finansial */}
                             <div className="space-y-6">
                                 <div className="flex items-center gap-2 pb-2 border-b border-indigo-100">
                                     <PiggyBank className="w-4 h-4 text-indigo-500" />
-                                    <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Kapasitas & Finansial</span>
+                                    <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Kapasitas &amp; Finansial</span>
                                 </div>
 
                                 <div className="space-y-5">
@@ -383,7 +463,20 @@ function PotensiEkonomiFormModal({
                                     </div>
                                 </div>
 
-                                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl mt-6">
+                                <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                            Alamat Usaha
+                                        </label>
+                                        <textarea
+                                            rows={3}
+                                            placeholder="Jl. Contoh No. 1, RT 01/RW 02..."
+                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm resize-none"
+                                            value={(form.alamat_usaha as string) || ""}
+                                            onChange={(e) => set("alamat_usaha", e.target.value)}
+                                        />
+                                    </div>
+
+                                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
                                     <h4 className="text-xs font-bold text-blue-800 mb-2 uppercase tracking-wide">Tips Pendataan</h4>
                                     <p className="text-sm text-blue-700 leading-relaxed">
                                         Data &quot;Omzet&quot; diinputkan dalam satuan nominal <b>Rupiah (Rp)</b>. Harap tidak menyingkat inputan menggunakan &quot;Ribu&quot; atau &quot;Juta&quot;, namun ketikkan angka asli secara keseluruhan (misal: &quot;15000000&quot; bukan &quot;15 Juta&quot;).
@@ -394,11 +487,8 @@ function PotensiEkonomiFormModal({
                         </div>
                     </div>
 
-                    {/* Footer / Actions */}
                     <div className="flex items-center justify-between px-6 py-4 md:px-8 border-t border-gray-100 bg-white shrink-0">
-                        <p className="text-xs text-gray-400">
-                            <span className="text-red-400">*</span> Wajib diisi
-                        </p>
+                        <p className="text-xs text-gray-400"><span className="text-red-400">*</span> Wajib diisi</p>
                         <div className="flex flex-col-reverse sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
                             <button
                                 type="button"
@@ -412,11 +502,7 @@ function PotensiEkonomiFormModal({
                                 disabled={isSubmitting}
                                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-lg shadow-blue-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {isSubmitting ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <Save className="w-4 h-4" />
-                                )}
+                                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                 {isEdit ? "Simpan Perubahan" : "Tambah Usaha"}
                             </button>
                         </div>

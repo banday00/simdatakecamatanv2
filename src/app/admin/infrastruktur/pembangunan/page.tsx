@@ -20,6 +20,10 @@ type Row = Record<string, unknown> & {
     nama_proyek: string; sumber_dana: string;
     anggaran: number; realisasi: number;
     progress_persen: number; status: string;
+    volume?: number | null; satuan?: string | null;
+    instansi_pelaksana?: string | null;
+    keterangan?: string | null;
+    lokasi?: string | null;
 };
 
 const statusColors: Record<string, string> = {
@@ -29,6 +33,7 @@ const statusColors: Record<string, string> = {
 
 const SUMBER_DANA_OPTIONS = ["APBD Kota", "APBD Provinsi", "APBN", "Dana Desa", "CSR", "Swadaya"];
 const STATUS_OPTIONS = ["Rencana", "Proses", "Selesai", "Bermasalah"];
+const SATUAN_OPTIONS = ["m", "m²", "m³", "km", "unit", "paket", "ls (lump sum)", "buah", "titik", "lokal", "Ha"];
 
 export default function PembangunanPage() {
     const { kelurahans } = useTenant();
@@ -36,6 +41,7 @@ export default function PembangunanPage() {
     const [modalOpen, setModalOpen] = useState(false);
     const [editRow, setEditRow] = useState<Row | null>(null);
     const [deleteRow, setDeleteRow] = useState<Row | null>(null);
+    const [detailRow, setDetailRow] = useState<Row | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const kelurahanOptions = kelurahans.map((k) => ({ label: k.nama, value: k.id }));
@@ -92,16 +98,10 @@ export default function PembangunanPage() {
             }
         },
         {
-            key: "anggaran", label: "Anggaran", sortable: true,
-            render: (v) => <span className="font-medium text-gray-700">Rp {Number(v ?? 0).toLocaleString("id-ID")}</span>
-        },
-        {
-            key: "realisasi", label: "Realisasi", sortable: true,
-            render: (v) => <span className="font-medium text-emerald-600">Rp {Number(v ?? 0).toLocaleString("id-ID")}</span>
-        },
-        {
-            key: "sumber_dana", label: "Sumber Dana",
-            render: (v) => <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700">{String(v || '-')}</span>
+            key: "volume", label: "Volume", sortable: true,
+            render: (v, row) => v != null
+                ? <span className="text-sm text-gray-700 font-medium">{Number(v).toLocaleString('id-ID')} <span className="text-gray-400">{String((row as any).satuan || '')}</span></span>
+                : <span className="text-gray-400 text-xs">-</span>
         },
     ];
 
@@ -133,6 +133,7 @@ export default function PembangunanPage() {
 
             <DataTable columns={columns} data={enrichedData} isLoading={isLoading}
                 onAdd={() => { setEditRow(null); setModalOpen(true); }} onEdit={(r) => { setEditRow(r); setModalOpen(true); }}
+                onView={(r) => setDetailRow(r)}
                 onDelete={(r) => setDeleteRow(r)} addLabel="Tambah Proyek" searchPlaceholder="Cari nama proyek..." />
 
             <PembangunanFormModal
@@ -143,6 +144,13 @@ export default function PembangunanPage() {
                 open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting}
                 title="Hapus Data Proyek?"
                 message={deleteRow ? `Yakin ingin menghapus proyek "${deleteRow.nama_proyek}"? Data yang dihapus tidak bisa dikembalikan.` : ""}
+            />
+
+            <PembangunanDetailModal
+                open={!!detailRow}
+                onClose={() => setDetailRow(null)}
+                row={detailRow}
+                kelMap={kelMap}
             />
         </div>
     );
@@ -169,6 +177,7 @@ function PembangunanFormModal({
         nama_proyek: "", sumber_dana: "APBD Kota",
         anggaran: 0, realisasi: 0,
         progress_persen: 0, status: "Rencana",
+        volume: "", satuan: "m", instansi_pelaksana: "", keterangan: "", lokasi: "",
     });
 
     useEffect(() => {
@@ -183,6 +192,11 @@ function PembangunanFormModal({
                 realisasi: editRow.realisasi ?? 0,
                 progress_persen: editRow.progress_persen ?? 0,
                 status: editRow.status ?? "Rencana",
+                volume: editRow.volume ?? "",
+                satuan: editRow.satuan ?? "m",
+                instansi_pelaksana: editRow.instansi_pelaksana ?? "",
+                keterangan: editRow.keterangan ?? "",
+                lokasi: editRow.lokasi ?? "",
             });
         } else {
             setForm({
@@ -191,12 +205,18 @@ function PembangunanFormModal({
                 nama_proyek: "", sumber_dana: "APBD Kota",
                 anggaran: 0, realisasi: 0,
                 progress_persen: 0, status: "Rencana",
+                volume: "", satuan: "m", instansi_pelaksana: "", keterangan: "", lokasi: "",
             });
         }
     }, [open, editRow, kelurahanOptions]);
 
     function set(field: string, value: string | number) {
-        setForm((prev) => ({ ...prev, [field]: value }));
+        setForm((prev) => {
+            const next = { ...prev, [field]: value };
+            // Jika status Selesai → paksa progress 100%
+            if (field === "status" && value === "Selesai") next.progress_persen = 100;
+            return next;
+        });
     }
 
     function handleFormSubmit(e: React.FormEvent) {
@@ -207,6 +227,7 @@ function PembangunanFormModal({
             realisasi: Number(form.realisasi),
             progress_persen: Number(form.progress_persen),
             tahun: Number(form.tahun),
+            volume: form.volume !== "" && form.volume !== null ? Number(form.volume) : null,
         };
         onSubmit(payload);
     }
@@ -301,6 +322,18 @@ function PembangunanFormModal({
 
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                            Instansi Pelaksana
+                                        </label>
+                                        <input
+                                            type="text" placeholder="Cth: Dinas PUPR Kota Bogor"
+                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                                            value={(form.instansi_pelaksana as string) || ""}
+                                            onChange={(e) => set("instansi_pelaksana", e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                                             Sumber Pendanaan <span className="text-red-500">*</span>
                                         </label>
                                         <select
@@ -337,6 +370,34 @@ function PembangunanFormModal({
                                                 value={(form.realisasi as number) || 0}
                                                 onChange={(e) => set("realisasi", Number(e.target.value))}
                                             />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                                Volume
+                                            </label>
+                                            <input
+                                                type="number" min={0} step="0.01" placeholder="Cth: 250"
+                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                                                value={(form.volume as string | number) ?? ""}
+                                                onChange={(e) => set("volume", e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                                Satuan
+                                            </label>
+                                            <select
+                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                                                value={(form.satuan as string) || "m"}
+                                                onChange={(e) => set("satuan", e.target.value)}
+                                            >
+                                                {SATUAN_OPTIONS.map((opt) => (
+                                                    <option key={opt} value={opt}>{opt}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
@@ -383,14 +444,46 @@ function PembangunanFormModal({
                                         </div>
                                         <input
                                             type="range" min="0" max="100" step="1"
-                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                                            readOnly={form.status === "Selesai"}
+                                            disabled={form.status === "Selesai"}
+                                            className={`w-full h-2 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${
+                                                form.status === "Selesai"
+                                                    ? "bg-emerald-200 accent-emerald-500 cursor-not-allowed opacity-70"
+                                                    : "bg-gray-200 accent-indigo-600"
+                                            }`}
                                             value={(form.progress_persen as number) || 0}
                                             onChange={(e) => set("progress_persen", Number(e.target.value))}
                                         />
                                         <div className="flex justify-between text-[10px] text-gray-400 mt-1 font-medium px-1">
                                             <span>Mulai (0%)</span>
-                                            <span>Serah Terima (100%)</span>
+                                            <span>{form.status === "Selesai" ? "✅ Otomatis 100% (Selesai)" : "Serah Terima (100%)"}</span>
                                         </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                            Lokasi
+                                        </label>
+                                        <textarea
+                                            rows={2}
+                                            placeholder="Cth: Jl. Raya Bogor KM 40..."
+                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm resize-none"
+                                            value={(form.lokasi as string) || ""}
+                                            onChange={(e) => set("lokasi", e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                                            Keterangan
+                                        </label>
+                                        <textarea
+                                            rows={3}
+                                            placeholder="Catatan tambahan mengenai proyek ini..."
+                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm resize-none"
+                                            value={(form.keterangan as string) || ""}
+                                            onChange={(e) => set("keterangan", e.target.value)}
+                                        />
                                     </div>
 
                                     {/* Info */}
@@ -435,6 +528,142 @@ function PembangunanFormModal({
                         </div>
                     </div>
                 </form>
+            </div>
+        </div>,
+        document.body
+    );
+}
+
+/* ═══════════════════════════════════════════════════════
+   PembangunanDetailModal (Read-only detail view)
+   ═══════════════════════════════════════════════════════ */
+
+function PembangunanDetailModal({
+    open, onClose, row, kelMap,
+}: {
+    open: boolean;
+    onClose: () => void;
+    row: Row | null;
+    kelMap: Map<string, string>;
+}) {
+    if (!open || !row) return null;
+
+    const statusColorsFull: Record<string, string> = {
+        Rencana: "bg-blue-100 text-blue-700 border-blue-200",
+        Proses: "bg-amber-100 text-amber-700 border-amber-200",
+        Selesai: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        Bermasalah: "bg-red-100 text-red-700 border-red-200",
+    };
+
+    const pct = row.progress_persen || 0;
+    const progressColor = pct >= 100 ? "bg-emerald-500" : pct >= 50 ? "bg-blue-500" : pct >= 25 ? "bg-amber-500" : "bg-red-400";
+
+    const InfoItem = ({ label, value, fullWidth = false }: { label: string; value: React.ReactNode; fullWidth?: boolean }) => (
+        <div className={fullWidth ? "col-span-2" : ""}>
+            <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider mb-1">{label}</p>
+            <div className="text-sm text-gray-800 font-medium">{value || <span className="text-gray-300">-</span>}</div>
+        </div>
+    );
+
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-fade-in">
+
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-10">
+                        <div className="absolute -top-4 -right-4 w-32 h-32 bg-white rounded-full" />
+                        <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white rounded-full" />
+                    </div>
+                    <div className="relative flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                                <FileText className="w-5 h-5 text-white/80" />
+                                <span className="text-white/70 text-xs font-medium uppercase tracking-wider">Detail Proyek</span>
+                            </div>
+                            <h2 className="text-xl font-bold text-white truncate">{row.nama_proyek}</h2>
+                            <p className="text-blue-100 text-sm mt-1">{kelMap.get(row.kelurahan_id) || "-"} • Tahun {row.tahun}</p>
+                        </div>
+                        <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors" title="Tutup">
+                            <X className="w-5 h-5 text-white" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+                    {/* Progress Section */}
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm font-semibold text-gray-700">Realisasi Progress</span>
+                            <div className="flex items-center gap-3">
+                                <span className={`inline-flex items-center px-3 py-1 text-xs font-bold rounded-full border ${statusColorsFull[row.status] || statusColorsFull.Rencana}`}>
+                                    {row.status}
+                                </span>
+                                <span className="text-lg font-black text-gray-800">{pct}%</span>
+                            </div>
+                        </div>
+                        <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                            <div className={`h-full ${progressColor} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
+                        </div>
+                    </div>
+
+                    {/* Info Grid */}
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                        <InfoItem label="Kelurahan" value={kelMap.get(row.kelurahan_id) || "-"} />
+                        <InfoItem label="Tahun Anggaran" value={row.tahun} />
+                        <InfoItem label="Sumber Dana" value={
+                            <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-700">
+                                {row.sumber_dana}
+                            </span>
+                        } />
+                        <InfoItem label="Instansi Pelaksana" value={row.instansi_pelaksana} />
+                        <InfoItem label="Anggaran" value={`Rp ${Number(row.anggaran || 0).toLocaleString("id-ID")}`} />
+                        <InfoItem label="Realisasi" value={`Rp ${Number(row.realisasi || 0).toLocaleString("id-ID")}`} />
+                        <InfoItem label="Volume" value={
+                            row.volume != null
+                                ? <>{Number(row.volume).toLocaleString('id-ID')} <span className="text-gray-400">{row.satuan || ''}</span></>
+                                : null
+                        } />
+                        <InfoItem label="Satuan" value={row.satuan} />
+                    </div>
+
+                    {/* Lokasi */}
+                    {row.lokasi && (
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                            <div className="flex items-start gap-2">
+                                <MapPin className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                                <div>
+                                    <p className="text-[11px] text-blue-500 font-semibold uppercase tracking-wider mb-1">Lokasi</p>
+                                    <p className="text-sm text-blue-800 leading-relaxed">{row.lokasi}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Keterangan */}
+                    {row.keterangan && (
+                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                            <div className="flex items-start gap-2">
+                                <Settings2 className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                                <div>
+                                    <p className="text-[11px] text-amber-500 font-semibold uppercase tracking-wider mb-1">Keterangan</p>
+                                    <p className="text-sm text-amber-800 leading-relaxed">{row.keterangan}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-gray-100 bg-white flex justify-end">
+                    <button onClick={onClose}
+                        className="px-5 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
+                        Tutup
+                    </button>
+                </div>
             </div>
         </div>,
         document.body

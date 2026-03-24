@@ -1,29 +1,37 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useTenant } from "@/lib/tenant/context";
 import { useAuth } from "@/lib/auth/context";
-import { useCrud } from "@/hooks/use-crud";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { DeleteConfirm } from "@/components/ui/delete-confirm";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
+import { createClient } from "@/lib/supabase/client";
 import { Store, Briefcase, TrendingUp, Building2, X, Loader2, Save, Tags, MapPin } from "lucide-react";
 
-/* ── Type matching DB table sidakota.econ_facilities ──
-   Columns: id, tenant_id, kelurahan_id, nama, jenis, alamat, koordinat_lat, koordinat_lng, created_at
-── */
-type FacilityRow = Record<string, unknown> & {
+/* ── Types ── */
+type RefJenisSarana = {
+    id: number;
+    nama: string;
+    urut: number;
+    aktif: boolean;
+};
+
+type FacilityRow = {
     id: string;
+    tenant_id?: string;
     kelurahan_id?: string;
     kelurahan_nama?: string;
     nama: string;
-    jenis: string;
-    alamat: string;
+    jenis_id?: number | null; // FK → ref_ekonomi_sarana
+    jenis_nama?: string;    // resolved from join
+    alamat?: string;
     koordinat_lat?: number;
     koordinat_lng?: number;
     created_at?: string;
+    [key: string]: unknown;
 };
 
 /* ── Jenis badge colors ── */
@@ -41,14 +49,15 @@ const JENIS_COLORS: Record<string, string> = {
 const columns: Column<FacilityRow>[] = [
     { key: "nama", label: "Nama Sarana", sortable: true },
     {
-        key: "jenis",
+        key: "jenis_nama",
         label: "Jenis",
         sortable: true,
         render: (val) => {
-            const cls = JENIS_COLORS[String(val)] || "bg-slate-50 text-slate-700 border-slate-200";
+            const label = String(val || "-");
+            const cls = JENIS_COLORS[label] || "bg-slate-50 text-slate-700 border-slate-200";
             return (
                 <span className={`inline-flex px-2 py-0.5 text-xs font-bold uppercase tracking-widest rounded-md border ${cls}`}>
-                    {String(val)}
+                    {label}
                 </span>
             );
         },
@@ -66,20 +75,70 @@ const columns: Column<FacilityRow>[] = [
     },
 ];
 
-const JENIS_OPTIONS = [
-    "Pasar", "Toko/Warung", "Koperasi", "Bank", "BPR", "Minimarket", "Restoran/Rumah Makan", "Hotel/Penginapan"
-];
+/* ── Hook: fetch ref_ekonomi_sarana ── */
+function useRefJenisSarana() {
+    const [items, setItems] = useState<RefJenisSarana[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function load() {
+            const supabase = createClient();
+            const { data } = await (supabase as any)
+                .schema("sidakota")
+                .from("ref_ekonomi_sarana")
+                .select("id, nama, urut, aktif")
+                .eq("aktif", true)
+                .order("urut", { ascending: true });
+            setItems(data ?? []);
+            setLoading(false);
+        }
+        load();
+    }, []);
+
+    return { items, loading };
+}
+
+/* ── Hook: fetch econ_facilities with join ── */
+function useEconFacilities(tenantId: string | undefined) {
+    const [data, setData] = useState<FacilityRow[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const load = useCallback(async () => {
+        if (!tenantId) return;
+        setIsLoading(true);
+        const supabase = createClient();
+        const { data: rows } = await (supabase as any)
+            .schema("sidakota")
+            .from("econ_facilities")
+            .select("*, ref_ekonomi_sarana:jenis_id(id, nama)")
+            .eq("tenant_id", tenantId)
+            .order("created_at", { ascending: false });
+
+        setData(
+            (rows ?? []).map((r: any) => ({
+                ...r,
+                jenis_nama: r.ref_ekonomi_sarana?.nama ?? "-",
+            }))
+        );
+        setIsLoading(false);
+    }, [tenantId]);
+
+    useEffect(() => { load(); }, [load]);
+
+    return { data, isLoading, reload: load };
+}
 
 export default function SaranaEkonomiPage() {
-    const { kelurahans } = useTenant();
+    const { tenant, kelurahans } = useTenant();
     const { user } = useAuth();
     const isKelurahanAdmin = user?.role === "admin_kelurahan";
     const filterKelurahanId = isKelurahanAdmin ? (user as any)?.kelurahan_id : null;
 
-    const { data, isLoading, create, update, remove } = useCrud<FacilityRow>({ table: "econ_facilities" });
+    const { data: rawData, isLoading, reload } = useEconFacilities(tenant?.id);
+    const { items: jenisOptions } = useRefJenisSarana();
 
-    // Enrich data with kelurahan_nama + filter for admin_kelurahan
-    const enrichedData = data
+    // Enrich with kelurahan_nama + filter
+    const enrichedData = rawData
         .map(r => ({ ...r, kelurahan_nama: kelurahans.find(k => k.id === r.kelurahan_id)?.nama || "-" }))
         .filter(r => !filterKelurahanId || r.kelurahan_id === filterKelurahanId);
 
@@ -92,10 +151,10 @@ export default function SaranaEkonomiPage() {
         ? kelurahans.filter(k => k.id === filterKelurahanId).map(k => ({ label: k.nama, value: k.id }))
         : kelurahans.map(k => ({ label: k.nama, value: k.id }));
 
-    // Stat calculations based on actual DB columns
+    // Stats
     const total = enrichedData.length;
     const jenisCount = enrichedData.reduce((acc, r) => {
-        const j = r.jenis || "Lainnya";
+        const j = r.jenis_nama || "Lainnya";
         acc[j] = (acc[j] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
@@ -104,12 +163,26 @@ export default function SaranaEkonomiPage() {
     const koperasi = jenisCount["Koperasi"] || 0;
 
     async function handleSubmit(formData: Record<string, unknown>) {
+        if (!tenant?.id) return;
         setIsSubmitting(true);
         try {
-            if (editRow) await update(editRow.id, formData);
-            else await create(formData);
+            const supabase = createClient();
+            // Resolve jenis text dari jenis_id yang dipilih
+            const jenisRef = jenisOptions.find(j => j.id === Number(formData.jenis_id));
+            const payload = {
+                ...formData,
+                tenant_id: tenant.id,
+                jenis_id: Number(formData.jenis_id) || null,
+            };
+
+            if (editRow) {
+                await (supabase as any).schema("sidakota").from("econ_facilities").update(payload).eq("id", editRow.id);
+            } else {
+                await (supabase as any).schema("sidakota").from("econ_facilities").insert(payload);
+            }
             setModalOpen(false);
             setEditRow(null);
+            await reload();
         } catch {
             alert(editRow ? "Gagal memperbarui data sarana ekonomi." : "Gagal menyimpan data sarana ekonomi.");
         } finally {
@@ -121,8 +194,10 @@ export default function SaranaEkonomiPage() {
         if (!deleteRow) return;
         setIsSubmitting(true);
         try {
-            await remove(deleteRow.id);
+            const supabase = createClient();
+            await (supabase as any).schema("sidakota").from("econ_facilities").delete().eq("id", deleteRow.id);
             setDeleteRow(null);
+            await reload();
         } catch {
             alert("Gagal menghapus data sarana ekonomi.");
         } finally {
@@ -166,21 +241,26 @@ export default function SaranaEkonomiPage() {
                 kelurahanOptions={kelurahanOptions}
                 isKelurahanAdmin={isKelurahanAdmin}
                 filterKelurahanId={filterKelurahanId}
+                jenisOptions={jenisOptions}
             />
 
-            <DeleteConfirm open={!!deleteRow} onClose={() => setDeleteRow(null)} onConfirm={handleDelete} isDeleting={isSubmitting}
-                title="Hapus Sarana Ekonomi?" message={`Yakin ingin menghapus "${deleteRow?.nama || ""}"? Data tidak dapat dikembalikan.`} />
+            <DeleteConfirm
+                open={!!deleteRow}
+                onClose={() => setDeleteRow(null)}
+                onConfirm={handleDelete}
+                isDeleting={isSubmitting}
+                title="Hapus Sarana Ekonomi?"
+                message={`Yakin ingin menghapus "${deleteRow?.nama || ""}"? Data tidak dapat dikembalikan.`}
+            />
         </div>
     );
 }
 
 /* ═══════════════════════════════════════════════════════
    SaranaEkonomiFormModal — Blue Theme
-   DB columns: kelurahan_id, nama, jenis, alamat
    ═══════════════════════════════════════════════════════ */
-
 function SaranaEkonomiFormModal({
-    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions, isKelurahanAdmin, filterKelurahanId,
+    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions, isKelurahanAdmin, filterKelurahanId, jenisOptions,
 }: {
     open: boolean;
     onClose: () => void;
@@ -190,34 +270,36 @@ function SaranaEkonomiFormModal({
     kelurahanOptions: { label: string; value: string }[];
     isKelurahanAdmin?: boolean;
     filterKelurahanId?: string | null;
+    jenisOptions: RefJenisSarana[];
 }) {
     const isEdit = !!editRow;
 
     const [form, setForm] = useState<Record<string, unknown>>({
         kelurahan_id: "",
         nama: "",
-        jenis: "Pasar",
+        jenis_id: "",
         alamat: "",
     });
 
     useEffect(() => {
         if (!open) return;
+        const firstJenisId = jenisOptions[0]?.id ?? "";
         if (editRow) {
             setForm({
                 kelurahan_id: editRow.kelurahan_id ?? "",
                 nama: editRow.nama ?? "",
-                jenis: editRow.jenis ?? "Pasar",
+                jenis_id: editRow.jenis_id ?? jenisOptions.find(j => j.nama === editRow.jenis)?.id ?? firstJenisId,
                 alamat: editRow.alamat ?? "",
             });
         } else {
             setForm({
                 kelurahan_id: (isKelurahanAdmin && filterKelurahanId) ? filterKelurahanId : (kelurahanOptions[0]?.value || ""),
                 nama: "",
-                jenis: "Pasar",
+                jenis_id: firstJenisId,
                 alamat: "",
             });
         }
-    }, [open, editRow, kelurahanOptions, isKelurahanAdmin, filterKelurahanId]);
+    }, [open, editRow, kelurahanOptions, isKelurahanAdmin, filterKelurahanId, jenisOptions]);
 
     function set(field: string, value: string | number) {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -266,11 +348,11 @@ function SaranaEkonomiFormModal({
                     <div className="p-6 md:p-8 overflow-y-auto bg-slate-50/30">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-                            {/* Left Column: Identitas & Kategori */}
+                            {/* Left Column */}
                             <div className="space-y-6">
                                 <div className="flex items-center gap-2 pb-2 border-b border-blue-100">
                                     <Tags className="w-4 h-4 text-blue-500" />
-                                    <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Identitas & Kategori</span>
+                                    <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Identitas &amp; Kategori</span>
                                 </div>
 
                                 <div className="space-y-5">
@@ -313,11 +395,12 @@ function SaranaEkonomiFormModal({
                                         <select
                                             required
                                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                                            value={(form.jenis as string) || "Pasar"}
-                                            onChange={(e) => set("jenis", e.target.value)}
+                                            value={(form.jenis_id as number | string) || ""}
+                                            onChange={(e) => set("jenis_id", Number(e.target.value))}
                                         >
-                                            {JENIS_OPTIONS.map((opt) => (
-                                                <option key={opt} value={opt}>{opt}</option>
+                                            <option value="" disabled>— Pilih Jenis Sarana —</option>
+                                            {jenisOptions.map((opt) => (
+                                                <option key={opt.id} value={opt.id}>{opt.nama}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -346,7 +429,7 @@ function SaranaEkonomiFormModal({
                                     </div>
                                 </div>
 
-                                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl mt-2">
+                                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
                                     <h4 className="text-xs font-bold text-blue-800 mb-2 uppercase tracking-wide">📌 Tips Pendataan</h4>
                                     <p className="text-sm text-blue-700 leading-relaxed">
                                         Pastikan nama sarana diisi dengan jelas dan lengkap agar mudah dicari. Alamat bersifat opsional, namun sangat disarankan untuk diisi demi kemudahan pemetaan.
@@ -357,11 +440,9 @@ function SaranaEkonomiFormModal({
                         </div>
                     </div>
 
-                    {/* Footer / Actions */}
+                    {/* Footer */}
                     <div className="flex items-center justify-between px-6 py-4 md:px-8 border-t border-gray-100 bg-white shrink-0">
-                        <p className="text-xs text-gray-400">
-                            <span className="text-red-400">*</span> Wajib diisi
-                        </p>
+                        <p className="text-xs text-gray-400"><span className="text-red-400">*</span> Wajib diisi</p>
                         <div className="flex flex-col-reverse sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
                             <button
                                 type="button"
@@ -375,11 +456,7 @@ function SaranaEkonomiFormModal({
                                 disabled={isSubmitting}
                                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-lg shadow-blue-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {isSubmitting ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <Save className="w-4 h-4" />
-                                )}
+                                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                 {isEdit ? "Simpan Perubahan" : "Tambah Sarana"}
                             </button>
                         </div>
