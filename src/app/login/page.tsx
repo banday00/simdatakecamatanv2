@@ -167,7 +167,7 @@ function LoginForm() {
                         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30 mb-4">
                             <Shield className="h-7 w-7 text-white" />
                         </div>
-                        <h1 className="text-xl font-extrabold text-white">SIDAKOTA</h1>
+                        <h1 className="text-xl font-extrabold text-white">SIPADU KECAMATAN</h1>
                         <p className="text-slate-300 text-xs mt-1">
                             {tenant?.nama || "Panel Administrasi Kecamatan"}
                         </p>
@@ -337,7 +337,7 @@ function LoginForm() {
                     <p className="text-center text-slate-400 text-xs mt-6">
                         Sistem Informasi Data Kecamatan Terpadu
                         <br />
-                        <span className="text-slate-500">© 2026 SIDAKOTA — {tenant?.nama || "Kota Bogor"}</span>
+                        <span className="text-slate-500">© 2026 SIPADU KECAMATAN — {tenant?.nama || "Kota Bogor"}</span>
                     </p>
                 </div>
             </div>
