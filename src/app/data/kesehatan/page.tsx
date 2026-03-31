@@ -1035,7 +1035,7 @@ export default function KesehatanPage() {
 
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<HealthStatsData>({ facilities: [], stunting: [], posyandu: [], maternal: [] });
-    const [activeSection, setActiveSection] = useState<"fasilitas" | "stunting" | "posyandu" | "maternal">("fasilitas");
+    const [activeSection, setActiveSection] = useState<"fasilitas" | "posyandu" | "maternal">("fasilitas");
     const [selectedKelurahan, setSelectedKelurahan] = useState<string | null>(null);
 
     const fetchData = useCallback(async () => {
@@ -1080,7 +1080,7 @@ export default function KesehatanPage() {
 
     const sections = [
         { key: "fasilitas" as const, label: "Fasilitas Kesehatan", icon: Stethoscope, color: "indigo" },
-        { key: "stunting" as const, label: "Stunting & Gizi", icon: Scale, color: "amber" },
+        // { key: "stunting" as const, label: "Stunting & Gizi", icon: Scale, color: "amber" }, // 🔒 Data rahasia Pemkot — disembunyikan sementara
         { key: "posyandu" as const, label: "Posyandu", icon: Heart, color: "emerald" },
         { key: "maternal" as const, label: "Ibu & Anak", icon: Baby, color: "blue" },
     ];
@@ -1111,7 +1111,7 @@ export default function KesehatanPage() {
                                 </div>
                                 <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">Data Kesehatan</h1>
                                 <p className="mt-2 text-lg text-white/70 max-w-2xl leading-relaxed">
-                                    Laporan fasilitas medis, prevalensi stunting, dan kesehatan keluarga.
+                                    Laporan fasilitas kesehatan, posyandu, dan kesehatan ibu &amp; anak.
                                 </p>
                             </div>
                         </div>
@@ -1174,9 +1174,10 @@ export default function KesehatanPage() {
                         {activeSection === "fasilitas" && (
                             <FasilitasSection data={data.facilities} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
                         )}
-                        {activeSection === "stunting" && (
+                        {/* Stunting & Gizi — 🔒 disembunyikan sementara (data rahasia Pemkot) */}
+                        {/* {activeSection === "stunting" && (
                             <StuntingSection data={data.stunting} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
-                        )}
+                        )} */}
                         {activeSection === "posyandu" && (
                             <PosyanduSection data={data.posyandu} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
                         )}

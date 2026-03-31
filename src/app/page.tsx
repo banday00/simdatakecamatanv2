@@ -31,6 +31,7 @@ type Stats = {
     rt: number;
     umkm: number;
     stunting_pct: number;
+    stunting_kasus: number;
     posyandu: number;
     tempat_ibadah: number;
     sarana_olahraga: number;
@@ -90,7 +91,7 @@ function PublicStatCard({
 ============================================================ */
 export default function HomePage() {
     const { tenant, kelurahans, isLoading } = useTenant();
-    const [stats, setStats] = useState<Stats>({ penduduk: 0, kelurahan: 0, fasilitas_kesehatan: 0, sarana_pendidikan: 0, rw: 0, rt: 0, umkm: 0, stunting_pct: 0, posyandu: 0, tempat_ibadah: 0, sarana_olahraga: 0, proyek_berjalan: 0 });
+    const [stats, setStats] = useState<Stats>({ penduduk: 0, kelurahan: 0, fasilitas_kesehatan: 0, sarana_pendidikan: 0, rw: 0, rt: 0, umkm: 0, stunting_pct: 0, stunting_kasus: 0, posyandu: 0, tempat_ibadah: 0, sarana_olahraga: 0, proyek_berjalan: 0 });
     const [news, setNews] = useState<any[]>([]);
     const [kelChart, setKelChart] = useState<KelChart[]>([]);
     const [moduleDistrib, setModuleDistrib] = useState<{ name: string; value: number }[]>([]);
@@ -133,19 +134,35 @@ export default function HomePage() {
 
             const totalPenduduk = popData?.reduce((sum, row) => sum + (row.jml_penduduk_lk || 0) + (row.jml_penduduk_pr || 0), 0) || 0;
 
-            // Fetch stunting prevalence (latest year)
-            const { data: stuntingData } = await supabase
-                .from("health_stunting")
-                .select("balita_total, balita_stunting")
+            // Stunting: ambil periode terbaru (tahun+bulan) terlebih dahulu,
+            // lalu aggregate SEMUA kelurahan pada periode yang sama persis.
+            let stuntingPct = 0;
+            let stuntingTotal = 0;
+            const { data: latestPeriod } = await supabase
+                .from("health_stunting_agregat_view")
+                .select("tahun, bulan")
                 .eq("tenant_id", tid)
                 .order("tahun", { ascending: false })
-                .limit(kelurahans.length);
+                .order("bulan", { ascending: false })
+                .limit(1)
+                .maybeSingle();
 
-            let stuntingPct = 0;
-            if (stuntingData && stuntingData.length > 0) {
-                const totalBalita = stuntingData.reduce((s, r) => s + (r.balita_total || 0), 0);
-                const totalStunting = stuntingData.reduce((s, r) => s + (r.balita_stunting || 0), 0);
-                stuntingPct = totalBalita > 0 ? Math.round((totalStunting / totalBalita) * 1000) / 10 : 0;
+            if (latestPeriod) {
+                const { data: stuntingData } = await supabase
+                    .from("health_stunting_agregat_view")
+                    .select("balita_total, balita_stunting")
+                    .eq("tenant_id", tid)
+                    .eq("tahun", latestPeriod.tahun)
+                    .eq("bulan", latestPeriod.bulan);
+
+                if (stuntingData && stuntingData.length > 0) {
+                    const totalBalita = stuntingData.reduce((s, r) => s + (Number(r.balita_total) || 0), 0);
+                    const totalStunting = stuntingData.reduce((s, r) => s + (Number(r.balita_stunting) || 0), 0);
+                    stuntingTotal = totalStunting;
+                    const rawPct = totalBalita > 0 ? Math.round((totalStunting / totalBalita) * 1000) / 10 : 0;
+                    // Sanity guard: ≥ 95% tidak realistis → data import belum diverifikasi
+                    stuntingPct = rawPct < 95 ? rawPct : 0;
+                }
             }
 
             const totalRW = kelurahans.reduce((s, k) => s + (k.jumlah_rw || 0), 0);
@@ -160,6 +177,7 @@ export default function HomePage() {
                 rt: totalRT,
                 umkm: umkmCount || 0,
                 stunting_pct: stuntingPct,
+                stunting_kasus: stuntingTotal,
                 posyandu: posyanduCount || 0,
                 tempat_ibadah: ibadahCount || 0,
                 sarana_olahraga: olahragaCount || 0,
@@ -384,7 +402,7 @@ export default function HomePage() {
                 {/* Stats Row 2 */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
                     <PublicStatCard label="UMKM Aktif" value={stats.umkm} icon={TrendingUp} gradient="stat-gradient-purple" delay={400} />
-                    <PublicStatCard label="Stunting" value={stats.stunting_pct > 0 ? `${stats.stunting_pct}%` : "-"} icon={AlertTriangle} gradient="stat-gradient-rose" delay={500} />
+                    <PublicStatCard label="Tempat Ibadah" value={stats.tempat_ibadah} icon={Building2} gradient="stat-gradient-rose" delay={500} />
                     <PublicStatCard label="Posyandu" value={stats.posyandu} icon={Heart} gradient="stat-gradient-blue" delay={600} />
                     <PublicStatCard label="Proyek Aktif" value={stats.proyek_berjalan} icon={Hammer} gradient="stat-gradient-cyan" delay={700} />
                 </div>
@@ -464,12 +482,19 @@ export default function HomePage() {
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 font-bold px-2 py-1 rounded-md">
-                                            <span>{kel.jumlah_rw || 0}</span> RW
-                                        </span>
-                                        <span className="inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-600 font-bold px-2 py-1 rounded-md">
-                                            <span>{kel.jumlah_rt || 0}</span> RT
-                                        </span>
+                                        {(kel.jumlah_rw ?? 0) > 0 && (
+                                            <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 font-bold px-2 py-1 rounded-md">
+                                                <span>{kel.jumlah_rw}</span> RW
+                                            </span>
+                                        )}
+                                        {(kel.jumlah_rt ?? 0) > 0 && (
+                                            <span className="inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-600 font-bold px-2 py-1 rounded-md">
+                                                <span>{kel.jumlah_rt}</span> RT
+                                            </span>
+                                        )}
+                                        {!(kel.jumlah_rw ?? 0) && !(kel.jumlah_rt ?? 0) && (
+                                            <span className="text-xs text-slate-400 italic">—</span>
+                                        )}
                                     </div>
                                     <div className="mt-3 flex items-center gap-1 text-xs text-indigo-500 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
                                         Lihat Detail <ExternalLink className="w-3 h-3" />
@@ -542,13 +567,13 @@ export default function HomePage() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 {[
-                                    { label: "Penduduk", value: stats.penduduk > 0 ? stats.penduduk.toLocaleString("id-ID") : "-", icon: "�" },
-                                    { label: "Kelurahan", value: stats.kelurahan, icon: "�" },
-                                    { label: "Modul Data", value: "9+", icon: "📦" },
-                                    { label: "Update", value: "Real-time", icon: "⚡" },
+                                    { label: "Penduduk", value: stats.penduduk > 0 ? stats.penduduk.toLocaleString("id-ID") : "-", icon: Users },
+                                    { label: "Kelurahan", value: stats.kelurahan, icon: MapPin },
+                                    { label: "Modul Data", value: `${modules.length}`, icon: BarChart3 },
+                                    { label: "Update", value: "Real-time", icon: Activity },
                                 ].map((item) => (
                                     <div key={item.label} className="glass rounded-2xl p-5 text-center">
-                                        <div className="text-2xl mb-2">{item.icon}</div>
+                                        <item.icon className="w-6 h-6 text-white/60 mx-auto mb-2" />
                                         <div className="text-2xl font-extrabold">{item.value}</div>
                                         <div className="text-xs text-white/50 mt-1">{item.label}</div>
                                     </div>
