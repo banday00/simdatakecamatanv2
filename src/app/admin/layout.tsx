@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/context";
 import { useTenant } from "@/lib/tenant/context";
@@ -21,6 +21,7 @@ import {
     Map,
     Settings,
     Users,
+    Users2,
     LogOut,
     ChevronDown,
     Menu,
@@ -50,9 +51,24 @@ const navGroups = [
                 label: "Pemerintahan", href: "/admin/pemerintahan", icon: Landmark,
                 children: [
                     { label: "Profil", href: "/admin/pemerintahan/profil" },
-                    { label: "Kependudukan", href: "/admin/pemerintahan/kependudukan" },
                     { label: "Lembaga", href: "/admin/pemerintahan/lembaga" },
                     { label: "Organisasi", href: "/admin/pemerintahan/organisasi" },
+                ],
+            },
+            {
+                label: "Kependudukan", href: "/admin/pemerintahan/kependudukan", icon: Users2,
+                children: [
+                    { label: "Ringkasan", href: "/admin/pemerintahan/kependudukan?tab=summary" },
+                    { label: "Kelompok Umur", href: "/admin/pemerintahan/kependudukan?tab=kelompok_umur" },
+                    { label: "Umur Tunggal", href: "/admin/pemerintahan/kependudukan?tab=umur_tunggal" },
+                    { label: "Agama", href: "/admin/pemerintahan/kependudukan?tab=agama" },
+                    { label: "Pendidikan", href: "/admin/pemerintahan/kependudukan?tab=pendidikan" },
+                    { label: "Pekerjaan", href: "/admin/pemerintahan/kependudukan?tab=pekerjaan" },
+                    { label: "Status Kawin", href: "/admin/pemerintahan/kependudukan?tab=status_kawin" },
+                    { label: "Gol. Darah", href: "/admin/pemerintahan/kependudukan?tab=golongan_darah" },
+                    { label: "Dokumen KTP", href: "/admin/pemerintahan/kependudukan?tab=ktp" },
+                    { label: "Dokumen KIA", href: "/admin/pemerintahan/kependudukan?tab=kia" },
+                    { label: "Akta Lahir", href: "/admin/pemerintahan/kependudukan?tab=akta" },
                 ],
             },
             {
@@ -129,10 +145,20 @@ const allNavItems = navGroups.flatMap(g => g.items);
 
 type NavItem = (typeof allNavItems)[number];
 
-function SidebarItem({ item, pathname }: { item: NavItem; pathname: string }) {
+function SidebarItem({ item, pathname, searchString }: { item: NavItem; pathname: string; searchString: string }) {
+    // Helper: check if a href (potentially with ?query) matches current location
+    function isHrefActive(href: string): boolean {
+        const [hPath, hQuery] = href.split("?");
+        if (hQuery) {
+            // Must match path AND have matching query param
+            return pathname === hPath && searchString.includes(hQuery);
+        }
+        return pathname === href || pathname.startsWith(href + "/");
+    }
+
     const isActive =
-        pathname === item.href ||
-        (item as any).children?.some((c: any) => pathname.startsWith(c.href));
+        isHrefActive(item.href) ||
+        (item as any).children?.some((c: any) => isHrefActive(c.href));
     const hasChildren = (item as any).children?.length > 0;
     const [open, setOpen] = useState(isActive);
 
@@ -172,7 +198,7 @@ function SidebarItem({ item, pathname }: { item: NavItem; pathname: string }) {
                             href={child.href}
                             className={cn(
                                 "block px-3 py-1.5 rounded-md text-[12px] transition-colors",
-                                pathname === child.href || pathname.startsWith(child.href + "/")
+                                isHrefActive(child.href)
                                     ? "text-cyan-300 font-semibold bg-white/5"
                                     : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
                             )}
@@ -191,7 +217,21 @@ export default function AdminLayout({
 }: {
     children: React.ReactNode;
 }) {
+    return (
+        <Suspense fallback={null}>
+            <AdminLayoutInner>{children}</AdminLayoutInner>
+        </Suspense>
+    );
+}
+
+function AdminLayoutInner({
+    children,
+}: {
+    children: React.ReactNode;
+}) {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const searchString = searchParams.toString();
     const router = useRouter();
     const { profile, signOut } = useAuth();
     const { tenant } = useTenant();
@@ -369,7 +409,7 @@ export default function AdminLayout({
                                 </p>
                                 <div className="space-y-0.5">
                                     {visibleItems.map((item) => (
-                                        <SidebarItem key={item.href} item={item} pathname={pathname} />
+                                        <SidebarItem key={item.href} item={item} pathname={pathname} searchString={searchString} />
                                     ))}
                                 </div>
                             </div>

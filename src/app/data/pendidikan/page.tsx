@@ -80,11 +80,11 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
         return result.sort((a, b) => a.nama.localeCompare(b.nama));
     }, [facilities, selectedKelurahan, searchQuery]);
 
-    // Summary Stats
     const totalSekolah = filteredData.length;
     const totalGuru = filteredData.reduce((acc, curr) => acc + (curr.jumlah_guru || 0), 0);
     const totalSiswa = filteredData.reduce((acc, curr) => acc + (curr.jumlah_siswa || 0), 0);
     const totalRombel = filteredData.reduce((acc, curr) => acc + (curr.jumlah_rombel || 0), 0);
+    const totalRuangKelas = filteredData.reduce((acc, curr) => acc + (curr.jumlah_ruang_kelas || 0), 0);
     const rasioGuruSiswa = totalGuru > 0 ? (totalSiswa / totalGuru).toFixed(1) : "0.0";
 
     const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
@@ -107,16 +107,13 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
     }, [filteredData]);
 
     const kelBarData = useMemo(() => {
-        const counts: Record<string, number> = {};
-        kelurahans.forEach(k => counts[k.nama] = 0);
+        const counts: Record<string, { nama: string; jumlah: number }> = {};
+        kelurahans.forEach(k => counts[k.id] = { nama: k.nama, jumlah: 0 });
         facilities.forEach(d => {
-            const name = kelMap.get(d.kelurahan_id);
-            if (name) counts[name] = (counts[name] || 0) + 1;
+            if (counts[d.kelurahan_id]) counts[d.kelurahan_id].jumlah++;
         });
-        return Object.entries(counts)
-            .map(([nama, jumlah]) => ({ nama: nama.length > 10 ? nama.substring(0, 10) + "…" : nama, jumlah }))
-            .sort((a, b) => b.jumlah - a.jumlah);
-    }, [facilities, kelMap, kelurahans]);
+        return Object.values(counts).sort((a, b) => b.jumlah - a.jumlah);
+    }, [facilities, kelurahans]);
 
     return (
         <section className="space-y-6">
@@ -130,12 +127,13 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
                     { label: "Total Sekolah", value: totalSekolah, icon: "🏫", color: "text-indigo-600" },
                     { label: "Total Guru", value: totalGuru.toLocaleString('id-ID'), icon: "👨‍🏫", color: "text-blue-600" },
                     { label: "Total Siswa", value: totalSiswa.toLocaleString('id-ID'), icon: "👨‍🎓", color: "text-emerald-600" },
                     { label: "Total Rombel", value: totalRombel.toLocaleString('id-ID'), icon: "🪑", color: "text-amber-600" },
+                    { label: "Ruang Kelas", value: totalRuangKelas.toLocaleString('id-ID'), icon: "🏛️", color: "text-violet-600" },
                     { label: "Rasio Guru:Siswa", value: `1:${rasioGuruSiswa}`, icon: "⚖️", color: "text-rose-600" },
                 ].map((stat, i) => (
                     <div key={i} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm text-center">
@@ -154,9 +152,19 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                     </div>
                     <div className="w-full flex-1 min-h-[400px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: -20, bottom: 60 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                <XAxis dataKey="nama" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
+                                <XAxis
+                                    dataKey="nama"
+                                    tick={{ fontSize: 10, fill: "#64748b" }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                    dy={10}
+                                    angle={-45}
+                                    textAnchor="end"
+                                    height={70}
+                                    interval={0}
+                                />
                                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                 <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} />
                                 <Bar dataKey="jumlah" name="Jumlah Sekolah" fill="#4f46e5" radius={[6, 6, 0, 0]} maxBarSize={40}>
@@ -170,32 +178,50 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                 </div>
 
                 <div className="md:col-span-4 flex flex-col gap-6">
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col lg:flex-1 min-h-[200px]">
-                        <h3 className="text-sm font-bold text-slate-800 mb-2">Komposisi Jenjang</h3>
-                        <div className="flex-1 relative">
+                    {/* Komposisi Jenjang — custom legend agar tidak terpotong */}
+                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col">
+                        <h3 className="text-sm font-bold text-slate-800 mb-3">Komposisi Jenjang</h3>
+                        <div className="h-44">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie data={jenjangPieData} cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={2} dataKey="value">
+                                    <Pie data={jenjangPieData} cx="50%" cy="50%" innerRadius={30} outerRadius={60} paddingAngle={2} dataKey="value">
                                         {jenjangPieData.map((d, i) => <Cell key={i} fill={JENJANG_COLORS[d.name] || CHART_COLORS[i % CHART_COLORS.length]} />)}
                                     </Pie>
-                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} />
-                                    <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "10px" }} />
+                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} formatter={(val, name) => [`${val} sekolah`, name]} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
+                        {/* Custom Legend — wraps automatically */}
+                        <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 pt-3 border-t border-slate-100">
+                            {jenjangPieData.map((d, i) => (
+                                <div key={i} className="flex items-center gap-1">
+                                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: JENJANG_COLORS[d.name] || CHART_COLORS[i % CHART_COLORS.length] }} />
+                                    <span className="text-[10px] text-slate-600 font-medium">{d.name} ({d.value})</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col lg:flex-1 min-h-[200px]">
-                        <h3 className="text-sm font-bold text-slate-800 mb-2">Status Sekolah</h3>
-                        <div className="flex-1 relative">
+
+                    {/* Status Sekolah */}
+                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col">
+                        <h3 className="text-sm font-bold text-slate-800 mb-3">Status Sekolah</h3>
+                        <div className="h-44">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie data={statusPieData} cx="50%" cy="50%" innerRadius={0} outerRadius={60} dataKey="value">
                                         {statusPieData.map((d, i) => <Cell key={i} fill={d.name.toLowerCase() === 'negeri' ? '#10b981' : '#f59e0b'} />)}
                                     </Pie>
-                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} />
-                                    <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "10px" }} />
+                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} formatter={(val, name) => [`${val} sekolah`, name]} />
                                 </PieChart>
                             </ResponsiveContainer>
+                        </div>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 pt-3 border-t border-slate-100">
+                            {statusPieData.map((d, i) => (
+                                <div key={i} className="flex items-center gap-1">
+                                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.name.toLowerCase() === 'negeri' ? '#10b981' : '#f59e0b' }} />
+                                    <span className="text-[10px] text-slate-600 font-medium">{d.name} ({d.value})</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -218,23 +244,38 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                 <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {paginatedData.map(row => (
                         <div key={row.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-white hover:border-indigo-200 hover:shadow-md transition-all relative">
-                            {row.akreditasi && (
-                                <div className="absolute top-4 right-4 text-[10px] font-black w-6 h-6 rounded bg-amber-100 text-amber-700 flex items-center justify-center">
+                            {/* Akreditasi badge */}
+                            {row.akreditasi && row.akreditasi !== 'Belum' && (
+                                <div className="absolute top-4 right-4 text-[10px] font-black w-6 h-6 rounded bg-amber-100 text-amber-700 flex items-center justify-center" title="Akreditasi">
                                     {row.akreditasi}
                                 </div>
                             )}
+
                             <h4 className="font-bold text-slate-800 text-sm mb-1 line-clamp-1 pr-8">{row.nama}</h4>
-                            <div className="flex items-center gap-2 mb-3 mt-2">
+
+                            {/* Periode */}
+                            {(row.tahun_ajaran || row.semester) && (
+                                <p className="text-[10px] text-slate-400 mb-2 font-mono">
+                                    T.A. {row.tahun_ajaran}/{Number(row.tahun_ajaran) + 1} — Semester {Number(row.semester) > 10 ? (Number(row.semester) % 10) : row.semester}
+                                </p>
+                            )}
+
+                            <div className="flex items-center gap-2 mb-3">
                                 <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-white border uppercase tracking-wider text-slate-600">
                                     {row.jenjang}
                                 </span>
                                 <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${row.status?.toLowerCase() === 'negeri' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
                                     {row.status}
                                 </span>
+                                {row.partisipasi_bos === 'ya' && (
+                                    <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border bg-blue-50 text-blue-600 border-blue-100">BOS</span>
+                                )}
                             </div>
-                            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-200">
+
+                            {/* Stats utama */}
+                            <div className="grid grid-cols-4 gap-2 pt-3 border-t border-slate-200">
                                 <div className="text-center">
-                                    <p className="text-sm font-black text-slate-700">{row.jumlah_siswa || 0}</p>
+                                    <p className="text-sm font-black text-slate-700">{(row.jumlah_siswa || 0).toLocaleString('id-ID')}</p>
                                     <p className="text-[9px] font-bold text-slate-400 uppercase">Siswa</p>
                                 </div>
                                 <div className="text-center">
@@ -245,7 +286,23 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                                     <p className="text-sm font-black text-slate-700">{row.jumlah_rombel || 0}</p>
                                     <p className="text-[9px] font-bold text-slate-400 uppercase">Rombel</p>
                                 </div>
+                                <div className="text-center">
+                                    <p className="text-sm font-black text-slate-700">{row.jumlah_ruang_kelas || 0}</p>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase">Kelas</p>
+                                </div>
                             </div>
+
+                            {/* Gender breakdown (jika ada data) */}
+                            {(Number(row.jumlah_siswa_laki) > 0 || Number(row.jumlah_siswa_perempuan) > 0) && (
+                                <div className="flex items-center gap-3 pt-2 mt-2 border-t border-slate-100 text-[10px] text-slate-500">
+                                    <span className="text-blue-500 font-bold">♂ {row.jumlah_siswa_laki || 0}</span>
+                                    <span className="text-pink-500 font-bold">♀ {row.jumlah_siswa_perempuan || 0}</span>
+                                    {Number(row.jumlah_siswa_dalam_kota) > 0 && (
+                                        <span className="ml-auto text-slate-400">Dlm: {row.jumlah_siswa_dalam_kota} | Luar: {row.jumlah_siswa_luar_kota || 0}</span>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
                                 <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {kelMap.get(row.kelurahan_id) || "-"}</span>
                                 <span>NPSN: <strong>{row.npsn || "-"}</strong></span>
@@ -293,7 +350,45 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
 /* ============================================================
    Section 2: Partisipasi & Literasi
 ================================================================ */
-function PartisipasiSection({ participation, kelurahans, selectedKelurahan }: { participation: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
+
+// Mapping jenjang di edu_facilities → kelompok umur APK
+const JENJANG_SD_MAP  = ["SD", "SPK SD"];
+const JENJANG_SMP_MAP = ["SMP", "SPK SMP"];
+const JENJANG_SMA_MAP = ["SMA", "SPK SMA", "SMK"];
+
+function PartisipasiSection({ participation, facilities, kelurahans, selectedKelurahan }: { participation: any[]; facilities: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
+    // Hitung jumlah siswa per kelurahan+semester per kelompok umur dari edu_facilities
+    // Key format: "kelurahan_id::semester" (semester = combined format e.g. 20251)
+    const siswaByKelSemester = useMemo(() => {
+        const map: Record<string, { sd: number; smp: number; sma: number }> = {};
+        facilities.forEach(f => {
+            const kid = f.kelurahan_id;
+            if (!kid) return;
+            const key = `${kid}::${f.semester || 0}`;
+            if (!map[key]) map[key] = { sd: 0, smp: 0, sma: 0 };
+            const j = (f.jenjang || "").trim();
+            const siswa = Number(f.jumlah_siswa) || 0;
+            if (JENJANG_SD_MAP.includes(j))  map[key].sd  += siswa;
+            if (JENJANG_SMP_MAP.includes(j)) map[key].smp += siswa;
+            if (JENJANG_SMA_MAP.includes(j)) map[key].sma += siswa;
+        });
+        return map;
+    }, [facilities]);
+    // Also keep a flat per-kelurahan aggregation (all semesters) for chart fallback
+    const siswaByKelurahan = useMemo(() => {
+        const map: Record<string, { sd: number; smp: number; sma: number }> = {};
+        facilities.forEach(f => {
+            const kid = f.kelurahan_id;
+            if (!kid) return;
+            if (!map[kid]) map[kid] = { sd: 0, smp: 0, sma: 0 };
+            const j = (f.jenjang || "").trim();
+            const siswa = Number(f.jumlah_siswa) || 0;
+            if (JENJANG_SD_MAP.includes(j))  map[kid].sd  += siswa;
+            if (JENJANG_SMP_MAP.includes(j)) map[kid].smp += siswa;
+            if (JENJANG_SMA_MAP.includes(j)) map[kid].sma += siswa;
+        });
+        return map;
+    }, [facilities]);
     const kelMap = new Map<string, string>();
     kelurahans.forEach(k => kelMap.set(k.id, k.nama));
 
@@ -556,43 +651,69 @@ function PartisipasiSection({ participation, kelurahans, selectedKelurahan }: { 
                     <table className="w-full text-left text-sm whitespace-nowrap">
                         <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-200">
                             <tr>
-                                <th className="px-6 py-4 font-bold">Wilayah</th>
-                                <th className="px-6 py-4 font-bold text-center">Tahun</th>
-                                <th className="px-6 py-4 font-bold text-center">Jenjang</th>
-                                <th className="px-6 py-4 font-bold text-right">APK (%)</th>
-                                <th className="px-6 py-4 font-bold text-right">Melek Huruf (%)</th>
-                                <th className="px-6 py-4 font-bold text-right">Putus Sekolah</th>
+                                <th className="px-5 py-4 font-bold">Wilayah</th>
+                                <th className="px-4 py-4 font-bold text-center">Tahun</th>
+                                <th className="px-4 py-4 font-bold text-center">Semester</th>
+                                <th className="px-4 py-4 font-bold text-center">Jenjang</th>
+                                <th className="px-4 py-4 font-bold text-right" title="Jumlah penduduk kelompok umur">Penduduk Usia</th>
+                                <th className="px-4 py-4 font-bold text-right" title="Jumlah siswa dari data Sarana Pendidikan">Siswa Sarana</th>
+                                <th className="px-4 py-4 font-bold text-right">APK (%)</th>
+                                <th className="px-4 py-4 font-bold text-right">Melek Huruf (%)</th>
+                                <th className="px-4 py-4 font-bold text-right">Putus Sekolah</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {paginatedData.map((row, i) => (
-                                <tr key={row.id || i} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <MapPin className="w-4 h-4 text-indigo-500" />
-                                            <span className="font-semibold text-slate-700">{kelMap.get(row.kelurahan_id) || "-"}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <span className="font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded text-xs">{row.tahun}</span>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <span className="font-bold text-slate-700 bg-blue-50 text-blue-600 px-2 py-1 rounded text-[10px] tracking-wider uppercase border border-blue-100">{row.jenjang || "-"}</span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right font-semibold text-slate-600">
-                                        {row.angka_partisipasi ? Number(row.angka_partisipasi).toFixed(1) : "-"}
-                                    </td>
-                                    <td className="px-6 py-4 text-right font-semibold text-slate-600">
-                                        {row.angka_melek_huruf ? Number(row.angka_melek_huruf).toFixed(1) : "-"}
-                                    </td>
-                                    <td className="px-6 py-4 text-right font-bold text-amber-600">
-                                        {(row.angka_putus_sekolah || 0).toLocaleString('id-ID')}
-                                    </td>
-                                </tr>
-                            ))}
+                            {paginatedData.map((row, i) => {
+                                // Penduduk kelompok umur dari edu_participation
+                                const jenjang = (row.jenjang || '').replace(/\/MI|\/MTs|\/MA|\/SMK/gi, '').trim();
+                                const penduduk = jenjang === 'SD' ? (row.jumlah_usia_7_12 || 0)
+                                    : jenjang === 'SMP' ? (row.jumlah_usia_13_15 || 0)
+                                    : jenjang === 'SMA' ? (row.jumlah_usia_16_18 || 0) : 0;
+                                // Siswa dari edu_facilities — match by kelurahan + semester (combined format)
+                                const semKey = `${row.kelurahan_id}::${row.semester || 0}`;
+                                const sf = siswaByKelSemester[semKey] || siswaByKelurahan[row.kelurahan_id];
+                                const siswa = sf ? (jenjang === 'SD' ? sf.sd : jenjang === 'SMP' ? sf.smp : jenjang === 'SMA' ? sf.sma : 0) : 0;
+                                // Parse combined semester display (e.g. 20251 → S1)
+                                const rawSem = Number(row.semester) || 0;
+                                const semDisplay = rawSem > 10 ? (rawSem % 10) : rawSem;
+                                return (
+                                    <tr key={row.id || i} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-5 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <MapPin className="w-4 h-4 text-indigo-500" />
+                                                <span className="font-semibold text-slate-700">{kelMap.get(row.kelurahan_id) || "-"}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-4 text-center">
+                                            <span className="font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded text-xs">{row.tahun}</span>
+                                        </td>
+                                        <td className="px-4 py-4 text-center">
+                                            <span className="font-mono text-slate-500 text-xs">{semDisplay ? `S${semDisplay}` : "—"}</span>
+                                        </td>
+                                        <td className="px-4 py-4 text-center">
+                                            <span className="font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded text-[10px] tracking-wider uppercase border border-blue-100">{row.jenjang || "-"}</span>
+                                        </td>
+                                        <td className="px-4 py-4 text-right text-slate-600">
+                                            {penduduk > 0 ? penduduk.toLocaleString('id-ID') : <span className="text-slate-300">—</span>}
+                                        </td>
+                                        <td className="px-4 py-4 text-right font-medium text-indigo-600">
+                                            {siswa > 0 ? siswa.toLocaleString('id-ID') : <span className="text-slate-300">—</span>}
+                                        </td>
+                                        <td className="px-4 py-4 text-right font-semibold text-slate-700">
+                                            {row.angka_partisipasi ? Number(row.angka_partisipasi).toFixed(1) : "—"}
+                                        </td>
+                                        <td className="px-4 py-4 text-right font-semibold text-slate-600">
+                                            {row.angka_melek_huruf ? Number(row.angka_melek_huruf).toFixed(1) : "—"}
+                                        </td>
+                                        <td className="px-4 py-4 text-right font-bold text-amber-600">
+                                            {(row.angka_putus_sekolah || 0).toLocaleString('id-ID')}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                             {filteredTableData.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                                    <td colSpan={9} className="px-6 py-12 text-center text-slate-400">
                                         <Search className="w-8 h-8 mx-auto mb-2 text-slate-300" />
                                         <p className="text-sm">Data tidak ditemukan</p>
                                     </td>
@@ -658,17 +779,28 @@ function AnalisisSection({ facilities, participation, kelurahans, selectedKelura
             metrics[k.id] = {
                 id: k.id, nama: k.nama,
                 apk_sd: 0, apk_smp: 0, apk_sma: 0,
+                penduduk_sd: 0, penduduk_smp: 0, penduduk_sma: 0,
                 amh: 0, aps: 0, rasio: 0,
-                jml_guru: 0, jml_siswa: 0, total_sekolah: 0,
+                jml_guru: 0, jml_siswa: 0, jml_siswa_laki: 0, jml_siswa_perempuan: 0,
+                jml_ruang_kelas: 0, bos_count: 0, total_sekolah: 0,
             };
         });
 
         latestPartisipasi.forEach(p => {
             if (!metrics[p.kelurahan_id]) return;
             const nj = (p.jenjang || '').replace(/\/MI|\/MTs|\/MA|\/SMK/gi, '').trim() || p.jenjang;
-            if (nj === 'SD') metrics[p.kelurahan_id].apk_sd = Number(p.angka_partisipasi) || 0;
-            if (nj === 'SMP') metrics[p.kelurahan_id].apk_smp = Number(p.angka_partisipasi) || 0;
-            if (nj === 'SMA') metrics[p.kelurahan_id].apk_sma = Number(p.angka_partisipasi) || 0;
+            if (nj === 'SD') {
+                metrics[p.kelurahan_id].apk_sd = Number(p.angka_partisipasi) || 0;
+                metrics[p.kelurahan_id].penduduk_sd = Number(p.jumlah_usia_7_12) || 0;
+            }
+            if (nj === 'SMP') {
+                metrics[p.kelurahan_id].apk_smp = Number(p.angka_partisipasi) || 0;
+                metrics[p.kelurahan_id].penduduk_smp = Number(p.jumlah_usia_13_15) || 0;
+            }
+            if (nj === 'SMA') {
+                metrics[p.kelurahan_id].apk_sma = Number(p.angka_partisipasi) || 0;
+                metrics[p.kelurahan_id].penduduk_sma = Number(p.jumlah_usia_16_18) || 0;
+            }
             if (p.angka_melek_huruf) metrics[p.kelurahan_id].amh = Number(p.angka_melek_huruf);
             if (p.angka_putus_sekolah) metrics[p.kelurahan_id].aps += Number(p.angka_putus_sekolah);
         });
@@ -678,6 +810,10 @@ function AnalisisSection({ facilities, participation, kelurahans, selectedKelura
             metrics[f.kelurahan_id].total_sekolah++;
             metrics[f.kelurahan_id].jml_guru += (f.jumlah_guru || 0);
             metrics[f.kelurahan_id].jml_siswa += (f.jumlah_siswa || 0);
+            metrics[f.kelurahan_id].jml_siswa_laki += (f.jumlah_siswa_laki || 0);
+            metrics[f.kelurahan_id].jml_siswa_perempuan += (f.jumlah_siswa_perempuan || 0);
+            metrics[f.kelurahan_id].jml_ruang_kelas += (f.jumlah_ruang_kelas || 0);
+            if ((f.partisipasi_bos || '').toLowerCase() === 'ya') metrics[f.kelurahan_id].bos_count++;
         });
 
         Object.values(metrics).forEach((m: any) => {
@@ -692,23 +828,46 @@ function AnalisisSection({ facilities, participation, kelurahans, selectedKelura
     }, [kelurahans, latestPartisipasi, facilities]);
 
     const cityAvg = useMemo(() => {
-        const count = kelMetrics.filter((m: any) => m.amh > 0).length || 1;
-        const sum = kelMetrics.reduce((acc: any, m: any) => ({
-            apk_sd: acc.apk_sd + m.apk_sd, apk_smp: acc.apk_smp + m.apk_smp, apk_sma: acc.apk_sma + m.apk_sma,
-            amh: acc.amh + m.amh, aps: acc.aps + m.aps, rasio: acc.rasio + m.rasio,
-        }), { apk_sd: 0, apk_smp: 0, apk_sma: 0, amh: 0, aps: 0, rasio: 0 });
-        return {
-            apk_sd: Number((sum.apk_sd / count).toFixed(1)), apk_smp: Number((sum.apk_smp / count).toFixed(1)),
-            apk_sma: Number((sum.apk_sma / count).toFixed(1)), amh: Number((sum.amh / count).toFixed(1)),
-            aps: Number((sum.aps / count).toFixed(1)), rasio: Number((sum.rasio / count).toFixed(1)),
-        };
+        // === APK: Aggregate (standar BPS) ===
+        // APK = Σ siswa jenjang / Σ penduduk usia × 100
+        // Karena APK per kelurahan sudah = siswa/penduduk×100,
+        // maka: siswa_kel = apk_kel × penduduk_kel / 100
+        // City APK = Σ(apk_kel × penduduk_kel) / Σ(penduduk_kel)
+        const totPendSD  = kelMetrics.reduce((s: number, m: any) => s + m.penduduk_sd,  0);
+        const totPendSMP = kelMetrics.reduce((s: number, m: any) => s + m.penduduk_smp, 0);
+        const totPendSMA = kelMetrics.reduce((s: number, m: any) => s + m.penduduk_sma, 0);
+
+        const apk_sd  = totPendSD  > 0 ? Number((kelMetrics.reduce((s: number, m: any) => s + m.apk_sd  * m.penduduk_sd,  0) / totPendSD).toFixed(1))  : 0;
+        const apk_smp = totPendSMP > 0 ? Number((kelMetrics.reduce((s: number, m: any) => s + m.apk_smp * m.penduduk_smp, 0) / totPendSMP).toFixed(1)) : 0;
+        const apk_sma = totPendSMA > 0 ? Number((kelMetrics.reduce((s: number, m: any) => s + m.apk_sma * m.penduduk_sma, 0) / totPendSMA).toFixed(1)) : 0;
+
+        // === AMH: Rata-rata kelurahan yg punya data ===
+        const amhKels = kelMetrics.filter((m: any) => m.amh > 0);
+        const amh = amhKels.length > 0
+            ? Number((amhKels.reduce((s: number, m: any) => s + m.amh, 0) / amhKels.length).toFixed(1))
+            : 0;
+
+        // === APS: Rata-rata kelurahan yg punya data partisipasi ===
+        const apsKels = kelMetrics.filter((m: any) => m.apk_sd > 0 || m.apk_smp > 0 || m.apk_sma > 0 || m.aps > 0);
+        const aps = apsKels.length > 0
+            ? Number((apsKels.reduce((s: number, m: any) => s + m.aps, 0) / apsKels.length).toFixed(1))
+            : 0;
+
+        // === Rasio G:M: Agregat ===
+        const totalGuru  = kelMetrics.reduce((s: number, m: any) => s + m.jml_guru,  0);
+        const totalSiswa = kelMetrics.reduce((s: number, m: any) => s + m.jml_siswa, 0);
+        const rasio = totalGuru > 0 ? Number((totalSiswa / totalGuru).toFixed(1)) : 0;
+
+        return { apk_sd, apk_smp, apk_sma, amh, aps, rasio };
     }, [kelMetrics]);
 
     const activeKelurahanMetric = selectedKelurahan ? kelMetrics.find((m: any) => m.id === selectedKelurahan) : null;
 
     const radarData = useMemo(() => {
-        if (!selectedKelurahan && kelMetrics.length === 0) return [];
-        const target: any = activeKelurahanMetric || kelMetrics[0];
+        if (kelMetrics.length === 0) return [];
+        const target: any = selectedKelurahan
+            ? kelMetrics.find((m: any) => m.id === selectedKelurahan)
+            : kelMetrics[0];
         if (!target) return [];
         return [
             { subject: 'APK SD', A: target.apk_sd, B: cityAvg.apk_sd, fullMark: 100 },
@@ -717,7 +876,7 @@ function AnalisisSection({ facilities, participation, kelurahans, selectedKelura
             { subject: 'AMH', A: target.amh, B: cityAvg.amh, fullMark: 100 },
             { subject: 'Rasio G:M', A: target.rasio > 0 ? Math.min(100, (20 / target.rasio) * 100) : 0, B: cityAvg.rasio > 0 ? Math.min(100, (20 / cityAvg.rasio) * 100) : 0, fullMark: 100 },
         ];
-    }, [kelMetrics, activeKelurahanMetric, selectedKelurahan, cityAvg]);
+    }, [kelMetrics, selectedKelurahan, cityAvg]);
 
     const perhatianCount = kelMetrics.filter((m: any) =>
         m.apk_sd < BENCHMARKS.apk_sd.perhatian || m.apk_smp < BENCHMARKS.apk_smp.perhatian || m.amh < BENCHMARKS.amh.perhatian
@@ -735,26 +894,56 @@ function AnalisisSection({ facilities, participation, kelurahans, selectedKelura
                 </div>
             </div>
 
-            {/* Summary Cards */}
+            {/* Summary Cards — APK/AMH dari Partisipasi */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
-                    { label: "APK SD", value: `${cityAvg.apk_sd}%`, benchmark: BENCHMARKS.apk_sd, raw: cityAvg.apk_sd },
-                    { label: "APK SMP", value: `${cityAvg.apk_smp}%`, benchmark: BENCHMARKS.apk_smp, raw: cityAvg.apk_smp },
-                    { label: "APK SMA", value: `${cityAvg.apk_sma}%`, benchmark: BENCHMARKS.apk_sma, raw: cityAvg.apk_sma },
-                    { label: "AMH", value: `${cityAvg.amh}%`, benchmark: BENCHMARKS.amh, raw: cityAvg.amh },
-                    { label: "Putus Sekolah", value: `${cityAvg.aps}`, benchmark: BENCHMARKS.aps, raw: cityAvg.aps },
-                    { label: "Rasio G:M", value: `1:${cityAvg.rasio}`, benchmark: BENCHMARKS.rasio, raw: cityAvg.rasio },
-                ].map((stat, i) => {
-                    const status = getStatusBadge(stat.raw, stat.benchmark);
-                    return (
-                        <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
-                            <span className="text-2xl font-black text-slate-800 block mb-1">{stat.value}</span>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">{stat.label} (Rata-rata)</span>
-                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${status.bg}`}>{status.text}</span>
-                        </div>
-                    );
-                })}
+                    { label: "APK SD", value: `${cityAvg.apk_sd}%`, benchmark: BENCHMARKS.apk_sd, raw: cityAvg.apk_sd, subtitle: "Agregat" },
+                    { label: "APK SMP", value: `${cityAvg.apk_smp}%`, benchmark: BENCHMARKS.apk_smp, raw: cityAvg.apk_smp, subtitle: "Agregat" },
+                    { label: "APK SMA", value: `${cityAvg.apk_sma}%`, benchmark: BENCHMARKS.apk_sma, raw: cityAvg.apk_sma, subtitle: "Agregat" },
+                    { label: "AMH", value: `${cityAvg.amh}%`, benchmark: BENCHMARKS.amh, raw: cityAvg.amh, subtitle: "Rata-rata" },
+                    { label: "Putus Sekolah", value: `${cityAvg.aps}`, benchmark: BENCHMARKS.aps, raw: cityAvg.aps, subtitle: "Rata-rata" },
+                    { label: "Rasio G:M", value: `1:${cityAvg.rasio}`, benchmark: BENCHMARKS.rasio, raw: cityAvg.rasio, subtitle: "Agregat" },
+                ].map((stat, i) => (
+                    <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
+                        <span className="text-2xl font-black text-slate-800 block mb-1">{stat.value}</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{stat.label} ({stat.subtitle})</span>
+                    </div>
+                ))}
             </div>
+
+            {/* Summary Cards Sarana — dari edu_facilities */}
+            {(() => {
+                const totalSekolah = kelMetrics.reduce((s: number, m: any) => s + m.total_sekolah, 0);
+                const totalSiswa = kelMetrics.reduce((s: number, m: any) => s + m.jml_siswa, 0);
+                const totalGuru = kelMetrics.reduce((s: number, m: any) => s + m.jml_guru, 0);
+                const totalKelas = kelMetrics.reduce((s: number, m: any) => s + m.jml_ruang_kelas, 0);
+                const totalBos = kelMetrics.reduce((s: number, m: any) => s + m.bos_count, 0);
+                const rasioKelas = totalKelas > 0 ? (totalSiswa / totalKelas).toFixed(1) : "0";
+                return (
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center">
+                            <span className="text-xl font-black text-indigo-600 block mb-1">{totalSekolah}</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Sekolah</span>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center">
+                            <span className="text-xl font-black text-emerald-600 block mb-1">{totalSiswa.toLocaleString('id-ID')}</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Siswa</span>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center">
+                            <span className="text-xl font-black text-blue-600 block mb-1">{totalGuru.toLocaleString('id-ID')}</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Guru</span>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center">
+                            <span className="text-xl font-black text-violet-600 block mb-1">{totalKelas}</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ruang Kelas</span>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center">
+                            <span className="text-xl font-black text-amber-600 block mb-1">{totalBos}</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sekolah BOS</span>
+                        </div>
+                    </div>
+                );
+            })()}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Radar Chart */}
@@ -789,18 +978,21 @@ function AnalisisSection({ facilities, participation, kelurahans, selectedKelura
                         </div>
                         <p className="text-[10px] text-slate-400 mt-1">Diurutkan berdasarkan rata-rata APK tertinggi</p>
                     </div>
-                    <div className="flex-1 overflow-y-auto max-h-[350px] p-0 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto max-h-[380px] p-0 custom-scrollbar">
                         <table className="w-full text-sm text-left">
                             <thead className="bg-slate-50 sticky top-0 border-b border-slate-200">
                                 <tr>
                                     <th className="px-3 py-3 font-bold text-slate-600 text-xs">#</th>
                                     <th className="px-3 py-3 font-bold text-slate-600 text-xs">Kelurahan</th>
-                                    <th className="px-3 py-3 font-bold text-slate-600 text-xs text-center" title="Angka Partisipasi Kasar SD">SD</th>
-                                    <th className="px-3 py-3 font-bold text-slate-600 text-xs text-center" title="Angka Partisipasi Kasar SMP">SMP</th>
-                                    <th className="px-3 py-3 font-bold text-slate-600 text-xs text-center" title="Angka Partisipasi Kasar SMA">SMA</th>
+                                    <th className="px-3 py-3 font-bold text-slate-600 text-xs text-center">Sekolah</th>
+                                    <th className="px-3 py-3 font-bold text-slate-600 text-xs text-center">Siswa</th>
+                                    <th className="px-3 py-3 font-bold text-slate-600 text-xs text-center">Kelas</th>
+                                    <th className="px-3 py-3 font-bold text-slate-600 text-xs text-center" title="Angka Partisipasi Kasar SD">APK SD</th>
+                                    <th className="px-3 py-3 font-bold text-slate-600 text-xs text-center" title="Angka Partisipasi Kasar SMP">APK SMP</th>
+                                    <th className="px-3 py-3 font-bold text-slate-600 text-xs text-center" title="Angka Partisipasi Kasar SMA">APK SMA</th>
                                     <th className="px-3 py-3 font-bold text-slate-600 text-xs text-center" title="Angka Melek Huruf">AMH</th>
-                                    <th className="px-3 py-3 font-bold text-slate-600 text-xs text-center" title="Angka Putus Sekolah">APS</th>
                                     <th className="px-3 py-3 font-bold text-slate-600 text-xs text-center" title="Rasio Guru:Murid">G:M</th>
+                                    <th className="px-3 py-3 font-bold text-slate-600 text-xs text-center" title="Jumlah sekolah penerima BOS">BOS</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -812,23 +1004,28 @@ function AnalisisSection({ facilities, participation, kelurahans, selectedKelura
                                             </span>
                                         </td>
                                         <td className="px-3 py-2.5 font-medium text-slate-800 text-xs whitespace-nowrap">{m.nama}</td>
+                                        <td className="px-3 py-2.5 text-center text-xs font-bold text-indigo-600">{m.total_sekolah}</td>
+                                        <td className="px-3 py-2.5 text-center text-xs text-slate-600">{m.jml_siswa.toLocaleString('id-ID')}</td>
+                                        <td className="px-3 py-2.5 text-center text-xs text-slate-600">{m.jml_ruang_kelas}</td>
                                         <td className="px-3 py-2.5 text-center">
-                                            <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${getStatusBadge(m.apk_sd, BENCHMARKS.apk_sd).bg}`}>{m.apk_sd.toFixed(1)}</span>
+                                            <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-700">{m.apk_sd > 0 ? m.apk_sd.toFixed(1) : '—'}</span>
                                         </td>
                                         <td className="px-3 py-2.5 text-center">
-                                            <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${getStatusBadge(m.apk_smp, BENCHMARKS.apk_smp).bg}`}>{m.apk_smp.toFixed(1)}</span>
+                                            <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-700">{m.apk_smp > 0 ? m.apk_smp.toFixed(1) : '—'}</span>
                                         </td>
                                         <td className="px-3 py-2.5 text-center">
-                                            <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${getStatusBadge(m.apk_sma, BENCHMARKS.apk_sma).bg}`}>{m.apk_sma.toFixed(1)}</span>
+                                            <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-700">{m.apk_sma > 0 ? m.apk_sma.toFixed(1) : '—'}</span>
                                         </td>
                                         <td className="px-3 py-2.5 text-center">
-                                            <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${getStatusBadge(m.amh, BENCHMARKS.amh).bg}`}>{m.amh.toFixed(1)}</span>
+                                            <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-700">{m.amh > 0 ? m.amh.toFixed(1) : '—'}</span>
                                         </td>
                                         <td className="px-3 py-2.5 text-center">
-                                            <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${getStatusBadge(m.aps, BENCHMARKS.aps).bg}`}>{m.aps}</span>
+                                            <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-700">{m.rasio > 0 ? `1:${m.rasio}` : '—'}</span>
                                         </td>
                                         <td className="px-3 py-2.5 text-center">
-                                            <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${getStatusBadge(m.rasio, BENCHMARKS.rasio).bg}`}>1:{m.rasio}</span>
+                                            {m.bos_count > 0 ? (
+                                                <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600">{m.bos_count}</span>
+                                            ) : <span className="text-slate-300 text-xs">—</span>}
                                         </td>
                                     </tr>
                                 ))}
@@ -847,11 +1044,7 @@ function AnalisisSection({ facilities, participation, kelurahans, selectedKelura
                     <p>• <strong>APS</strong> — Angka Putus Sekolah, total semua jenjang (Kemendikbud)</p>
                     <p>• <strong>G:M</strong> — Rasio Guru-Murid, standar SPM 1:20 s.d 1:28 (Permendikbud)</p>
                 </div>
-                <div className="flex items-center gap-4 mt-3 text-[10px]">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Baik</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> Perlu Perhatian</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Kritis</span>
-                </div>
+
             </div>
         </section>
     );
@@ -990,7 +1183,7 @@ export default function PendidikanPage() {
                             <SaranaSection facilities={data.facilities} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
                         )}
                         {activeSection === "partisipasi" && (
-                            <PartisipasiSection participation={data.participation} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
+                            <PartisipasiSection participation={data.participation} facilities={data.facilities} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
                         )}
                         {activeSection === "analisis" && (
                             <AnalisisSection facilities={data.facilities} participation={data.participation} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />

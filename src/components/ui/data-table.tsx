@@ -225,7 +225,7 @@ export function DataTable<T extends Record<string, unknown>>({
                                         >
                                             {col.render
                                                 ? col.render(row[col.key], row)
-                                                : (row[col.key] as React.ReactNode) ?? "—"}
+                                                : row[col.key] != null ? String(row[col.key]) : "—"}
                                         </td>
                                     ))}
                                     {hasActions && (

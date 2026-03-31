@@ -69,7 +69,7 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
             const q = searchQuery.toLowerCase();
             result = result.filter(d =>
                 (d.nama || "").toLowerCase().includes(q) ||
-                (d.jenis || "").toLowerCase().includes(q)
+                (d.jenis_nama || "").toLowerCase().includes(q)
             );
         }
         return result.sort((a, b) => a.nama.localeCompare(b.nama));
@@ -83,13 +83,13 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
             counts[name] = (counts[name] || 0) + 1;
         });
         return Object.entries(counts)
-            .map(([nama, jumlah]) => ({ nama: nama.length > 10 ? nama.substring(0, 10) + "…" : nama, jumlah }))
+            .map(([nama, jumlah]) => ({ nama, jumlah }))
             .sort((a, b) => b.jumlah - a.jumlah);
     }, [data, kelMap, kelurahans]);
 
     const typePieData = useMemo(() => {
         const counts: Record<string, number> = {};
-        filteredData.forEach(d => counts[d.jenis || "Lainnya"] = (counts[d.jenis || "Lainnya"] || 0) + 1);
+        filteredData.forEach(d => counts[d.jenis_nama || "Lainnya"] = (counts[d.jenis_nama || "Lainnya"] || 0) + 1);
         return Object.entries(counts).map(([name, value]) => ({ name, value }));
     }, [filteredData]);
 
@@ -121,17 +121,26 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                <div className="md:col-span-8 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
+                <div className="md:col-span-8 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-base font-bold text-slate-800">Distribusi per Wilayah</h3>
                         <span className="text-xs font-bold px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg">{kelurahans.length} Kelurahan</span>
                     </div>
-                    <div className="h-72">
+                    <div className="flex-1 min-h-[350px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                <XAxis dataKey="nama" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
+                                <XAxis 
+                                    dataKey="nama" 
+                                    tick={{ fontSize: 10, fill: "#64748b" }} 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    dy={10} 
+                                    angle={-45} 
+                                    textAnchor="end" 
+                                    height={60} 
+                                />
                                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                 <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} />
                                 <Bar dataKey="jumlah" name="Jumlah Faskes" radius={[6, 6, 0, 0]} maxBarSize={40}>
@@ -144,7 +153,7 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
                     </div>
                 </div>
 
-                <div className="md:col-span-4 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col items-center justify-center">
+                <div className="md:col-span-4 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col">
                     <h3 className="text-base font-bold text-slate-800 self-start mb-6">Komposisi Jenis</h3>
                     <div className="w-full h-48 relative">
                         <ResponsiveContainer width="100%" height="100%">
@@ -190,7 +199,7 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
                 </div>
                 <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {paginatedData.map(row => {
-                        const styleInfo = faskesTypes[row.jenis] || { icon: "🏥", color: "text-indigo-600 bg-indigo-50 border-indigo-100" };
+                        const styleInfo = faskesTypes[row.jenis_nama] || { icon: "🏥", color: "text-indigo-600 bg-indigo-50 border-indigo-100" };
                         return (
                             <div key={row.id} className="p-4 bg-white border border-slate-100 rounded-xl hover:shadow-md hover:border-indigo-200 transition-all">
                                 <div className="flex items-start justify-between mb-3">
@@ -198,11 +207,11 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
                                         {styleInfo.icon}
                                     </div>
                                     <span className="inline-flex px-2 py-1 rounded-md text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-100 uppercase tracking-widest">
-                                        {row.jenis || "Faskes"}
+                                        {row.jenis_nama || "Faskes"}
                                     </span>
                                 </div>
                                 <h4 className="font-bold text-slate-800 text-sm mb-1 line-clamp-1">{row.nama}</h4>
-                                <p className="text-[11px] font-bold text-indigo-500 mb-2 uppercase tracking-wide">{row.jenis}</p>
+                                <p className="text-[11px] font-bold text-indigo-500 mb-2 uppercase tracking-wide">{row.jenis_nama}</p>
                                 <p className="text-xs text-slate-500 mb-3 line-clamp-2 min-h-8">{row.alamat || "Tidak ada alamat lengkap"}</p>
                                 <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                                     <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1">
@@ -269,11 +278,13 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
 }
 
 /* ============================================================
-   Section 2: Stunting
+   Section 2: Stunting (BNBA Agregat View)
 ============================================================ */
 function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
     const kelMap = new Map<string, string>();
     kelurahans.forEach(k => kelMap.set(k.id, k.nama));
+
+    const BULAN_NAMES = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -283,6 +294,7 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
         setCurrentPage(1);
     }, [selectedKelurahan, searchQuery]);
 
+    // Each row dari view mewakili (kelurahan × tahun × bulan)
     const filteredTableData = useMemo(() => {
         return data.filter(s => {
             if (selectedKelurahan && s.kelurahan_id !== selectedKelurahan) return false;
@@ -292,7 +304,7 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                 return (s.tahun?.toString().includes(q)) || (kelName.includes(q));
             }
             return true;
-        }).sort((a,b) => b.tahun - a.tahun || a.kelurahan_id.localeCompare(b.kelurahan_id));
+        }).sort((a, b) => b.tahun - a.tahun || (b.bulan || 0) - (a.bulan || 0) || a.kelurahan_id.localeCompare(b.kelurahan_id));
     }, [data, selectedKelurahan, searchQuery, kelMap]);
 
     const totalPages = Math.ceil(filteredTableData.length / ITEMS_PER_PAGE);
@@ -301,30 +313,20 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
         return filteredTableData.slice(start, start + ITEMS_PER_PAGE);
     }, [filteredTableData, currentPage]);
 
+    // Aggregate per-tahun dari semua bulan & kelurahan yang dipilih
     const selectedData = useMemo(() => {
-        let result = data;
-        if (selectedKelurahan) {
-            result = result.filter(d => d.kelurahan_id === selectedKelurahan);
-        }
-        return result.sort((a, b) => a.tahun - b.tahun);
+        if (selectedKelurahan) return data.filter(d => d.kelurahan_id === selectedKelurahan);
+        return data;
     }, [data, selectedKelurahan]);
 
-    const latestYear = useMemo(() => {
-        if (!selectedData.length) return new Date().getFullYear();
-        return Math.max(...selectedData.map(d => d.tahun));
-    }, [selectedData]);
-
-    const latestData = useMemo(() => selectedData.filter(d => d.tahun === latestYear), [selectedData, latestYear]);
-
-    // Trend aggregation across all selected kelurahan by year
     const trendData = useMemo(() => {
         const aggs: Record<number, any> = {};
         selectedData.forEach(d => {
             if (!aggs[d.tahun]) aggs[d.tahun] = { tahun: d.tahun, total_balita: 0, total_stunting: 0, gizi_buruk: 0, gizi_kurang: 0 };
-            aggs[d.tahun].total_balita += (d.balita_total || 0);
-            aggs[d.tahun].total_stunting += (d.balita_stunting || 0);
-            aggs[d.tahun].gizi_buruk += (d.balita_gizi_buruk || 0);
-            aggs[d.tahun].gizi_kurang += (d.balita_gizi_kurang || 0);
+            aggs[d.tahun].total_balita += Number(d.balita_total) || 0;
+            aggs[d.tahun].total_stunting += Number(d.balita_stunting) || 0;
+            aggs[d.tahun].gizi_buruk += Number(d.balita_gizi_buruk) || 0;
+            aggs[d.tahun].gizi_kurang += Number(d.balita_gizi_kurang) || 0;
         });
         return Object.values(aggs).map(a => ({
             ...a,
@@ -332,16 +334,21 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
         })).sort((a, b) => a.tahun - b.tahun);
     }, [selectedData]);
 
-    const latestAgg = trendData[trendData.length - 1] || { total_stunting: 0, prevalensi: 0, total_balita: 0 };
+    const latestYear = trendData.length > 0 ? trendData[trendData.length - 1].tahun : new Date().getFullYear();
+    const latestAgg = trendData[trendData.length - 1] || { total_stunting: 0, prevalensi: 0, total_balita: 0, gizi_buruk: 0, gizi_kurang: 0 };
     const prevAgg = trendData[trendData.length - 2] || latestAgg;
 
-    // Kelurahan comparison for latest year
+    // Sebaran kelurahan untuk tahun terbaru
     const kelBarData = useMemo(() => {
-        const reqData = data.filter(d => d.tahun === latestYear);
-        return reqData.map(d => ({
-            nama: kelMap.get(d.kelurahan_id)?.substring(0, 10) + "…" || "Lainnya",
-            stunting: d.balita_stunting || 0,
-            prevalensi: d.balita_total > 0 ? Number(((d.balita_stunting / d.balita_total) * 100).toFixed(1)) : 0
+        const byKel: Record<string, any> = {};
+        data.filter(d => d.tahun === latestYear).forEach(d => {
+            if (!byKel[d.kelurahan_id]) byKel[d.kelurahan_id] = { nama: kelMap.get(d.kelurahan_id) || "Lainnya", stunting: 0, total: 0 };
+            byKel[d.kelurahan_id].stunting += Number(d.balita_stunting) || 0;
+            byKel[d.kelurahan_id].total += Number(d.balita_total) || 0;
+        });
+        return Object.values(byKel).map(d => ({
+            ...d,
+            prevalensi: d.total > 0 ? Number(((d.stunting / d.total) * 100).toFixed(1)) : 0
         })).sort((a, b) => b.stunting - a.stunting);
     }, [data, latestYear, kelMap]);
 
@@ -353,21 +360,21 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                 </div>
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800">Kasus Stunting & Gizi</h2>
-                    <p className="text-slate-500 text-sm">Pemantauan prevalensi stunting, gizi buruk, dan gizi kurang pada balita (Tahun {latestYear})</p>
+                    <p className="text-slate-500 text-sm">Pemantauan prevalensi stunting, gizi buruk, dan gizi kurang pada balita berdasarkan data E-PPGBM (BNBA)</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="md:col-span-1 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center bg-gradient-to-br from-indigo-50 to-blue-50">
                     <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                        <ActivitySquare className="w-4 h-4" /> Prevalensi
+                        <ActivitySquare className="w-4 h-4" /> Prevalensi ({latestYear})
                     </p>
                     <div className="flex items-end gap-2 mb-2">
                         <span className="text-5xl font-black text-slate-800">{latestAgg.prevalensi}</span>
                         <span className="text-xl font-bold text-slate-500 mb-1">%</span>
                     </div>
                     {trendData.length > 1 && (
-                        <p className={`text-xs font-bold flex items-center gap-1 ${Number(latestAgg.prevalensi) < Number(prevAgg.prevalensi) ? 'text-emerald-500' : 'text-indigo-500'}`}>
+                        <p className={`text-xs font-bold flex items-center gap-1 ${Number(latestAgg.prevalensi) < Number(prevAgg.prevalensi) ? 'text-emerald-500' : 'text-red-500'}`}>
                             {Number(latestAgg.prevalensi) < Number(prevAgg.prevalensi) ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
                             {Math.abs(Number(latestAgg.prevalensi) - Number(prevAgg.prevalensi)).toFixed(1)}% dari tahun lalu
                         </p>
@@ -375,13 +382,13 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                 </div>
                 <div className="md:col-span-3 grid grid-cols-3 gap-4">
                     {[
-                        { label: "Balita Diukur", value: latestAgg.total_balita, icon: "👶", color: "blue" },
+                        { label: "Balita Terdata", value: latestAgg.total_balita, icon: "👶", color: "blue" },
                         { label: "Kasus Stunting", value: latestAgg.total_stunting, icon: "📏", color: "indigo" },
-                        { label: "Gizi Buruk & Kurang", value: latestAgg.gizi_buruk + latestAgg.gizi_kurang, icon: "🩺", color: "amber" },
+                        { label: "Gizi Buruk & Kurang", value: (latestAgg.gizi_buruk || 0) + (latestAgg.gizi_kurang || 0), icon: "🩺", color: "amber" },
                     ].map((stat, i) => (
                         <div key={i} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center">
                             <div className="text-2xl mb-3">{stat.icon}</div>
-                            <span className="text-3xl font-black text-slate-800">{stat.value.toLocaleString("id-ID")}</span>
+                            <span className="text-3xl font-black text-slate-800">{Number(stat.value).toLocaleString("id-ID")}</span>
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{stat.label}</span>
                         </div>
                     ))}
@@ -390,7 +397,7 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                 <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-                    <h3 className="text-base font-bold text-slate-800 mb-6">Tren Stunting ({trendData[0]?.tahun} - {latestYear})</h3>
+                    <h3 className="text-base font-bold text-slate-800 mb-6">Tren Stunting Tahunan</h3>
                     <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -409,17 +416,27 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
 
                 {!selectedKelurahan && (
                     <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-                        <h3 className="text-base font-bold text-slate-800 mb-6">Sebaran Kasus per Kelurahan ({latestYear})</h3>
+                        <h3 className="text-base font-bold text-slate-800 mb-6">Sebaran per Kelurahan ({latestYear})</h3>
                         <div className="h-64">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: -20, bottom: 50 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                    <XAxis dataKey="nama" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
+                                    <XAxis 
+                                        dataKey="nama" 
+                                        tick={{ fontSize: 10, fill: "#64748b" }} 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        dy={10} 
+                                        angle={-45} 
+                                        textAnchor="end" 
+                                        height={60} 
+                                        interval={0}
+                                    />
                                     <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                     <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} />
-                                    <Bar dataKey="stunting" name="Balita Stunting" fill="#4f46e5" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                                    <Bar dataKey="stunting" name="Balita Stunting" radius={[4, 4, 0, 0]} maxBarSize={30}>
                                         {kelBarData.map((d, i) => (
-                                            <Cell key={i} fill={d.prevalensi > 10 ? "#4f46e5" : "#fbbf24"} />
+                                            <Cell key={i} fill={d.prevalensi > 10 ? "#ef4444" : "#fbbf24"} />
                                         ))}
                                     </Bar>
                                 </BarChart>
@@ -429,10 +446,13 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                 )}
             </div>
 
-            {/* Data Table Stunting */}
+            {/* Data Table from BNBA Agregat View */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mt-6">
                 <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <h3 className="text-base font-bold text-slate-800">Daftar Data Stunting & Gizi</h3>
+                    <div>
+                        <h3 className="text-base font-bold text-slate-800">Rekap Data Stunting (BNBA)</h3>
+                        <p className="text-xs text-slate-400 mt-0.5">Sumber: E-PPGBM — Data By Name By Address</p>
+                    </div>
                     <div className="relative w-full sm:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
@@ -450,6 +470,7 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                             <tr>
                                 <th className="px-6 py-4 font-bold">Wilayah</th>
                                 <th className="px-6 py-4 font-bold text-center">Tahun</th>
+                                <th className="px-6 py-4 font-bold text-center">Bulan</th>
                                 <th className="px-6 py-4 font-bold text-right">Total Balita</th>
                                 <th className="px-6 py-4 font-bold text-right">Stunting</th>
                                 <th className="px-6 py-4 font-bold text-right">Gizi Buruk & Kurang</th>
@@ -458,10 +479,13 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {paginatedData.map((row, i) => {
-                                const prevalensi = row.balita_total > 0 ? ((row.balita_stunting / row.balita_total) * 100).toFixed(1) : "0.0";
+                                const total = Number(row.balita_total) || 0;
+                                const stunting = Number(row.balita_stunting) || 0;
+                                const prevalensi = total > 0 ? ((stunting / total) * 100).toFixed(1) : "0.0";
                                 const isHigh = Number(prevalensi) > 10;
+                                const bulanNama = row.bulan ? BULAN_NAMES[Number(row.bulan) - 1] : "-";
                                 return (
-                                    <tr key={row.id || i} className="hover:bg-slate-50/50 transition-colors">
+                                    <tr key={`${row.kelurahan_id}-${row.tahun}-${row.bulan || i}`} className="hover:bg-slate-50/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <MapPin className="w-4 h-4 text-indigo-500" />
@@ -471,14 +495,17 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                                         <td className="px-6 py-4 text-center">
                                             <span className="font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded text-xs">{row.tahun}</span>
                                         </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className="font-mono text-slate-500 text-xs">{bulanNama}</span>
+                                        </td>
                                         <td className="px-6 py-4 text-right font-bold text-slate-600">
-                                            {(row.balita_total || 0).toLocaleString('id-ID')}
+                                            {total.toLocaleString('id-ID')}
                                         </td>
                                         <td className="px-6 py-4 text-right font-bold text-red-500">
-                                            {(row.balita_stunting || 0).toLocaleString('id-ID')}
+                                            {stunting.toLocaleString('id-ID')}
                                         </td>
                                         <td className="px-6 py-4 text-right font-semibold text-amber-500">
-                                            {((row.balita_gizi_buruk || 0) + (row.balita_gizi_kurang || 0)).toLocaleString('id-ID')}
+                                            {((Number(row.balita_gizi_buruk) || 0) + (Number(row.balita_gizi_kurang) || 0)).toLocaleString('id-ID')}
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <span className={`inline-block px-2.5 py-1 text-[11px] font-bold rounded-lg border ${isHigh ? 'bg-red-50 text-red-700 border-red-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
@@ -490,7 +517,7 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                             })}
                             {filteredTableData.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                                    <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                                         <Search className="w-8 h-8 mx-auto mb-2 text-slate-300" />
                                         <p className="text-sm">Data tidak ditemukan</p>
                                     </td>
@@ -528,12 +555,17 @@ function PosyanduSection({ data, kelurahans, selectedKelurahan }: { data: any[];
         if (selectedKelurahan) {
             result = result.filter(d => d.kelurahan_id === selectedKelurahan);
         }
-        return result.sort((a, b) => a.nama.localeCompare(b.nama));
+        return result.sort((a, b) => (a.nama || "").localeCompare(b.nama || ""));
     }, [data, selectedKelurahan]);
 
     const totalKader = selectedData.reduce((acc, curr) => acc + (curr.jumlah_kader || 0), 0);
     const totalBalita = selectedData.reduce((acc, curr) => acc + (curr.jumlah_balita || 0), 0);
     const totalLansia = selectedData.reduce((acc, curr) => acc + (curr.jumlah_lansia || 0), 0);
+    const totalIbuHamil = selectedData.reduce((acc, curr) => acc + (curr.jumlah_ibu_hamil || 0), 0);
+    const posyanduAktif = selectedData.filter(d => {
+        const cakupans = [d.cakupan_gizi || 0, d.cakupan_kia || 0, d.cakupan_kb || 0, d.cakupan_imunisasi || 0];
+        return cakupans.filter(c => c >= 50).length >= 3 && (d.frekuensi_kegiatan || 0) >= 8;
+    }).length;
 
     const strataData = useMemo(() => {
         const counts: Record<string, number> = {};
@@ -558,6 +590,25 @@ function PosyanduSection({ data, kelurahans, selectedKelurahan }: { data: any[];
 
     useEffect(() => { setPosPage(1); }, [selectedKelurahan]);
 
+    // Mini cakupan bar helper
+    function CakupanBar({ label, value }: { label: string; value: number }) {
+        const isGood = value >= 50;
+        return (
+            <div className="space-y-0.5">
+                <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-medium text-slate-500">{label}</span>
+                    <span className={`text-[9px] font-bold ${isGood ? 'text-emerald-600' : 'text-amber-600'}`}>{value}%</span>
+                </div>
+                <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                        className={`h-full rounded-full transition-all ${isGood ? 'bg-emerald-500' : 'bg-amber-400'}`}
+                        style={{ width: `${Math.min(value, 100)}%` }}
+                    />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <section className="space-y-6">
             <div className="flex items-center gap-3 mb-6">
@@ -566,21 +617,23 @@ function PosyanduSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                 </div>
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800">Posyandu & Layanan Dasar</h2>
-                    <p className="text-slate-500 text-sm">Distribusi posyandu balita dan lansia beserta kapasitas kadernya</p>
+                    <p className="text-slate-500 text-sm">Distribusi posyandu, kepengurusan, dan cakupan layanan standar nasional SIP</p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
                     { label: "Total Posyandu", value: selectedData.length, icon: "🏕️", color: "text-indigo-600" },
+                    { label: "Posyandu Aktif", value: posyanduAktif, icon: "✅", color: "text-emerald-600" },
                     { label: "Kader Aktif", value: totalKader, icon: "👩‍⚕️", color: "text-indigo-600" },
                     { label: "Sasaran Balita", value: totalBalita, icon: "👶", color: "text-blue-600" },
                     { label: "Sasaran Lansia", value: totalLansia, icon: "👵", color: "text-emerald-600" },
+                    { label: "Ibu Hamil", value: totalIbuHamil, icon: "🤰", color: "text-blue-600" },
                 ].map((stat, i) => (
-                    <div key={i} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm text-center transform transition-transform hover:-translate-y-1">
-                        <div className="text-2xl mb-2">{stat.icon}</div>
-                        <span className={`text-3xl font-black ${stat.color} block leading-none mb-1`}>{stat.value.toLocaleString("id-ID")}</span>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stat.label}</span>
+                    <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center transform transition-transform hover:-translate-y-1">
+                        <div className="text-xl mb-1">{stat.icon}</div>
+                        <span className={`text-2xl font-black ${stat.color} block leading-none mb-1`}>{stat.value.toLocaleString("id-ID")}</span>
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{stat.label}</span>
                     </div>
                 ))}
             </div>
@@ -588,37 +641,94 @@ function PosyanduSection({ data, kelurahans, selectedKelurahan }: { data: any[];
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-6 items-start">
                 <div className="md:col-span-8 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-                        <h3 className="text-base font-bold text-slate-800">Daftar Posyandu Aktif</h3>
+                        <h3 className="text-base font-bold text-slate-800">Daftar Posyandu</h3>
                         <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg">{selectedData.length} Posyandu</span>
                     </div>
                     <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {posPaginated.map(row => (
-                            <div key={row.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-white hover:border-indigo-200 hover:shadow-md transition-all">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h4 className="font-bold text-slate-800 text-sm">{row.nama}</h4>
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${STRATA_COLORS[row.strata || "Pratama"] || STRATA_COLORS["Pratama"]}`}>
-                                        {row.strata || "Pratama"}
-                                    </span>
+                        {posPaginated.map(row => {
+                            const cakupans = [
+                                { label: "Gizi", val: Number(row.cakupan_gizi) || 0 },
+                                { label: "KIA", val: Number(row.cakupan_kia) || 0 },
+                                { label: "KB", val: Number(row.cakupan_kb) || 0 },
+                                { label: "Imunisasi", val: Number(row.cakupan_imunisasi) || 0 },
+                            ];
+                            const above50 = cakupans.filter(c => c.val >= 50).length;
+                            const isActive = above50 >= 3 && (row.frekuensi_kegiatan || 0) >= 8;
+                            const kaderArr = Array.isArray(row.anggota_kader) ? row.anggota_kader : [];
+
+                            return (
+                                <div key={row.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-white hover:border-indigo-200 hover:shadow-md transition-all">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <h4 className="font-bold text-slate-800 text-sm leading-tight">{row.nama}</h4>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            {isActive && (
+                                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-200">AKTIF</span>
+                                            )}
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${STRATA_COLORS[row.strata || "Pratama"] || STRATA_COLORS["Pratama"]}`}>
+                                                {row.strata || "Pratama"}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Ketua & Lokasi */}
+                                    {row.ketua && (
+                                        <p className="text-[11px] text-slate-600 mb-0.5">
+                                            <span className="font-semibold">Ketua:</span> {row.ketua}
+                                        </p>
+                                    )}
+                                    <p className="text-xs text-slate-500 flex items-center gap-1 mb-1">
+                                        <MapPin className="w-3 h-3 text-indigo-400 shrink-0" />
+                                        <span className="truncate">{row.alamat || kelMap.get(row.kelurahan_id) || "-"}</span>
+                                    </p>
+                                    {row.rt_rw && (
+                                        <p className="text-[10px] text-slate-400 mb-2">RT/RW: {row.rt_rw} · {kelMap.get(row.kelurahan_id) || ""}</p>
+                                    )}
+
+                                    {/* Stats row */}
+                                    <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-200 mb-2">
+                                        <div className="text-center">
+                                            <p className="text-sm font-black text-slate-700">{row.jumlah_kader || 0}</p>
+                                            <p className="text-[8px] font-bold text-slate-400 uppercase">Kader</p>
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-sm font-black text-slate-700">{row.jumlah_balita || 0}</p>
+                                            <p className="text-[8px] font-bold text-slate-400 uppercase">Balita</p>
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-sm font-black text-slate-700">{row.jumlah_lansia || 0}</p>
+                                            <p className="text-[8px] font-bold text-slate-400 uppercase">Lansia</p>
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-sm font-black text-slate-700">{row.frekuensi_kegiatan || 0}×</p>
+                                            <p className="text-[8px] font-bold text-slate-400 uppercase">Kegiatan</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Cakupan mini bars */}
+                                    {cakupans.some(c => c.val > 0) && (
+                                        <div className="space-y-1 pt-2 border-t border-slate-200">
+                                            {cakupans.map(c => (
+                                                <CakupanBar key={c.label} label={c.label} value={c.val} />
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Kader names expandable */}
+                                    {kaderArr.length > 0 && (
+                                        <details className="mt-2 pt-2 border-t border-slate-200">
+                                            <summary className="text-[10px] font-bold text-indigo-600 cursor-pointer hover:text-indigo-700">
+                                                👥 {kaderArr.length} Anggota Kader
+                                            </summary>
+                                            <div className="mt-1 flex flex-wrap gap-1">
+                                                {kaderArr.map((name: string, idx: number) => (
+                                                    <span key={idx} className="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-medium">{name}</span>
+                                                ))}
+                                            </div>
+                                        </details>
+                                    )}
                                 </div>
-                                <p className="text-xs text-slate-500 flex items-center gap-1 mb-3">
-                                    <MapPin className="w-3 h-3 text-indigo-400" /> {kelMap.get(row.kelurahan_id) || "-"}
-                                </p>
-                                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-200">
-                                    <div className="text-center">
-                                        <p className="text-sm font-black text-slate-700">{row.jumlah_kader || 0}</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase">Kader</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-sm font-black text-slate-700">{row.jumlah_balita || 0}</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase">Balita</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-sm font-black text-slate-700">{row.jumlah_lansia || 0}</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase">Lansia</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                     {posTotalPages > 1 && (
                         <div className="p-4 border-t border-slate-100 flex items-center justify-between">
@@ -676,6 +786,34 @@ function PosyanduSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                                 <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
                             </PieChart>
                         </ResponsiveContainer>
+                    </div>
+
+                    {/* Posyandu Aktif summary */}
+                    <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                        <p className="text-xs font-bold text-slate-700 mb-2">Kriteria Posyandu Aktif (SIP)</p>
+                        <div className="space-y-1.5 text-[11px] text-slate-600">
+                            <div className="flex justify-between">
+                                <span>Kegiatan ≥ 8×/tahun</span>
+                                <span className="font-bold">{selectedData.filter(d => (d.frekuensi_kegiatan || 0) >= 8).length}/{selectedData.length}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Kader ≥ 5 orang</span>
+                                <span className="font-bold">{selectedData.filter(d => (d.jumlah_kader || 0) >= 5).length}/{selectedData.length}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>3/4 cakupan ≥ 50%</span>
+                                <span className="font-bold">{selectedData.filter(d => {
+                                    const c = [d.cakupan_gizi || 0, d.cakupan_kia || 0, d.cakupan_kb || 0, d.cakupan_imunisasi || 0];
+                                    return c.filter(v => v >= 50).length >= 3;
+                                }).length}/{selectedData.length}</span>
+                            </div>
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-slate-200 flex justify-between items-center">
+                            <span className="text-xs font-bold text-slate-700">Status Aktif</span>
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${posyanduAktif > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                                {posyanduAktif}/{selectedData.length} Posyandu
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -907,15 +1045,24 @@ export default function KesehatanPage() {
         const tid = tenant.id;
 
         try {
-            const [faskesRes, stuntingRes, posyanduRes, maternalRes] = await Promise.all([
+            const [faskesRes, stuntingRes, posyanduRes, maternalRes, jenisRefRes] = await Promise.all([
                 supabase.schema("sidakota").from("health_facilities").select("*").eq("tenant_id", tid),
-                supabase.schema("sidakota").from("health_stunting").select("*").eq("tenant_id", tid),
+                supabase.schema("sidakota").from("health_stunting_agregat_view").select("*").eq("tenant_id", tid).order("tahun", { ascending: false }).order("bulan", { ascending: false }),
                 supabase.schema("sidakota").from("health_posyandu").select("*").eq("tenant_id", tid),
-                supabase.schema("sidakota").from("health_maternal").select("*").eq("tenant_id", tid)
+                supabase.schema("sidakota").from("health_maternal").select("*").eq("tenant_id", tid),
+                supabase.schema("sidakota").from("ref_jenis_fasilitas_kesehatan").select("id, nama")
             ]);
 
+            // Map jenis_id → jenis_nama
+            const jenisMap = new Map<number, string>();
+            (jenisRefRes.data || []).forEach((j: any) => jenisMap.set(j.id, j.nama));
+            const enrichedFacilities = (faskesRes.data || []).map((f: any) => ({
+                ...f,
+                jenis_nama: jenisMap.get(Number(f.jenis_id)) || "Lainnya",
+            }));
+
             setData({
-                facilities: faskesRes.data || [],
+                facilities: enrichedFacilities,
                 stunting: stuntingRes.data || [],
                 posyandu: posyanduRes.data || [],
                 maternal: maternalRes.data || []

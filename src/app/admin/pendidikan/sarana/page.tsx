@@ -8,7 +8,7 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 import { DeleteConfirm } from "@/components/ui/delete-confirm";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
-import { School, GraduationCap, BookOpen, Building, X, Loader2, Save, FileText, MapPin } from "lucide-react";
+import { School, GraduationCap, BookOpen, Building, X, Loader2, Save, FileText, MapPin, Users, CalendarDays } from "lucide-react";
 
 type FacilityRow = Record<string, unknown> & {
     id: string;
@@ -18,9 +18,17 @@ type FacilityRow = Record<string, unknown> & {
     status: string;
     npsn: string;
     jumlah_siswa: number;
+    jumlah_siswa_laki: number;
+    jumlah_siswa_perempuan: number;
+    jumlah_siswa_dalam_kota: number;
+    jumlah_siswa_luar_kota: number;
     jumlah_guru: number;
     jumlah_rombel: number;
+    jumlah_ruang_kelas: number;
     akreditasi: string;
+    semester: number;
+    tahun_ajaran: number;
+    partisipasi_bos: string;
     koordinat_lat: number;
     koordinat_lng: number;
 };
@@ -60,16 +68,45 @@ const columns: Column<FacilityRow>[] = [
         },
     },
     {
+        key: "tahun_ajaran",
+        label: "T.A.",
+        sortable: true,
+        render: (val, row) => {
+            const sem = Number(row.semester) || 0;
+            const semDisplay = sem > 10 ? (sem % 10) : sem;
+            return (
+                <span className="text-xs text-slate-500 font-mono">
+                    {val ? `${val}/${Number(val)+1}` : "-"}
+                    {semDisplay ? ` S${semDisplay}` : ""}
+                </span>
+            );
+        },
+    },
+    {
         key: "jumlah_siswa",
         label: "Siswa",
         sortable: true,
-        render: (val) => <span className="font-medium text-slate-700">{Number(val ?? 0).toLocaleString("id-ID")}</span>,
+        render: (val, row) => (
+            <div className="text-right">
+                <div className="font-bold text-slate-700">{Number(val ?? 0).toLocaleString("id-ID")}</div>
+                {(Number(row.jumlah_siswa_laki) > 0 || Number(row.jumlah_siswa_perempuan) > 0) && (
+                    <div className="text-[10px] text-slate-400">
+                        ♂{Number(row.jumlah_siswa_laki ?? 0)} ♀{Number(row.jumlah_siswa_perempuan ?? 0)}
+                    </div>
+                )}
+            </div>
+        ),
     },
     {
         key: "jumlah_guru",
         label: "Guru",
         sortable: true,
         render: (val) => <span className="font-medium text-slate-700">{Number(val ?? 0).toLocaleString("id-ID")}</span>,
+    },
+    {
+        key: "jumlah_rombel",
+        label: "Rombel",
+        render: (val) => <span className="font-medium text-slate-600">{Number(val ?? 0)}</span>,
     },
     {
         key: "akreditasi",
@@ -80,11 +117,37 @@ const columns: Column<FacilityRow>[] = [
             return <span className={color}>{v}</span>;
         },
     },
+    {
+        key: "partisipasi_bos",
+        label: "BOS",
+        render: (val) => {
+            const v = (String(val || "tidak")).toLowerCase();
+            return (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${v === "ya" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-50 text-slate-500 border-slate-200"}`}>
+                    {v === "ya" ? "YA" : "TIDAK"}
+                </span>
+            );
+        },
+    },
 ];
 
 const JENJANG_OPTIONS = ["PAUD", "TK", "SD", "SMP", "SMA", "SMK"];
 const STATUS_OPTIONS = ["Negeri", "Swasta"];
 const AKREDITASI_OPTIONS = ["A", "B", "C", "Belum"];
+const BOS_OPTIONS = ["ya", "tidak"];
+const SEMESTER_OPTIONS = [
+    { label: "Semester 1 (Ganjil)", value: 1 },
+    { label: "Semester 2 (Genap)", value: 2 },
+];
+
+function generateTahunAjaranOptions() {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = currentYear - 2; y <= currentYear + 1; y++) {
+        years.push(y);
+    }
+    return years;
+}
 
 export default function SaranaPage() {
     const { kelurahans } = useTenant();
@@ -205,75 +268,117 @@ function SaranaFormModal({
     filterKelurahanId?: string | null;
 }) {
     const isEdit = !!editRow;
+    const currentYear = new Date().getFullYear();
+    const tahunAjaranOptions = generateTahunAjaranOptions();
 
-    const [form, setForm] = useState<Record<string, unknown>>({
+    const defaultForm = {
         kelurahan_id: "",
         nama: "",
         npsn: "",
         jenjang: "SD",
         status: "Negeri",
         akreditasi: "Belum",
+        tahun_ajaran: currentYear,
+        semester: 1,
         jumlah_siswa: 0,
+        jumlah_siswa_laki: 0,
+        jumlah_siswa_perempuan: 0,
+        jumlah_siswa_dalam_kota: 0,
+        jumlah_siswa_luar_kota: 0,
         jumlah_guru: 0,
         jumlah_rombel: 0,
+        jumlah_ruang_kelas: 0,
+        partisipasi_bos: "tidak",
         koordinat_lat: "",
         koordinat_lng: "",
-    });
+    };
+
+    const [form, setForm] = useState<Record<string, unknown>>(defaultForm);
 
     useEffect(() => {
         if (!open) return;
         if (editRow) {
+            // Parse semester: jika format gabungan (20251), ambil digit terakhir
+            const rawSem = editRow.semester ?? 1;
+            const parsedSemester = rawSem > 10 ? (rawSem % 10) : rawSem;
             setForm({
                 kelurahan_id: editRow.kelurahan_id ?? "",
                 nama: editRow.nama ?? "",
                 npsn: editRow.npsn ?? "",
-                jenjang: editRow.jenjang ?? "SD/MI",
+                jenjang: editRow.jenjang ?? "SD",
                 status: editRow.status ?? "Negeri",
                 akreditasi: editRow.akreditasi ?? "Belum",
+                tahun_ajaran: editRow.tahun_ajaran ?? currentYear,
+                semester: parsedSemester,
                 jumlah_siswa: editRow.jumlah_siswa ?? 0,
+                jumlah_siswa_laki: editRow.jumlah_siswa_laki ?? 0,
+                jumlah_siswa_perempuan: editRow.jumlah_siswa_perempuan ?? 0,
+                jumlah_siswa_dalam_kota: editRow.jumlah_siswa_dalam_kota ?? 0,
+                jumlah_siswa_luar_kota: editRow.jumlah_siswa_luar_kota ?? 0,
                 jumlah_guru: editRow.jumlah_guru ?? 0,
                 jumlah_rombel: editRow.jumlah_rombel ?? 0,
+                jumlah_ruang_kelas: editRow.jumlah_ruang_kelas ?? 0,
+                partisipasi_bos: editRow.partisipasi_bos ?? "tidak",
                 koordinat_lat: editRow.koordinat_lat ?? "",
                 koordinat_lng: editRow.koordinat_lng ?? "",
             });
         } else {
             setForm({
+                ...defaultForm,
                 kelurahan_id: (isKelurahanAdmin && filterKelurahanId) ? filterKelurahanId : "",
-                nama: "",
-                npsn: "",
-                jenjang: "SD",
-                status: "Negeri",
-                akreditasi: "Belum",
-                jumlah_siswa: 0,
-                jumlah_guru: 0,
-                jumlah_rombel: 0,
-                koordinat_lat: "",
-                koordinat_lng: "",
             });
         }
     }, [open, editRow, isKelurahanAdmin, filterKelurahanId]);
 
     function set(field: string, value: string | number) {
-        setForm((prev) => ({ ...prev, [field]: value }));
+        setForm((prev) => {
+            const next = { ...prev, [field]: value };
+            // Auto-calculate Total Siswa = Laki-laki + Perempuan
+            if (field === "jumlah_siswa_laki" || field === "jumlah_siswa_perempuan") {
+                const laki = Number(field === "jumlah_siswa_laki" ? value : next.jumlah_siswa_laki) || 0;
+                const perempuan = Number(field === "jumlah_siswa_perempuan" ? value : next.jumlah_siswa_perempuan) || 0;
+                next.jumlah_siswa = laki + perempuan;
+            }
+            return next;
+        });
     }
+
+    // Validasi: Dalam Kota + Luar Kota harus = Total Siswa
+    const totalSiswa = Number(form.jumlah_siswa) || 0;
+    const dalamKota = Number(form.jumlah_siswa_dalam_kota) || 0;
+    const luarKota = Number(form.jumlah_siswa_luar_kota) || 0;
+    const kotaSum = dalamKota + luarKota;
+    const kotaMismatch = totalSiswa > 0 && kotaSum > 0 && kotaSum !== totalSiswa;
 
     function handleFormSubmit(e: React.FormEvent) {
         e.preventDefault();
-        // Clean up: send koordinat as number or null
+        // Validasi dalam + luar kota
+        if (kotaMismatch) {
+            alert(`Dalam Kota (${dalamKota}) + Luar Kota (${luarKota}) = ${kotaSum} tidak sama dengan Total Siswa (${totalSiswa}). Harap perbaiki.`);
+            return;
+        }
         const submitData = { ...form };
         submitData.koordinat_lat = form.koordinat_lat ? Number(form.koordinat_lat) : null;
         submitData.koordinat_lng = form.koordinat_lng ? Number(form.koordinat_lng) : null;
+        // Format semester: tahun_ajaran * 10 + semester (misal 20251)
+        const ta = Number(form.tahun_ajaran) || currentYear;
+        const sem = Number(form.semester) || 1;
+        submitData.semester = ta * 10 + sem;
         onSubmit(submitData);
     }
 
     if (!open) return null;
+
+    const inputCls = "w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm";
+    const labelCls = "block text-sm font-semibold text-gray-700 mb-1.5";
+    const sectionHeaderCls = "flex items-center gap-2 pb-2 border-b border-gray-200";
 
     return createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
             <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md transition-opacity" onClick={onClose} />
 
             <div
-                className="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+                className="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden"
                 style={{ animation: "modalSlideIn 0.3s ease-out" }}
             >
                 {/* Gradient accent - Blue Theme */}
@@ -290,7 +395,7 @@ function SaranaFormModal({
                                 {isEdit ? "Edit Sarana Pendidikan" : "Tambah Sarana Pendidikan"}
                             </h2>
                             <p className="text-sm text-gray-500 mt-0.5">
-                                Catat informasi legalitas, operasional, dan kapasitas sarana pendidikan.
+                                Catat informasi legalitas, kapasitas, dan operasional sarana pendidikan.
                             </p>
                         </div>
                     </div>
@@ -301,174 +406,306 @@ function SaranaFormModal({
 
                 {/* Form Body */}
                 <form onSubmit={handleFormSubmit} className="flex flex-col flex-1 overflow-hidden">
-                    <div className="p-6 md:p-8 overflow-y-auto bg-slate-50/30">
-                        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    <div className="p-6 md:p-8 overflow-y-auto bg-slate-50/30 space-y-8">
 
-                            {/* Left Column: Identity & Legal */}
-                            <div className="lg:col-span-3 space-y-6">
-                                <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
-                                    <FileText className="w-4 h-4 text-blue-500" />
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Identitas & Legalitas</span>
+                        {/* ── Bagian 1: Identitas & Legalitas ── */}
+                        <div>
+                            <div className={sectionHeaderCls}>
+                                <FileText className="w-4 h-4 text-blue-500" />
+                                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Identitas & Legalitas</span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-5">
+                                <div className="sm:col-span-2 lg:col-span-3">
+                                    <label className={labelCls}>Kelurahan <span className="text-red-500">*</span></label>
+                                    <select
+                                        required
+                                        className={inputCls}
+                                        value={(form.kelurahan_id as string) || ""}
+                                        onChange={(e) => set("kelurahan_id", e.target.value)}
+                                        disabled={kelurahanOptions.length === 1}
+                                    >
+                                        <option value="" disabled>— Pilih Kelurahan —</option>
+                                        {kelurahanOptions.map((o) => (
+                                            <option key={o.value} value={o.value}>{o.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="sm:col-span-2 lg:col-span-3">
+                                    <label className={labelCls}>Nama Sekolah <span className="text-red-500">*</span></label>
+                                    <input
+                                        required
+                                        type="text"
+                                        className={inputCls}
+                                        value={(form.nama as string) || ""}
+                                        onChange={(e) => set("nama", e.target.value)}
+                                        placeholder="Contoh: SDN 01 Bogor Utara"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={labelCls}>NPSN</label>
+                                    <input
+                                        type="text"
+                                        className={inputCls}
+                                        value={(form.npsn as string) || ""}
+                                        onChange={(e) => set("npsn", e.target.value)}
+                                        placeholder="8 Digit Nomor Pokok"
+                                        maxLength={10}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={labelCls}>Jenjang <span className="text-red-500">*</span></label>
+                                    <select
+                                        required
+                                        className={inputCls}
+                                        value={(form.jenjang as string) || "SD"}
+                                        onChange={(e) => set("jenjang", e.target.value)}
+                                    >
+                                        {JENJANG_OPTIONS.map((opt) => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className={labelCls}>Status</label>
+                                    <select
+                                        className={inputCls}
+                                        value={(form.status as string) || "Negeri"}
+                                        onChange={(e) => set("status", e.target.value)}
+                                    >
+                                        {STATUS_OPTIONS.map((opt) => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className={labelCls}>Akreditasi</label>
+                                    <select
+                                        className={inputCls}
+                                        value={(form.akreditasi as string) || "Belum"}
+                                        onChange={(e) => set("akreditasi", e.target.value)}
+                                    >
+                                        {AKREDITASI_OPTIONS.map((opt) => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className={labelCls}>Partisipasi BOS</label>
+                                    <select
+                                        className={inputCls}
+                                        value={(form.partisipasi_bos as string) || "tidak"}
+                                        onChange={(e) => set("partisipasi_bos", e.target.value)}
+                                    >
+                                        {BOS_OPTIONS.map((opt) => (
+                                            <option key={opt} value={opt}>{opt === "ya" ? "Ya" : "Tidak"}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ── Bagian 2: Periode Data ── */}
+                        <div>
+                            <div className={sectionHeaderCls}>
+                                <CalendarDays className="w-4 h-4 text-indigo-500" />
+                                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Periode Data</span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-5">
+                                <div>
+                                    <label className={labelCls}>Tahun Ajaran <span className="text-red-500">*</span></label>
+                                    <select
+                                        required
+                                        className={inputCls}
+                                        value={(form.tahun_ajaran as number) || currentYear}
+                                        onChange={(e) => set("tahun_ajaran", Number(e.target.value))}
+                                    >
+                                        {tahunAjaranOptions.map((y) => (
+                                            <option key={y} value={y}>{y}/{y + 1}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className={labelCls}>Semester <span className="text-red-500">*</span></label>
+                                    <select
+                                        required
+                                        className={inputCls}
+                                        value={(form.semester as number) || 1}
+                                        onChange={(e) => set("semester", Number(e.target.value))}
+                                    >
+                                        {SEMESTER_OPTIONS.map((opt) => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ── Bagian 3: Data Siswa ── */}
+                        <div>
+                            <div className={sectionHeaderCls}>
+                                <Users className="w-4 h-4 text-emerald-500" />
+                                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Data Siswa</span>
+                                <span className="ml-auto text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-500 rounded-full">Total = L + P</span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-5">
+                                {/* Siswa Laki-laki */}
+                                <div>
+                                    <label className={labelCls}>Siswa Laki-laki <span className="text-red-500">*</span></label>
+                                    <input
+                                        required
+                                        type="number"
+                                        min={0}
+                                        className={inputCls}
+                                        value={(form.jumlah_siswa_laki as number) || 0}
+                                        onChange={(e) => set("jumlah_siswa_laki", Number(e.target.value))}
+                                    />
+                                </div>
+
+                                {/* Siswa Perempuan */}
+                                <div>
+                                    <label className={labelCls}>Siswa Perempuan <span className="text-red-500">*</span></label>
+                                    <input
+                                        required
+                                        type="number"
+                                        min={0}
+                                        className={inputCls}
+                                        value={(form.jumlah_siswa_perempuan as number) || 0}
+                                        onChange={(e) => set("jumlah_siswa_perempuan", Number(e.target.value))}
+                                    />
+                                </div>
+
+                                {/* Total Siswa (readonly, auto-calculated) */}
+                                <div className="sm:col-span-2">
+                                    <label className={labelCls}>Total Siswa</label>
+                                    <div className="relative">
+                                        <input
+                                            readOnly
+                                            type="number"
+                                            className={`${inputCls} bg-emerald-50 border-emerald-300 text-emerald-700 font-bold cursor-not-allowed`}
+                                            value={totalSiswa}
+                                        />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-emerald-500 font-bold">AUTO</span>
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 mt-1">
+                                        = Laki-laki ({Number(form.jumlah_siswa_laki) || 0}) + Perempuan ({Number(form.jumlah_siswa_perempuan) || 0})
+                                    </p>
+                                </div>
+
+                                {/* Dalam Kota */}
+                                <div>
+                                    <label className={labelCls}>Dalam Kota</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        className={`${inputCls} ${kotaMismatch ? 'border-red-400 ring-2 ring-red-100' : ''}`}
+                                        value={(form.jumlah_siswa_dalam_kota as number) || 0}
+                                        onChange={(e) => set("jumlah_siswa_dalam_kota", Number(e.target.value))}
+                                    />
+                                </div>
+
+                                {/* Luar Kota */}
+                                <div>
+                                    <label className={labelCls}>Luar Kota</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        className={`${inputCls} ${kotaMismatch ? 'border-red-400 ring-2 ring-red-100' : ''}`}
+                                        value={(form.jumlah_siswa_luar_kota as number) || 0}
+                                        onChange={(e) => set("jumlah_siswa_luar_kota", Number(e.target.value))}
+                                    />
+                                </div>
+
+                                {/* Validasi Dalam+Luar Kota */}
+                                {kotaMismatch && (
+                                    <div className="sm:col-span-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 font-medium">
+                                        ⚠️ Dalam Kota ({dalamKota.toLocaleString('id-ID')}) + Luar Kota ({luarKota.toLocaleString('id-ID')}) = <strong>{kotaSum.toLocaleString('id-ID')}</strong> ≠ Total Siswa (<strong>{totalSiswa.toLocaleString('id-ID')}</strong>)
+                                    </div>
+                                )}
+                                {!kotaMismatch && kotaSum > 0 && (
+                                    <div className="sm:col-span-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700 font-medium">
+                                        ✅ Dalam Kota ({dalamKota.toLocaleString('id-ID')}) + Luar Kota ({luarKota.toLocaleString('id-ID')}) = Total Siswa ({totalSiswa.toLocaleString('id-ID')})
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* ── Bagian 4: Kapasitas & Lokasi ── */}
+                        <div>
+                            <div className={sectionHeaderCls}>
+                                <MapPin className="w-4 h-4 text-blue-500" />
+                                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Kapasitas & Lokasi</span>
+                            </div>
+                            <div className="space-y-5 mt-5">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                                    <div>
+                                        <label className={labelCls}>Jumlah Guru</label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            className={inputCls}
+                                            value={(form.jumlah_guru as number) || 0}
+                                            onChange={(e) => set("jumlah_guru", Number(e.target.value))}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className={labelCls}>Rombel</label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            className={inputCls}
+                                            value={(form.jumlah_rombel as number) || 0}
+                                            onChange={(e) => set("jumlah_rombel", Number(e.target.value))}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className={labelCls}>Ruang Kelas</label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            className={inputCls}
+                                            value={(form.jumlah_ruang_kelas as number) || 0}
+                                            onChange={(e) => set("jumlah_ruang_kelas", Number(e.target.value))}
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                                    <div className="sm:col-span-2">
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                            Kelurahan <span className="text-red-500">*</span>
-                                        </label>
-                                        <select
-                                            required
-                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                                            value={(form.kelurahan_id as string) || ""}
-                                            onChange={(e) => set("kelurahan_id", e.target.value)}
-                                            disabled={kelurahanOptions.length === 1}
-                                        >
-                                            <option value="" disabled>— Pilih Kelurahan —</option>
-                                            {kelurahanOptions.map((o) => (
-                                                <option key={o.value} value={o.value}>{o.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="sm:col-span-2">
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                            Nama Sekolah <span className="text-red-500">*</span>
-                                        </label>
+                                    <div>
+                                        <label className={labelCls}>Latitude</label>
                                         <input
-                                            required
-                                            type="text"
-                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                                            value={(form.nama as string) || ""}
-                                            onChange={(e) => set("nama", e.target.value)}
-                                            placeholder="Contoh: SDN 01 Bogor Utara"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">NPSN</label>
-                                        <input
-                                            type="text"
-                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                                            value={(form.npsn as string) || ""}
-                                            onChange={(e) => set("npsn", e.target.value)}
-                                            placeholder="8 Digit Nomor Pokok"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Jenjang <span className="text-red-500">*</span></label>
-                                        <select
-                                            required
-                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                                            value={(form.jenjang as string) || "SD/MI"}
-                                            onChange={(e) => set("jenjang", e.target.value)}
-                                        >
-                                            {JENJANG_OPTIONS.map((opt) => (
-                                                <option key={opt} value={opt}>{opt}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Status</label>
-                                        <select
-                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                                            value={(form.status as string) || "Negeri"}
-                                            onChange={(e) => set("status", e.target.value)}
-                                        >
-                                            {STATUS_OPTIONS.map((opt) => (
-                                                <option key={opt} value={opt}>{opt}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Akreditasi</label>
-                                        <select
-                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                                            value={(form.akreditasi as string) || "Belum"}
-                                            onChange={(e) => set("akreditasi", e.target.value)}
-                                        >
-                                            {AKREDITASI_OPTIONS.map((opt) => (
-                                                <option key={opt} value={opt}>{opt}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Right Column: Capacity & Location */}
-                            <div className="lg:col-span-2 space-y-6">
-                                <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
-                                    <MapPin className="w-4 h-4 text-blue-500" />
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Kapasitas & Lokasi</span>
-                                </div>
-
-                                <div className="space-y-5">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                            Jumlah Siswa <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            required
                                             type="number"
-                                            min={0}
-                                            className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                                            value={(form.jumlah_siswa as number) || 0}
-                                            onChange={(e) => set("jumlah_siswa", Number(e.target.value))}
+                                            step="0.000001"
+                                            className={inputCls}
+                                            value={(form.koordinat_lat as string | number) ?? ""}
+                                            onChange={(e) => set("koordinat_lat", e.target.value)}
+                                            placeholder="-6.xxxxxx"
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Jml Guru</label>
-                                            <input
-                                                type="number"
-                                                min={0}
-                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                                                value={(form.jumlah_guru as number) || 0}
-                                                onChange={(e) => set("jumlah_guru", Number(e.target.value))}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Jml Rombel</label>
-                                            <input
-                                                type="number"
-                                                min={0}
-                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                                                value={(form.jumlah_rombel as number) || 0}
-                                                onChange={(e) => set("jumlah_rombel", Number(e.target.value))}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Latitude</label>
-                                            <input
-                                                type="number"
-                                                step="0.000001"
-                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                                                value={(form.koordinat_lat as string | number) ?? ""}
-                                                onChange={(e) => set("koordinat_lat", e.target.value)}
-                                                placeholder="-6.xxxxxx"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Longitude</label>
-                                            <input
-                                                type="number"
-                                                step="0.000001"
-                                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                                                value={(form.koordinat_lng as string | number) ?? ""}
-                                                onChange={(e) => set("koordinat_lng", e.target.value)}
-                                                placeholder="106.xxxxxx"
-                                            />
-                                        </div>
+                                    <div>
+                                        <label className={labelCls}>Longitude</label>
+                                        <input
+                                            type="number"
+                                            step="0.000001"
+                                            className={inputCls}
+                                            value={(form.koordinat_lng as string | number) ?? ""}
+                                            onChange={(e) => set("koordinat_lng", e.target.value)}
+                                            placeholder="106.xxxxxx"
+                                        />
                                     </div>
                                 </div>
                             </div>
                         </div>
+
                     </div>
 
                     {/* Footer / Actions */}

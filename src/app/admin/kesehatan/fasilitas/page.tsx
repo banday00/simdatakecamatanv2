@@ -1,62 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useTenant } from "@/lib/tenant/context";
 import { useCrud } from "@/hooks/use-crud";
+import { createClient } from "@/lib/supabase/client";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { DeleteConfirm } from "@/components/ui/delete-confirm";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Hospital, AlertTriangle, Heart, Stethoscope, X, Loader2, Save, MapPin, Activity } from "lucide-react";
 
+type JenisRef = { id: number; nama: string };
+
 type FasilitasRow = Record<string, unknown> & {
     id: string;
     kelurahan_id?: string;
     nama: string;
-    jenis: string;
+    jenis_id: number;
     alamat: string | null;
     penanggung_jawab: string | null;
     jumlah_tenaga_medis: number | null;
     koordinat_lat: number | null;
     koordinat_lng: number | null;
 };
-
-const columns: Column<FasilitasRow>[] = [
-    { key: "kelurahan_nama", label: "Kelurahan", sortable: true },
-    { key: "nama", label: "Nama Fasilitas", sortable: true },
-    {
-        key: "jenis",
-        label: "Jenis",
-        sortable: true,
-        render: (val) => (
-            <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
-                {String(val)}
-            </span>
-        ),
-    },
-    { key: "alamat", label: "Alamat" },
-    { key: "penanggung_jawab", label: "Penanggung Jawab" },
-    {
-        key: "jumlah_tenaga_medis",
-        label: "Tenaga Medis",
-        sortable: true,
-        render: (val) => <span className="font-medium">{Number(val ?? 0).toLocaleString("id-ID")}</span>,
-    },
-];
-
-const jenisOptions = [
-    { label: "Rumah Sakit", value: "Rumah Sakit" },
-    { label: "Puskesmas", value: "Puskesmas" },
-    { label: "Puskesmas Pembantu", value: "Puskesmas Pembantu" },
-    { label: "Klinik", value: "Klinik" },
-    { label: "Posyandu", value: "Posyandu" },
-    { label: "Apotek", value: "Apotek" },
-    { label: "Bidan Praktek", value: "Bidan Praktek" },
-    { label: "Praktek Dokter", value: "Praktek Dokter" },
-    { label: "Bidan", value: "Bidan" },
-    { label: "Lainnya", value: "Lainnya" },
-];
 
 export default function FasilitasKesehatanPage() {
     const { kelurahans } = useTenant();
@@ -66,35 +33,92 @@ export default function FasilitasKesehatanPage() {
     const [editRow, setEditRow] = useState<FasilitasRow | null>(null);
     const [deleteRow, setDeleteRow] = useState<FasilitasRow | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [jenisRefs, setJenisRefs] = useState<JenisRef[]>([]);
 
-    // Restrict kelurahan options for admin_kelurahan
+    // Load jenis referensi dari Supabase
+    useEffect(() => {
+        const supabase = createClient();
+        supabase
+            .schema("sidakota")
+            .from("ref_jenis_fasilitas_kesehatan")
+            .select("id, nama")
+            .order("nama")
+            .then(({ data }) => { if (data) setJenisRefs(data); });
+    }, []);
+
+    const jenisMap = useMemo(() => {
+        const m = new Map<number, string>();
+        jenisRefs.forEach(j => m.set(j.id, j.nama));
+        return m;
+    }, [jenisRefs]);
+
     const kelurahanOptions = isKelurahanAdmin
         ? kelurahans.filter((k) => k.id === filterKelurahanId).map((k) => ({ label: k.nama, value: k.id }))
         : kelurahans.map((k) => ({ label: k.nama, value: k.id }));
 
-    // Enrich data with kelurahan name for display in table
     const enrichedData = data.map((row) => ({
         ...row,
         kelurahan_nama: kelurahans.find((k) => k.id === row.kelurahan_id)?.nama || "—",
+        jenis_nama: jenisMap.get(Number(row.jenis_id)) || "—",
     }));
 
+    // Stats
     const totalFasilitas = data.length;
     const totalTenagaMedis = data.reduce((s, r) => s + (Number(r.jumlah_tenaga_medis) || 0), 0);
-    const puskesmas = data.filter((r) => r.jenis === "Puskesmas").length;
-    const rs = data.filter((r) => r.jenis === "Rumah Sakit").length;
+    const puskesmasId = jenisRefs.find(j => j.nama === "Puskesmas")?.id;
+    const rsId = jenisRefs.find(j => j.nama === "Rumah Sakit")?.id;
+    const puskesmas = puskesmasId ? data.filter((r) => Number(r.jenis_id) === puskesmasId).length : 0;
+    const rs = rsId ? data.filter((r) => Number(r.jenis_id) === rsId).length : 0;
+
+    const columns: Column<FasilitasRow>[] = [
+        { key: "kelurahan_nama" as any, label: "Kelurahan", sortable: true },
+        { key: "nama", label: "Nama Fasilitas", sortable: true },
+        {
+            key: "jenis_nama" as any,
+            label: "Jenis",
+            sortable: true,
+            render: (val) => (
+                <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
+                    {String(val || "—")}
+                </span>
+            ),
+        },
+        { key: "alamat", label: "Alamat" },
+        { key: "penanggung_jawab", label: "Penanggung Jawab" },
+        {
+            key: "jumlah_tenaga_medis",
+            label: "Tenaga Medis",
+            sortable: true,
+            render: (val) => <span className="font-medium">{Number(val ?? 0).toLocaleString("id-ID")}</span>,
+        },
+    ];
 
     async function handleSubmit(formData: Record<string, unknown>) {
         setIsSubmitting(true);
         try {
-            if (editRow) await update(editRow.id, formData);
-            else await create(formData);
+            // Sanitize payload: convert empty strings to null for numeric columns
+            const payload = { ...formData };
+            payload.koordinat_lat = payload.koordinat_lat !== "" && payload.koordinat_lat != null ? Number(payload.koordinat_lat) : null;
+            payload.koordinat_lng = payload.koordinat_lng !== "" && payload.koordinat_lng != null ? Number(payload.koordinat_lng) : null;
+            payload.jumlah_tenaga_medis = Number(payload.jumlah_tenaga_medis) || 0;
+            payload.jenis_id = Number(payload.jenis_id) || null;
+            // Remove empty optional string fields
+            if (!payload.alamat) payload.alamat = null;
+            if (!payload.penanggung_jawab) payload.penanggung_jawab = null;
+
+            console.log("[Fasilitas] submitting payload:", payload);
+
+            if (editRow) await update(editRow.id, payload);
+            else await create(payload);
             setModalOpen(false);
             setEditRow(null);
         } catch (err: any) {
-            console.error("[Fasilitas] handleSubmit:", err);
-            alert(`Gagal menyimpan: ${err?.message || 'Silakan coba lagi'}`);
-        }
-        finally { setIsSubmitting(false); }
+            const msg = err?.message || err?.details || err?.hint || (typeof err === 'object' ? JSON.stringify(err, Object.getOwnPropertyNames(err)) : String(err));
+            console.error("[Fasilitas] handleSubmit error:", err);
+            console.error("[Fasilitas] error keys:", Object.keys(err || {}));
+            console.error("[Fasilitas] error own props:", Object.getOwnPropertyNames(err || {}));
+            alert(`Gagal menyimpan: ${msg || 'Silakan coba lagi'}`);
+        } finally { setIsSubmitting(false); }
     }
 
     async function handleDelete() {
@@ -102,10 +126,10 @@ export default function FasilitasKesehatanPage() {
         setIsSubmitting(true);
         try { await remove(deleteRow.id); setDeleteRow(null); }
         catch (err: any) {
+            const msg = err?.message || err?.details || err?.hint || JSON.stringify(err);
             console.error("[Fasilitas] handleDelete:", err);
-            alert(`Gagal menghapus: ${err?.message || 'Silakan coba lagi'}`);
-        }
-        finally { setIsSubmitting(false); }
+            alert(`Gagal menghapus: ${msg || 'Silakan coba lagi'}`);
+        } finally { setIsSubmitting(false); }
     }
 
     return (
@@ -145,6 +169,7 @@ export default function FasilitasKesehatanPage() {
                 editRow={editRow}
                 isSubmitting={isSubmitting}
                 kelurahanOptions={kelurahanOptions}
+                jenisRefs={jenisRefs}
                 isKelurahanAdmin={isKelurahanAdmin}
                 filterKelurahanId={filterKelurahanId}
             />
@@ -162,7 +187,7 @@ export default function FasilitasKesehatanPage() {
    ═══════════════════════════════════════════════════════ */
 
 function FasilitasFormModal({
-    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions, isKelurahanAdmin, filterKelurahanId,
+    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions, jenisRefs, isKelurahanAdmin, filterKelurahanId,
 }: {
     open: boolean;
     onClose: () => void;
@@ -170,6 +195,7 @@ function FasilitasFormModal({
     editRow: FasilitasRow | null;
     isSubmitting: boolean;
     kelurahanOptions: { label: string; value: string }[];
+    jenisRefs: JenisRef[];
     isKelurahanAdmin?: boolean;
     filterKelurahanId?: string | null;
 }) {
@@ -178,7 +204,7 @@ function FasilitasFormModal({
     const [form, setForm] = useState<Record<string, unknown>>({
         kelurahan_id: "",
         nama: "",
-        jenis: "Rumah Sakit",
+        jenis_id: null,
         alamat: "",
         penanggung_jawab: "",
         jumlah_tenaga_medis: 0,
@@ -192,7 +218,7 @@ function FasilitasFormModal({
             setForm({
                 kelurahan_id: editRow.kelurahan_id ?? "",
                 nama: editRow.nama ?? "",
-                jenis: editRow.jenis ?? "Rumah Sakit",
+                jenis_id: Number(editRow.jenis_id) || null,
                 alamat: editRow.alamat ?? "",
                 penanggung_jawab: editRow.penanggung_jawab ?? "",
                 jumlah_tenaga_medis: editRow.jumlah_tenaga_medis ?? 0,
@@ -203,7 +229,7 @@ function FasilitasFormModal({
             setForm({
                 kelurahan_id: (isKelurahanAdmin && filterKelurahanId) ? filterKelurahanId : "",
                 nama: "",
-                jenis: "Rumah Sakit",
+                jenis_id: jenisRefs[0]?.id ?? null,
                 alamat: "",
                 penanggung_jawab: "",
                 jumlah_tenaga_medis: 0,
@@ -211,7 +237,13 @@ function FasilitasFormModal({
                 koordinat_lng: "",
             });
         }
-    }, [open, editRow, isKelurahanAdmin, filterKelurahanId]);
+    }, [open, editRow, isKelurahanAdmin, filterKelurahanId, jenisRefs]);
+
+    // Auto-set default jenis_id when jenisRefs loads for new form
+    useEffect(() => {
+        if (!open || editRow || jenisRefs.length === 0) return;
+        setForm(prev => ({ ...prev, jenis_id: Number(prev.jenis_id) || jenisRefs[0]?.id || null }));
+    }, [jenisRefs, open, editRow]);
 
     function set(field: string, value: string | number) {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -219,6 +251,7 @@ function FasilitasFormModal({
 
     function handleFormSubmit(e: React.FormEvent) {
         e.preventDefault();
+        if (!form.jenis_id) { alert("Jenis Fasilitas wajib dipilih."); return; }
         onSubmit(form);
     }
 
@@ -260,7 +293,7 @@ function FasilitasFormModal({
                     <div className="p-6 md:p-8 overflow-y-auto bg-slate-50/30">
                         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
 
-                            {/* Left Column: Context / Basic Info */}
+                            {/* Left Column: Basic Info */}
                             <div className="lg:col-span-2 space-y-6">
                                 <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
                                     <MapPin className="w-4 h-4 text-primary-500" />
@@ -304,13 +337,14 @@ function FasilitasFormModal({
                                         Jenis Fasilitas <span className="text-red-500">*</span>
                                     </label>
                                     <select
-                                        value={String(form.jenis)}
-                                        onChange={(e) => set("jenis", e.target.value)}
+                                        value={Number(form.jenis_id) || ""}
+                                        onChange={(e) => set("jenis_id", parseInt(e.target.value) || 0)}
                                         required
                                         className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm"
                                     >
-                                        {jenisOptions.map((opt) => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        <option value="">— Pilih Jenis —</option>
+                                        {jenisRefs.map((j) => (
+                                            <option key={j.id} value={j.id}>{j.nama}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -329,15 +363,14 @@ function FasilitasFormModal({
                                 </div>
                             </div>
 
-                            {/* Right Column: Details & Capacity */}
+                            {/* Right Column: Details */}
                             <div className="lg:col-span-3 space-y-6">
                                 <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
                                     <Activity className="w-4 h-4 text-primary-500" />
                                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Detail Data Lanjutan</span>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative">
-
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                                             Penanggung Jawab
@@ -362,7 +395,6 @@ function FasilitasFormModal({
                                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm"
                                         />
                                     </div>
-
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                                             Koordinat Latitude
@@ -387,7 +419,6 @@ function FasilitasFormModal({
                                             className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm"
                                         />
                                     </div>
-
                                 </div>
                             </div>
 

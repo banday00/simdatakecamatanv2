@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTenant } from "@/lib/tenant/context";
 import { createClient } from "@/lib/supabase/client";
+import { useSearchParams } from "next/navigation";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { FormModal, type FieldDef } from "@/components/ui/form-modal";
 import { DeleteConfirm } from "@/components/ui/delete-confirm";
@@ -264,19 +265,56 @@ function KependudukanFormModal({
     const isEdit = !!editRow;
     const [form, setForm] = useState<Record<string, unknown>>({});
 
+    // Track latest values via refs so the init effect only runs when 'open' toggles,
+    // not on every render when parent re-creates fields/initialData arrays.
+    const fieldsRef = useRef(fields);
+    const initialDataRef = useRef(initialData);
+    fieldsRef.current = fields;
+    initialDataRef.current = initialData;
+
+    const prevOpenRef = useRef(false);
     useEffect(() => {
-        if (!open) return;
-        const defaultForm: Record<string, unknown> = { ...initialData };
-        fields.forEach(f => {
+        if (!open) {
+            prevOpenRef.current = false;
+            return;
+        }
+        if (prevOpenRef.current) return; // Already initialized for this open session
+        prevOpenRef.current = true;
+
+        const defaultForm: Record<string, unknown> = { ...initialDataRef.current };
+        fieldsRef.current.forEach(f => {
             if (defaultForm[f.name] === undefined) {
-                defaultForm[f.name] = f.type === "number" ? "" : "";
+                defaultForm[f.name] = "";
             }
         });
         setForm(defaultForm);
-    }, [open, initialData, fields]);
+    }, [open]);
 
     function setVal(field: string, value: unknown) {
-        setForm(prev => ({ ...prev, [field]: value }));
+        setForm(prev => {
+            const updated = { ...prev, [field]: value };
+
+            // Auto-calculate total = lk + pr
+            if (field === 'jml_lk' || field === 'jml_pr') {
+                const lk = Number(field === 'jml_lk' ? value : updated.jml_lk) || 0;
+                const pr = Number(field === 'jml_pr' ? value : updated.jml_pr) || 0;
+                updated.total = lk + pr;
+            } else if (field.endsWith('_lk')) {
+                const base = field.slice(0, -3);
+                const totalField = base + '_total';
+                const lk = Number(value) || 0;
+                const pr = Number(updated[base + '_pr']) || 0;
+                updated[totalField] = lk + pr;
+            } else if (field.endsWith('_pr')) {
+                const base = field.slice(0, -3);
+                const totalField = base + '_total';
+                const pr = Number(value) || 0;
+                const lk = Number(updated[base + '_lk']) || 0;
+                updated[totalField] = lk + pr;
+            }
+
+            return updated;
+        });
     }
 
     function handleFormSubmit(e: React.FormEvent) {
@@ -375,21 +413,31 @@ function KependudukanFormModal({
                                     <h3 className="font-semibold text-gray-800 text-sm tracking-wide">Nilai Penduduk</h3>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
-                                    {valueFields.map(f => (
-                                        <div key={f.name} className={`flex flex-col space-y-1.5 ${f.name.includes('total') ? 'col-span-2' : 'col-span-1'}`}>
-                                            <label className="text-sm font-medium text-gray-700">
-                                                {f.label} {f.required && <span className="text-red-500">*</span>}
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={String(form[f.name] ?? "")}
-                                                onChange={(e) => setVal(f.name, Number(e.target.value))}
-                                                required={f.required}
-                                                min={f.min}
-                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                                            />
-                                        </div>
-                                    ))}
+                                    {valueFields.map(f => {
+                                        const isTotal = f.name === 'total' || f.name.endsWith('_total');
+                                        return (
+                                            <div key={f.name} className={`flex flex-col space-y-1.5 ${isTotal ? 'col-span-2' : 'col-span-1'}`}>
+                                                <label className={`text-sm font-medium flex items-center gap-1.5 ${isTotal ? 'text-indigo-600' : 'text-gray-700'}`}>
+                                                    {f.label}
+                                                    {isTotal && <span className="text-[10px] font-bold bg-indigo-100 text-indigo-500 px-1.5 py-0.5 rounded">Otomatis</span>}
+                                                </label>
+                                                {isTotal ? (
+                                                    <div className="w-full px-4 py-2.5 bg-indigo-50 border border-indigo-100 rounded-xl text-sm font-bold text-indigo-700 tabular-nums">
+                                                        {Number(form[f.name] ?? 0).toLocaleString('id-ID')}
+                                                    </div>
+                                                ) : (
+                                                    <input
+                                                        type="number"
+                                                        value={String(form[f.name] ?? '')}
+                                                        onChange={(e) => setVal(f.name, Number(e.target.value))}
+                                                        required={f.required}
+                                                        min={f.min ?? 0}
+                                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                                    />
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
@@ -535,6 +583,13 @@ function TabPanel({
             // Always enforce kelurahan_id for admin_kelurahan, override any form value
             if (kelId) payload.kelurahan_id = kelId;
 
+            // Strip generated/computed columns — DB calculates these automatically
+            Object.keys(payload).forEach(key => {
+                if (key === 'total' || key.endsWith('_total')) {
+                    delete payload[key];
+                }
+            });
+
             if (editRow) {
                 // On update: exclude tenant_id from payload (RLS already enforces it)
                 // and add .eq('tenant_id') guard for safety
@@ -626,9 +681,17 @@ function TabPanel({
 ================================================================ */
 export default function KependudukanPage() {
     const { tenant, kelurahans } = useTenant();
-    const [activeTab, setActiveTab] = useState(TAB_CONFIG[0].key);
+    const searchParams = useSearchParams();
+    const tabFromUrl = searchParams.get("tab") || TAB_CONFIG[0].key;
+    const [activeTab, setActiveTab] = useState(tabFromUrl);
     const [periodes, setPeriodes] = useState<PeriodeOption[]>([]);
     const [refData, setRefData] = useState<Record<string, RefOption[]>>({});
+
+    // Sync active tab when URL query changes (e.g. sidebar navigation)
+    useEffect(() => {
+        const validTab = TAB_CONFIG.find(t => t.key === tabFromUrl) ? tabFromUrl : TAB_CONFIG[0].key;
+        setActiveTab(validTab);
+    }, [tabFromUrl]);
 
     const [db] = useState(() => createClient().schema("sidakota"));
 
@@ -681,7 +744,6 @@ export default function KependudukanPage() {
                 description="Manajemen rekapitulasi data kependudukan per kelurahan dan periode"
                 breadcrumbs={[
                     { label: "Dashboard", href: "/admin" },
-                    { label: "Pemerintahan", href: "/admin/pemerintahan" },
                     { label: "Kependudukan" },
                 ]}
             />
