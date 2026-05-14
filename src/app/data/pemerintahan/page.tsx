@@ -43,6 +43,13 @@ const scaleIn = {
     visible: { opacity: 1, scale: 1, transition: { duration: 0.4, ease: "easeOut" } }
 };
 
+/* Menyamarkan 5 digit terakhir NIP untuk perlindungan privasi */
+const maskNip = (nip: string | null | undefined): string => {
+    if (!nip) return "";
+    if (nip.length <= 5) return "x".repeat(nip.length);
+    return nip.slice(0, -5) + "xxxxx";
+};
+
 /* ============================================================
    Types
 ============================================================ */
@@ -229,7 +236,7 @@ function ProfilSection({ tenant, kelurahans, selectedKelurahan, profiles, organi
                             <p className="text-sm text-indigo-600 font-medium mb-1">{currentLeader?.jabatan || (selectedKelurahan ? "Lurah" : "Camat")}</p>
                             {currentLeader?.nip && (
                                 <span className="inline-block px-3 py-1 bg-slate-100 rounded-full text-xs font-mono text-slate-500">
-                                    NIP. {currentLeader.nip}
+                                    NIP. {maskNip(currentLeader.nip)}
                                 </span>
                             )}
                         </div>
@@ -387,7 +394,7 @@ function ProfilSection({ tenant, kelurahans, selectedKelurahan, profiles, organi
                                                     <div className="p-1.5 bg-sky-50 rounded-md text-sky-600"><Mail className="w-3.5 h-3.5" /></div>
                                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Resmi</span>
                                                 </div>
-                                                <p className="text-xs font-bold text-slate-700 truncate">{tenant.email}</p>
+                                                <p className="text-xs font-bold text-slate-700 break-all leading-relaxed">{tenant.email}</p>
                                             </div>
                                         )}
                                     </div>
@@ -439,7 +446,7 @@ function ProfilSection({ tenant, kelurahans, selectedKelurahan, profiles, organi
                                             <p className="text-[11px] text-indigo-600 font-bold uppercase tracking-wider mb-2">{org.jabatan}</p>
                                             {org.nip && (
                                                 <div className="inline-block px-2 py-1 bg-slate-50 rounded text-[10px] text-slate-500 font-mono border border-slate-100">
-                                                    NIP. {org.nip}
+                                                    NIP. {maskNip(org.nip)}
                                                 </div>
                                             )}
                                         </div>
