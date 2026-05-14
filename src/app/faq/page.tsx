@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -8,14 +8,14 @@ import { ChevronLeft, HelpCircle, ChevronDown, MessageCircleQuestion } from "luc
 
 const FAQ_DATA = [
     {
-        category: "Tentang SIPADU KECAMATAN",
+        category: "Tentang SIMDATA Kecamatan",
         items: [
             {
-                q: "Apa itu SIPADU KECAMATAN?",
-                a: "SIPADU KECAMATAN (Sistem Informasi Pengelolaan Data Terpadu Kecamatan) adalah portal data terpadu untuk mengeksplorasi potensi, infrastruktur, kependudukan, dan profil setiap kelurahan secara komprehensif dan real-time."
+                q: "Apa itu SIMDATA Kecamatan?",
+                a: "SIMDATA Kecamatan (Sistem Informasi dan Manajemen Data Kecamatan) adalah portal data terpadu untuk mengeksplorasi potensi, infrastruktur, kependudukan, dan profil setiap kelurahan secara komprehensif dan real-time."
             },
             {
-                q: "Siapa yang mengelola SIPADU KECAMATAN?",
+                q: "Siapa yang mengelola SIMDATA Kecamatan?",
                 a: "Platform ini dikelola oleh Pemerintah Kecamatan berkolaborasi dengan aparatur dari masing-masing kelurahan yang secara rutin melakukan pemutakhiran data operasional dan statistik wilayah."
             },
             {
@@ -29,11 +29,11 @@ const FAQ_DATA = [
         items: [
             {
                 q: "Apa saja kategori data yang tersedia?",
-                a: "Saat ini SIPADU KECAMATAN mencakup 7 (tujuh) kategori utama: Pemerintahan, Kesehatan, Pendidikan, Infrastruktur, Sosial, Ketentraman & Ketertiban, serta Ekonomi."
+                a: "Saat ini SIMDATA Kecamatan mencakup 7 (tujuh) kategori utama: Pemerintahan, Kesehatan, Pendidikan, Infrastruktur, Sosial, Ketentraman & Ketertiban, serta Ekonomi."
             },
             {
                 q: "Darimana sumber data yang ditampilkan?",
-                a: "Seluruh data dihimpun secara langsung oleh aparatur kelurahan melalui panel admin SIPADU dan divalidasi oleh instansi tingkat kecamatan atau dinas terkait untuk memastikan akurasi data."
+                a: "Seluruh data dihimpun secara langsung oleh aparatur kelurahan melalui panel admin SIMDATA dan divalidasi oleh instansi tingkat kecamatan atau dinas terkait untuk memastikan akurasi data."
             },
             {
                 q: "Apakah data ini bisa diunduh untuk keperluan penelitian?",
@@ -46,7 +46,7 @@ const FAQ_DATA = [
         items: [
             {
                 q: "Apa itu Kepadatan Penduduk dan bagaimana menghitungnya?",
-                a: "Kepadatan Penduduk adalah rasio jumlah populasi terhadap luas wilayah. Di SIPADU, perhitungan didapatkan dari Total Penduduk / Luas Wilayah (km²)."
+                a: "Kepadatan Penduduk adalah rasio jumlah populasi terhadap luas wilayah. Di SIMDATA, perhitungan didapatkan dari Total Penduduk / Luas Wilayah (kmÂ²)."
             },
             {
                 q: "Apa perbedaan RT dan RW dalam statistik wilayah?",
@@ -59,7 +59,7 @@ const FAQ_DATA = [
         items: [
             {
                 q: "Apa itu Kasus Stunting dan bagaimana cara perhitungannya?",
-                a: "Stunting adalah kondisi gagal tumbuh pada balita. Dalam dashboard ini, persentase stunting dihitung berdasarkan (Jumlah Balita Stunting / Total Balita yang Diukur) × 100%."
+                a: "Stunting adalah kondisi gagal tumbuh pada balita. Dalam dashboard ini, persentase stunting dihitung berdasarkan (Jumlah Balita Stunting / Total Balita yang Diukur) Ã— 100%."
             },
             {
                 q: "Apa yang dimaksud dengan Rasio Posyandu?",
@@ -80,7 +80,7 @@ const FAQ_DATA = [
         items: [
             {
                 q: "Bagaimana status persentase kondisi jalan (\"Mantap\") diukur?",
-                a: "Kondisi \"Mantap\" mengacu pada kondisi jalan kategori Baik dan Sedang. Persentasenya adalah ((Jalan Baik + Jalan Sedang) / Total Panjang Jalan) × 100%."
+                a: "Kondisi \"Mantap\" mengacu pada kondisi jalan kategori Baik dan Sedang. Persentasenya adalah ((Jalan Baik + Jalan Sedang) / Total Panjang Jalan) Ã— 100%."
             },
             {
                 q: "Apa kriteria dari RTLH (Rumah Tidak Layak Huni)?",
@@ -128,7 +128,7 @@ export default function FAQPage() {
 
     return (
         <div className="min-h-screen bg-[#f8fafc] font-sans flex flex-col">
-            {/* ─── Header ─── */}
+            {/* â”€â”€â”€ Header â”€â”€â”€ */}
             <header className="relative overflow-x-clip text-white bg-digital-batik shrink-0 flex-shrink-0">
                 <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-indigo-500/10 to-transparent pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-[#f8fafc] to-transparent z-10" />
@@ -150,14 +150,14 @@ export default function FAQPage() {
                             </div>
                             <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">FAQ</h1>
                             <p className="mt-2 text-lg text-white/70 max-w-2xl leading-relaxed">
-                                Pertanyaan umum seputar SIPADU KECAMATAN dan panduan penggunaan data.
+                                Pertanyaan umum seputar SIMDATA Kecamatan dan panduan penggunaan data.
                             </p>
                         </div>
                     </div>
                 </div>
             </header>
 
-            {/* ─── FAQ Content ─── */}
+            {/* â”€â”€â”€ FAQ Content â”€â”€â”€ */}
             <main className="px-6 w-full max-w-4xl mx-auto -mt-16 relative z-20 pb-20 flex-1">
                 <div className="bg-white rounded-3xl shadow-xl shadow-indigo-500/5 border border-slate-100 p-6 md:p-10">
                     <div className="space-y-10">
@@ -220,3 +220,4 @@ export default function FAQPage() {
         </div>
     );
 }
+

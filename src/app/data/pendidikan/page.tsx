@@ -311,27 +311,28 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                     ))}
                 </div>
                 {totalPages > 1 && (
-                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-sm text-slate-500">
-                            Menampilkan {Math.min(filteredData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(filteredData.length, currentPage * ITEMS_PER_PAGE)} dari {filteredData.length} sekolah
+                    <div className="p-5 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">
+                        <span className="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
+                            <span className="hidden sm:inline">Menampilkan {Math.min(filteredData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(filteredData.length, currentPage * ITEMS_PER_PAGE)} dari {filteredData.length} sekolah</span>
+                            <span className="sm:hidden">{filteredData.length} sekolah</span>
                         </span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                             <button
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
-                                className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                Sebelumnya
+                                ←
                             </button>
-                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">
+                            <span className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 rounded-lg border border-slate-200">
                                 {currentPage} / {totalPages}
                             </span>
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
-                                className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                                Selanjutnya
+                                →
                             </button>
                         </div>
                     </div>
@@ -723,14 +724,15 @@ function PartisipasiSection({ participation, facilities, kelurahans, selectedKel
                     </table>
                 </div>
                 {totalPages > 1 && (
-                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-sm text-slate-500">
-                            Menampilkan {Math.min(filteredTableData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(filteredTableData.length, currentPage * ITEMS_PER_PAGE)} dari {filteredTableData.length}
+                    <div className="p-5 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">
+                        <span className="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
+                            <span className="hidden sm:inline">Menampilkan {Math.min(filteredTableData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(filteredTableData.length, currentPage * ITEMS_PER_PAGE)} dari {filteredTableData.length}</span>
+                            <span className="sm:hidden">{filteredTableData.length} data</span>
                         </span>
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">Sebelumnya</button>
-                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">{currentPage} / {totalPages}</span>
-                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">Selanjutnya</button>
+                        <div className="flex items-center gap-1.5">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">←</button>
+                            <span className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 rounded-lg border border-slate-200">{currentPage} / {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">→</button>
                         </div>
                     </div>
                 )}
@@ -1148,24 +1150,24 @@ export default function PendidikanPage() {
 
             {/* Main Content */}
             <main className="px-6 max-w-7xl mx-auto -mt-16 relative z-20 pb-16">
-                {/* Section Tabs */}
-                <div className="flex items-center gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-10 overflow-x-auto custom-scrollbar">
+                {/* Section Tabs - Grid on mobile, inline on desktop */}
+                <div className="grid grid-cols-3 md:flex md:items-center gap-2 md:gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-10">
                     {sections.map((sec) => {
                         const isActive = activeSection === sec.key;
                         const colorMap: Record<string, string> = {
-                            indigo: "bg-indigo-50 text-indigo-700",
-                            blue: "bg-blue-50 text-blue-700",
-                            emerald: "bg-emerald-50 text-emerald-700",
+                            indigo: "bg-indigo-50 text-indigo-700 border-indigo-200",
+                            blue: "bg-blue-50 text-blue-700 border-blue-200",
+                            emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
                         };
                         return (
                             <button
                                 key={sec.key}
                                 onClick={() => setActiveSection(sec.key)}
-                                className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${isActive ? colorMap[sec.color] + " shadow-sm border border-white" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-transparent"
+                                className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-2 md:px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all text-center border ${isActive ? colorMap[sec.color] + " shadow-sm" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                                     }`}
                             >
-                                <sec.icon className="w-4 h-4" />
-                                {sec.label}
+                                <sec.icon className="w-4 h-4 flex-shrink-0" />
+                                <span className="leading-tight">{sec.label}</span>
                             </button>
                         );
                     })}

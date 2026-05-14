@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
     BarChart3, MapPin, Newspaper, Shield, ChevronDown, HelpCircle,
     Landmark, Heart, GraduationCap, Hammer, HandHeart, ShieldCheck, TrendingUp, LayoutGrid,
-    Car, Home, Users
+    Car, Home, Users, Menu, X
 } from "lucide-react";
 
 const TOPIK_ITEMS = [
@@ -79,6 +79,7 @@ const LAYANAN_ITEMS = [
 ];
 
 export function Navbar() {
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [topikOpen, setTopikOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -120,20 +121,20 @@ export function Navbar() {
     }, []);
 
     return (
-        <nav className="relative z-50 flex items-center justify-between px-6 py-5 max-w-7xl mx-auto">
+        <nav className="relative z-50 flex items-center justify-between px-8 md:px-12 py-5 w-full">
             <div className="flex items-center gap-3">
-                <Link href="/" className="flex items-center gap-3 group">
+                <Link href="/" className="flex items-center gap-2.5 group">
                     <img
                         src="https://svc-supabase.kotabogor.go.id/storage/v1/object/public/public/logo_pemkot.png"
                         alt="Logo Pemkot Bogor"
-                        className="w-10 h-11 object-contain group-hover:scale-105 transition-transform drop-shadow-lg"
+                        className="w-8 h-9 object-contain group-hover:scale-105 transition-transform drop-shadow-lg"
                     />
                     <div>
-                        <h1 className="text-lg font-extrabold tracking-tight leading-tight text-white group-hover:text-cyan-100 transition-colors">
-                            SIPADU KECAMATAN
-                        </h1>
-                        <p className="text-[9px] font-medium text-cyan-200 uppercase tracking-[0.15em] drop-shadow-sm">
-                            Sistem Pengelolaan Data Terpadu
+                        <h4 className="text-sm font-semibold tracking-tight leading-tight text-white group-hover:text-cyan-100 transition-colors">
+                            SIMDATA KECAMATAN
+                        </h4>
+                        <p className="text-[8px] font-medium text-cyan-200 uppercase tracking-[0.15em] drop-shadow-sm">
+                            KOTA BOGOR
                         </p>
                     </div>
                 </Link>
@@ -293,12 +294,91 @@ export function Navbar() {
                 </Link>
                 <Link
                     href="/login"
-                    className="px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-gold-500 to-gold-600 text-white hover:from-gold-400 hover:to-gold-500 transition-all shadow-lg shadow-gold-500/20 flex items-center gap-2"
+                    className="hidden sm:flex px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-gold-500 to-gold-600 text-white hover:from-gold-400 hover:to-gold-500 transition-all shadow-lg shadow-gold-500/20 items-center gap-2"
                 >
                     <Shield className="w-4 h-4" />
                     Masuk Panel
                 </Link>
+
+                {/* Mobile Hamburger Button */}
+                <button
+                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                    className="sm:hidden p-2 text-slate-200 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+                >
+                    {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                </button>
             </div>
+
+            {/* Mobile Menu Dropdown */}
+            {mobileMenuOpen && (
+                <div className="absolute top-full left-0 w-full bg-slate-900/95 backdrop-blur-xl border-b border-white/10 sm:hidden flex flex-col p-4 gap-6 z-50 max-h-[80vh] overflow-y-auto shadow-2xl">
+                    {/* Topik Section */}
+                    <div>
+                        <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3 px-2">Topik Modul</div>
+                        <div className="grid grid-cols-1 gap-2">
+                            {TOPIK_ITEMS.map((item) => (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 transition-colors"
+                                >
+                                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center shrink-0`}>
+                                        <item.icon className="w-4 h-4 text-white" />
+                                    </div>
+                                    <div className="font-semibold text-sm text-slate-200">{item.label}</div>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Layanan Data Section */}
+                    <div>
+                        <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3 px-2">Layanan Data</div>
+                        <div className="grid grid-cols-1 gap-2">
+                            {LAYANAN_ITEMS.map((item) => {
+                                const isExternal = item.href.startsWith("http");
+                                const Component = isExternal ? "a" : Link;
+                                const extraProps = isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {};
+
+                                return (
+                                    <Component
+                                        key={item.href}
+                                        href={item.href}
+                                        {...extraProps}
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 transition-colors"
+                                    >
+                                        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center shrink-0`}>
+                                            <item.icon className="w-4 h-4 text-white" />
+                                        </div>
+                                        <div className="font-semibold text-sm text-slate-200">{item.label}</div>
+                                    </Component>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* FAQ & Login */}
+                    <div className="border-t border-white/10 pt-4 flex flex-col gap-2">
+                        <Link
+                            href="/faq"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 transition-colors text-slate-200 text-sm font-semibold"
+                        >
+                            <HelpCircle className="w-4 h-4" /> FAQ
+                        </Link>
+                        <Link
+                            href="/login"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="mt-2 flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold rounded-xl bg-gradient-to-r from-gold-500 to-gold-600 text-white shadow-lg"
+                        >
+                            <Shield className="w-4 h-4" />
+                            Masuk Panel
+                        </Link>
+                    </div>
+                </div>
+            )}
         </nav>
     );
 }

@@ -339,7 +339,7 @@ function PenggunaFormModal({ open, onClose, onSubmit, editRow, isSubmitting, kel
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-gray-900">{isEdit ? "Edit Pengguna" : "Tambah Pengguna Baru"}</h2>
-                            <p className="text-sm text-gray-500 mt-0.5">Kelola akses pengguna dashboard SIDAKOTA</p>
+                            <p className="text-sm text-gray-500 mt-0.5">Kelola akses pengguna dashboard SIMDATA Kecamatan</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">

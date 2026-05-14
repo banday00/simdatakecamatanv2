@@ -376,7 +376,7 @@ function AdminLayoutInner({
                         <BarChart3 className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h1 className="text-sm font-bold text-white tracking-tight">SIDAKOTA</h1>
+                        <h1 className="text-sm font-bold text-white tracking-tight">SIMDATA Kecamatan</h1>
                         <p className="text-[10px] text-slate-500 truncate uppercase tracking-widest">
                             {tenant?.nama || "Dashboard"}
                         </p>

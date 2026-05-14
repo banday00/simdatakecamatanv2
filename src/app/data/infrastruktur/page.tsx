@@ -169,14 +169,15 @@ function SanitasiSection({ sanitation, kelurahans, selectedKelurahan }: { sanita
                     </table>
                 </div>
                 {totalPages > 1 && (
-                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-sm text-slate-500">
-                            Menampilkan {Math.min(latestData.length, (page - 1) * limit + 1)} - {Math.min(latestData.length, page * limit)} dari {latestData.length}
+                    <div className="p-5 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">
+                        <span className="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
+                            <span className="hidden sm:inline">Menampilkan {Math.min(latestData.length, (page - 1) * limit + 1)} - {Math.min(latestData.length, page * limit)} dari {latestData.length}</span>
+                            <span className="sm:hidden">{latestData.length} data</span>
                         </span>
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Sebelumnya</button>
-                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{page} / {totalPages}</span>
-                            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
+                        <div className="flex items-center gap-1.5">
+                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">←</button>
+                            <span className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 rounded-lg border border-slate-200">{page} / {totalPages}</span>
+                            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">→</button>
                         </div>
                     </div>
                 )}
@@ -304,14 +305,15 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
                     </table>
                 </div>
                 {totalPages > 1 && (
-                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-sm text-slate-500">
-                            Menampilkan {Math.min(latestData.length, (page - 1) * limit + 1)} - {Math.min(latestData.length, page * limit)} dari {latestData.length}
+                    <div className="p-5 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">
+                        <span className="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
+                            <span className="hidden sm:inline">Menampilkan {Math.min(latestData.length, (page - 1) * limit + 1)} - {Math.min(latestData.length, page * limit)} dari {latestData.length}</span>
+                            <span className="sm:hidden">{latestData.length} proyek</span>
                         </span>
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Sebelumnya</button>
-                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{page} / {totalPages}</span>
-                            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
+                        <div className="flex items-center gap-1.5">
+                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">←</button>
+                            <span className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 rounded-lg border border-slate-200">{page} / {totalPages}</span>
+                            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">→</button>
                         </div>
                     </div>
                 )}
@@ -419,14 +421,15 @@ function OlahragaSection({ sports, kelurahans, selectedKelurahan }: { sports: an
                     ))}
                 </div>
                 {totalPages > 1 && (
-                    <div className="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-sm text-slate-500">
-                            Menampilkan {Math.min(filtered.length, (page - 1) * limit + 1)} - {Math.min(filtered.length, page * limit)} dari {filtered.length}
+                    <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">
+                        <span className="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
+                            <span className="hidden sm:inline">Menampilkan {Math.min(filtered.length, (page - 1) * limit + 1)} - {Math.min(filtered.length, page * limit)} dari {filtered.length}</span>
+                            <span className="sm:hidden">{filtered.length} fasilitas</span>
                         </span>
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Sebelumnya</button>
-                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{page} / {totalPages}</span>
-                            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
+                        <div className="flex items-center gap-1.5">
+                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">←</button>
+                            <span className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 rounded-lg border border-slate-200">{page} / {totalPages}</span>
+                            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">→</button>
                         </div>
                     </div>
                 )}
@@ -671,18 +674,23 @@ export default function DataInfrastrukturPage() {
             </header>
 
             <main className="px-6 max-w-7xl mx-auto -mt-16 relative z-20 pb-20 flex-1 w-full flex flex-col">
-                <div className="flex items-center gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-8 overflow-x-auto">
-                    <button onClick={() => setActiveTab("sanitasi")} className={`flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === "sanitasi" ? "bg-indigo-50 text-indigo-700 shadow-sm border border-white ring-1 ring-indigo-500/10" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-transparent"}`}>
-                        <Pipette className="w-4 h-4" /> Sanitasi & Lingkungan
+                {/* Section Tabs - 2x2 grid on mobile, single row on desktop */}
+                <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-8">
+                    <button onClick={() => setActiveTab("sanitasi")} className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-3 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all text-center border ${activeTab === "sanitasi" ? "bg-indigo-50 text-indigo-700 shadow-sm border-indigo-200 ring-1 ring-indigo-500/10" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}>
+                        <Pipette className="w-4 h-4 flex-shrink-0" />
+                        <span className="leading-tight">Sanitasi &amp; Lingkungan</span>
                     </button>
-                    <button onClick={() => setActiveTab("pembangunan")} className={`flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === "pembangunan" ? "bg-indigo-50 text-indigo-700 shadow-sm border border-white ring-1 ring-indigo-500/10" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-transparent"}`}>
-                        <Hammer className="w-4 h-4" /> Proyek Pembangunan
+                    <button onClick={() => setActiveTab("pembangunan")} className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-3 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all text-center border ${activeTab === "pembangunan" ? "bg-indigo-50 text-indigo-700 shadow-sm border-indigo-200 ring-1 ring-indigo-500/10" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}>
+                        <Hammer className="w-4 h-4 flex-shrink-0" />
+                        <span className="leading-tight">Proyek Pembangunan</span>
                     </button>
-                    <button onClick={() => setActiveTab("olahraga")} className={`flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === "olahraga" ? "bg-indigo-50 text-indigo-700 shadow-sm border border-white ring-1 ring-indigo-500/10" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-transparent"}`}>
-                        <Trophy className="w-4 h-4" /> Sarana Olahraga
+                    <button onClick={() => setActiveTab("olahraga")} className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-3 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all text-center border ${activeTab === "olahraga" ? "bg-indigo-50 text-indigo-700 shadow-sm border-indigo-200 ring-1 ring-indigo-500/10" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}>
+                        <Trophy className="w-4 h-4 flex-shrink-0" />
+                        <span className="leading-tight">Sarana Olahraga</span>
                     </button>
-                    <button onClick={() => setActiveTab("analisis")} className={`flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === "analisis" ? "bg-slate-800 text-white shadow-md border border-slate-700 ring-1 ring-slate-900/10" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-transparent"}`}>
-                        <Activity className="w-4 h-4" /> Analisis & Insight
+                    <button onClick={() => setActiveTab("analisis")} className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-3 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all text-center border ${activeTab === "analisis" ? "bg-slate-800 text-white shadow-md border-slate-700 ring-1 ring-slate-900/10" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}>
+                        <Activity className="w-4 h-4 flex-shrink-0" />
+                        <span className="leading-tight">Analisis &amp; Insight</span>
                     </button>
                 </div>
                 <div className="flex-1 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">

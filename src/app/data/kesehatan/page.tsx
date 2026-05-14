@@ -234,40 +234,47 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
                     </div>
                 )}
                 {totalPages > 1 && (
-                    <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-xs text-slate-500">
+                    <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">
+                        <span className="text-xs text-slate-500 text-center sm:text-left">
                             Halaman <span className="font-bold text-slate-700">{currentPage}</span> dari <span className="font-bold text-slate-700">{totalPages}</span>
                         </span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                             <button
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
                                 className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                             >
-                                ← Sebelumnya
+                                ←
                             </button>
-                            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                                let page: number;
-                                if (totalPages <= 5) page = i + 1;
-                                else if (currentPage <= 3) page = i + 1;
-                                else if (currentPage >= totalPages - 2) page = totalPages - 4 + i;
-                                else page = currentPage - 2 + i;
-                                return (
-                                    <button
-                                        key={page}
-                                        onClick={() => setCurrentPage(page)}
-                                        className={`w-8 h-8 text-xs font-bold rounded-lg transition-colors ${currentPage === page ? "bg-indigo-600 text-white shadow-sm" : "border border-slate-200 hover:bg-slate-50 text-slate-600"}`}
-                                    >
-                                        {page}
-                                    </button>
-                                );
-                            })}
+                            {/* Page number buttons — hidden on mobile */}
+                            <div className="hidden sm:flex items-center gap-1">
+                                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                                    let page: number;
+                                    if (totalPages <= 5) page = i + 1;
+                                    else if (currentPage <= 3) page = i + 1;
+                                    else if (currentPage >= totalPages - 2) page = totalPages - 4 + i;
+                                    else page = currentPage - 2 + i;
+                                    return (
+                                        <button
+                                            key={page}
+                                            onClick={() => setCurrentPage(page)}
+                                            className={`w-8 h-8 text-xs font-bold rounded-lg transition-colors ${currentPage === page ? "bg-indigo-600 text-white shadow-sm" : "border border-slate-200 hover:bg-slate-50 text-slate-600"}`}
+                                        >
+                                            {page}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {/* Mobile: show current/total badge */}
+                            <span className="sm:hidden px-3 py-1.5 text-xs font-bold bg-slate-100 text-slate-700 rounded-lg border border-slate-200">
+                                {currentPage} / {totalPages}
+                            </span>
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
                                 className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                             >
-                                Selanjutnya →
+                                →
                             </button>
                         </div>
                     </div>
@@ -731,11 +738,11 @@ function PosyanduSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                         })}
                     </div>
                     {posTotalPages > 1 && (
-                        <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-                            <span className="text-xs text-slate-500">
+                        <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">
+                            <span className="text-xs text-slate-500 text-center sm:text-left">
                                 Hal <span className="font-bold text-slate-700">{posPage}</span> / <span className="font-bold text-slate-700">{posTotalPages}</span>
                             </span>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                                 <button
                                     onClick={() => setPosPage(p => Math.max(1, p - 1))}
                                     disabled={posPage === 1}
@@ -743,22 +750,29 @@ function PosyanduSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                                 >
                                     ←
                                 </button>
-                                {Array.from({ length: Math.min(posTotalPages, 5) }, (_, i) => {
-                                    let page: number;
-                                    if (posTotalPages <= 5) page = i + 1;
-                                    else if (posPage <= 3) page = i + 1;
-                                    else if (posPage >= posTotalPages - 2) page = posTotalPages - 4 + i;
-                                    else page = posPage - 2 + i;
-                                    return (
-                                        <button
-                                            key={page}
-                                            onClick={() => setPosPage(page)}
-                                            className={`w-8 h-8 text-xs font-bold rounded-lg transition-colors ${posPage === page ? "bg-indigo-600 text-white shadow-sm" : "border border-slate-200 hover:bg-slate-50 text-slate-600"}`}
-                                        >
-                                            {page}
-                                        </button>
-                                    );
-                                })}
+                                {/* Page number buttons — hidden on mobile */}
+                                <div className="hidden sm:flex items-center gap-1">
+                                    {Array.from({ length: Math.min(posTotalPages, 5) }, (_, i) => {
+                                        let page: number;
+                                        if (posTotalPages <= 5) page = i + 1;
+                                        else if (posPage <= 3) page = i + 1;
+                                        else if (posPage >= posTotalPages - 2) page = posTotalPages - 4 + i;
+                                        else page = posPage - 2 + i;
+                                        return (
+                                            <button
+                                                key={page}
+                                                onClick={() => setPosPage(page)}
+                                                className={`w-8 h-8 text-xs font-bold rounded-lg transition-colors ${posPage === page ? "bg-indigo-600 text-white shadow-sm" : "border border-slate-200 hover:bg-slate-50 text-slate-600"}`}
+                                            >
+                                                {page}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {/* Mobile: compact badge */}
+                                <span className="sm:hidden px-3 py-1.5 text-xs font-bold bg-slate-100 text-slate-700 rounded-lg border border-slate-200">
+                                    {posPage} / {posTotalPages}
+                                </span>
                                 <button
                                     onClick={() => setPosPage(p => Math.min(posTotalPages, p + 1))}
                                     disabled={posPage === posTotalPages}
@@ -1139,25 +1153,25 @@ export default function KesehatanPage() {
 
             {/* Main Content */}
             <main className="px-6 max-w-7xl mx-auto -mt-16 relative z-20 pb-16">
-                {/* Section Tabs */}
-                <div className="flex items-center gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-10 overflow-x-auto custom-scrollbar">
+                {/* Section Tabs - Grid on mobile, inline on desktop */}
+                <div className="grid grid-cols-3 md:flex md:items-center gap-2 md:gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-10">
                     {sections.map((sec) => {
                         const isActive = activeSection === sec.key;
                         const colorMap: Record<string, string> = {
-                            indigo: "bg-indigo-50 text-indigo-700",
-                            amber: "bg-amber-50 text-amber-700",
-                            emerald: "bg-emerald-50 text-emerald-700",
-                            blue: "bg-blue-50 text-blue-700",
+                            indigo: "bg-indigo-50 text-indigo-700 border-indigo-200",
+                            amber: "bg-amber-50 text-amber-700 border-amber-200",
+                            emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                            blue: "bg-blue-50 text-blue-700 border-blue-200",
                         };
                         return (
                             <button
                                 key={sec.key}
                                 onClick={() => setActiveSection(sec.key)}
-                                className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${isActive ? colorMap[sec.color] + " shadow-sm border border-white" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-transparent"
+                                className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-2 md:px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all text-center border ${isActive ? colorMap[sec.color] + " shadow-sm" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                                     }`}
                             >
-                                <sec.icon className="w-4 h-4" />
-                                {sec.label}
+                                <sec.icon className="w-4 h-4 flex-shrink-0" />
+                                <span className="leading-tight">{sec.label}</span>
                             </button>
                         );
                     })}

@@ -14,10 +14,12 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
+import { motion } from "framer-motion";
 
 import NewsCard from "@/components/news-card";
 import { Navbar } from "@/components/ui/navbar";
 import { Footer } from "@/components/ui/footer";
+import { HeroBackground } from "@/components/ui/hero-background";
 
 /* ============================================================
    Types
@@ -66,22 +68,26 @@ function PublicStatCard({
     label, value, icon: Icon, gradient, delay = 0,
 }: { label: string; value: string | number; icon: React.ComponentType<{ className?: string }>; gradient: string; delay?: number }) {
     return (
-        <div className={`group relative flex flex-col items-center justify-center p-6 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 animate-slide-up opacity-0 overflow-hidden`}
-            style={{ animationDelay: `${delay}ms`, animationFillMode: "forwards" }}>
-
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.6, delay: delay / 1000, ease: "easeOut" }}
+            className={`group relative flex flex-col items-center justify-center p-3 md:p-6 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden`}
+        >
             {/* Top colored strip */}
-            <div className={`absolute top-0 left-0 w-full h-1 ${gradient}`} />
+            <div className="absolute top-0 left-0 w-full h-1 bg-indigo-600" />
 
-            <div className={`mb-3 p-3 rounded-xl bg-slate-50 group-hover:bg-slate-100 transition-colors text-slate-600 group-hover:text-blue-600`}>
-                <Icon className="w-6 h-6" />
+            <div className={`mb-2 p-2 rounded-xl bg-slate-50 group-hover:bg-slate-100 transition-colors text-slate-600 group-hover:text-indigo-600`}>
+                <Icon className="w-4 h-4 md:w-6 md:h-6" />
             </div>
-            <div className="text-3xl font-extrabold text-slate-800 tracking-tight group-hover:scale-110 transition-transform duration-300">
+            <div className="text-lg md:text-3xl font-extrabold text-slate-800 tracking-tight group-hover:scale-110 transition-transform duration-300">
                 {value}
             </div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mt-1">
+            <div className="text-[9px] md:text-xs font-semibold uppercase tracking-wider text-slate-400 mt-1 text-center leading-tight">
                 {label}
             </div>
-        </div>
+        </motion.div>
     );
 }
 
@@ -252,55 +258,59 @@ export default function HomePage() {
         <div className="min-h-screen bg-[#f8fafc]">
 
             {/* ========== HERO — GovTech Future Theme ========== */}
-            <header className="relative overflow-hidden text-white bg-digital-batik pb-24">
-                {/* Decorative Elements */}
-                <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-cyan-500/10 to-transparent pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-[#f8fafc] to-transparent z-10" />
+            <header className="relative text-white pb-12 md:pb-24 min-h-[50vh] md:min-h-screen flex flex-col">
+                {/* Desktop Background (hidden on mobile) */}
+                <div className="hidden md:block absolute inset-0 w-full h-full overflow-hidden">
+                    <HeroBackground />
+                    {/* Decorative Elements */}
+                    <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-cyan-500/10 to-transparent pointer-events-none z-10" />
+                    <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-[#f8fafc] to-transparent z-10" />
+                </div>
+
+                {/* Mobile Background: Slate 900 (hidden on desktop) */}
+                <div className="md:hidden absolute inset-0 w-full h-full bg-slate-900 z-0 overflow-hidden">
+                    {/* Glow effect */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-accent-400/10 rounded-full blur-3xl" />
+                    <div className="absolute bottom-20 left-10 w-40 h-40 bg-gold-400/10 rounded-full blur-3xl" />
+                    
+                    {/* SVG Curve Circle */}
+                    <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none z-10 translate-y-[1px]">
+                        <svg className="relative block w-full h-[40px] sm:h-[60px]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                            <path d="M0,120 L0,0 Q600,120 1200,0 L1200,120 Z" fill="#f8fafc"></path>
+                        </svg>
+                    </div>
+                </div>
 
                 {/* Nav */}
-                <Navbar />
+                <div className="relative z-30">
+                    <Navbar />
+                </div>
 
-                {/* Hero Content */}
-                <div className="relative z-10 px-6 pt-12 pb-40 max-w-7xl mx-auto text-center">
-                    <div className="inline-flex items-center gap-2 px-5 py-2 mb-8 rounded-full glass-panel text-sm font-medium border border-cyan-500/30 shadow-lg shadow-cyan-900/10">
-                        <span className="relative flex h-2.5 w-2.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
-                        </span>
-                        <span className="text-cyan-100 tracking-wide">Portal Data Terpadu · Kecamatan & Kelurahan</span>
-                    </div>
+                {/* Hero Content Desktop */}
+                <div className="hidden md:flex relative z-10 px-6 pt-12 pb-40 max-w-7xl mx-auto w-full flex-grow flex-col justify-end">
+                    {/* Tulisan hero header telah dihilangkan sesuai permintaan, div ini sekarang melar memenuhi layar */}
+                </div>
 
-                    <h2 className="text-3xl md:text-5xl lg:text-6xl font-extrabold leading-[1.1] mb-6 animate-fade-in drop-shadow-sm">
-                        {isLoading ? (
-                            <span className="inline-block w-96 h-16 shimmer rounded-lg" />
-                        ) : (
-                            <span>
-                                Sistem Pengelolaan Data Terpadu<br />
-                                <span className="text-gradient-gold drop-shadow-md">{tenant?.nama || "Kecamatan"}</span>
-                            </span>
-                        )}
-                    </h2>
-
-                    <p className="text-lg md:text-xl text-slate-300 mb-10 max-w-3xl mx-auto leading-relaxed animate-fade-in stagger-1 opacity-0" style={{ animationFillMode: "forwards" }}>
-                        Wujudkan tata kelola pemerintahan yang <span className="text-cyan-200 font-semibold">transparan</span>, <span className="text-cyan-200 font-semibold">akuntabel</span>, dan <span className="text-cyan-200 font-semibold">berbasis data</span> untuk pelayanan publik yang lebih baik.
-                    </p>
-
-                    <div className="flex flex-wrap gap-4 justify-center animate-fade-in stagger-2 opacity-0" style={{ animationFillMode: "forwards" }}>
-                        <Link href="#data" className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-600/25 flex items-center gap-2 hover:-translate-y-1">
-                            <Eye className="w-5 h-5" />
-                            Jelajahi Data
-                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </Link>
-                        {/* <Link href="/peta" className="px-8 py-4 glass-panel font-bold rounded-2xl hover:bg-white/10 transition-all flex items-center gap-2 border border-white/20 hover:border-white/40 text-white">
-                            <MapPin className="w-5 h-5 text-cyan-300" />
-                            Buka Peta
-                        </Link> */}
-                    </div>
+                {/* Hero Content Mobile */}
+                <div className="md:hidden relative z-20 px-6 pt-12 pb-20 max-w-7xl mx-auto w-full flex-grow flex flex-col justify-center items-center text-center">
+                    <motion.div 
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                    >
+                        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2 drop-shadow-sm">
+                            SIMDATA <br />
+                            <span className="text-cyan-300">KECAMATAN</span>
+                        </h1>
+                        <p className="text-blue-100 text-xs sm:text-sm max-w-[240px] sm:max-w-xs mx-auto font-medium">
+                            Data Transparan untuk Pelayanan Lebih Baik
+                        </p>
+                    </motion.div>
                 </div>
             </header>
 
             {/* ========== QUICK STATS ========== */}
-            <section className="px-6 -mt-12 relative z-20 max-w-7xl mx-auto">
+            <section className="px-6 mt-8 lg:mt-12 relative z-20 max-w-7xl mx-auto">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <PublicStatCard label="Penduduk" value={stats.penduduk > 0 ? stats.penduduk.toLocaleString("id-ID") + " jiwa" : "-"} icon={Users} gradient="stat-gradient-blue" delay={0} />
                     <PublicStatCard label="Kelurahan" value={stats.kelurahan || kelurahans.length} icon={MapPin} gradient="stat-gradient-cyan" delay={100} />
@@ -311,17 +321,29 @@ export default function HomePage() {
 
             {/* ========== DATA VISUALIZATION ========== */}
             <section className="px-6 py-20 max-w-7xl mx-auto" id="data">
-                <div className="text-center mb-12">
-                    <span className="inline-flex px-4 py-1.5 rounded-full bg-primary-50 text-primary-600 text-xs font-bold uppercase tracking-widest mb-3">
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-50px" }}
+                    transition={{ duration: 0.6 }}
+                    className="text-center mb-8 md:mb-12"
+                >
+                    <span className="inline-flex px-3 py-1 md:px-4 md:py-1.5 rounded-full bg-primary-50 text-primary-600 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-3">
                         Visualisasi Data
                     </span>
-                    <h3 className="text-3xl md:text-4xl font-extrabold text-gray-900">Data Kecamatan dalam Angka</h3>
-                    <p className="mt-3 text-gray-500 max-w-xl mx-auto">Ringkasan data terpadu dari seluruh kelurahan se-kecamatan</p>
-                </div>
+                    <h3 className="text-2xl md:text-4xl font-extrabold text-gray-900">Data Kecamatan dalam Angka</h3>
+                    <p className="mt-2 md:mt-3 text-sm md:text-base text-gray-500 max-w-xl mx-auto">Ringkasan data terpadu dari seluruh kelurahan se-kecamatan</p>
+                </motion.div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Bar Chart - Population per Kelurahan */}
-                    <div className="lg:col-span-2 card-gov-tech p-8">
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true, margin: "-50px" }}
+                        transition={{ duration: 0.6, delay: 0.1 }}
+                        className="lg:col-span-2 card-gov-tech p-8"
+                    >
                         <div className="flex items-center justify-between mb-6">
                             <div>
                                 <h4 className="text-xl font-bold text-slate-900">Penduduk per Kelurahan</h4>
@@ -354,28 +376,34 @@ export default function HomePage() {
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </motion.div>
 
                     {/* Pie Chart - Facility Distribution */}
-                    <div className="card-gov-tech p-8">
-                        <div className="flex items-center justify-between mb-6">
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true, margin: "-50px" }}
+                        transition={{ duration: 0.6, delay: 0.3 }}
+                        className="card-gov-tech p-5 md:p-8 flex flex-col h-full"
+                    >
+                        <div className="flex items-center justify-between mb-4 md:mb-6">
                             <div>
-                                <h4 className="text-xl font-bold text-slate-900">Statistik Fasilitas</h4>
-                                <p className="text-sm text-slate-500 mt-1">Distribusi sarana publik</p>
+                                <h4 className="text-lg md:text-xl font-bold text-slate-900">Statistik Fasilitas</h4>
+                                <p className="text-xs md:text-sm text-slate-500 mt-1">Distribusi sarana publik</p>
                             </div>
                         </div>
-                        <div className="h-80 relative">
+                        <div className="h-48 md:h-64 relative w-full flex-grow">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
                                         data={moduleDistrib.filter((d) => d.value > 0)}
                                         cx="50%" cy="50%"
-                                        innerRadius={60} outerRadius={100}
+                                        innerRadius="60%" outerRadius="90%"
                                         paddingAngle={2}
                                         dataKey="value"
                                         stroke="none"
                                     >
-                                        {moduleDistrib.map((_, i) => (
+                                        {moduleDistrib.filter((d) => d.value > 0).map((_, i) => (
                                             <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                                         ))}
                                     </Pie>
@@ -383,20 +411,28 @@ export default function HomePage() {
                                         contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
                                         formatter={(value: number) => `${value} unit`}
                                     />
-                                    <Legend iconType="circle" layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: "11px", right: 0 }} />
                                 </PieChart>
                             </ResponsiveContainer>
                             {/* Center Text */}
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none pr-20">
-                                <div className="text-center">
-                                    <span className="block text-2xl font-bold text-slate-800">
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div className="text-center bg-white/50 backdrop-blur-sm rounded-full w-20 h-20 md:w-24 md:h-24 flex flex-col items-center justify-center shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
+                                    <span className="block text-xl md:text-2xl font-bold text-slate-800 leading-none mb-1">
                                         {moduleDistrib.reduce((a, b) => a + b.value, 0)}
                                     </span>
-                                    <span className="text-xs text-slate-500 uppercase tracking-widest">Total</span>
+                                    <span className="text-[9px] md:text-[10px] text-slate-500 uppercase tracking-widest">Total</span>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                        {/* Custom HTML Legend */}
+                        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-6">
+                            {moduleDistrib.filter((d) => d.value > 0).map((entry, index) => (
+                                <div key={index} className="flex items-center text-[11px] md:text-xs text-slate-600 font-medium">
+                                    <span className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full mr-2 shadow-sm" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}></span>
+                                    {entry.name}
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
                 </div>
 
                 {/* Stats Row 2 */}
@@ -410,31 +446,43 @@ export default function HomePage() {
 
             {/* ========== MODULES GRID ========== */}
             <section className="px-6 py-16 max-w-7xl mx-auto">
-                <div className="text-center mb-12">
-                    <span className="inline-flex px-4 py-1.5 rounded-full bg-primary-50 text-primary-600 text-xs font-bold uppercase tracking-widest mb-3">
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-50px" }}
+                    transition={{ duration: 0.6 }}
+                    className="text-center mb-8 md:mb-12"
+                >
+                    <span className="inline-flex px-3 py-1 md:px-4 md:py-1.5 rounded-full bg-primary-50 text-primary-600 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-3">
                         Kategori
                     </span>
-                    <h3 className="text-3xl md:text-4xl font-extrabold text-gray-900">Jelajahi Data Berdasarkan Modul</h3>
-                    <p className="mt-3 text-gray-500">Pilih kategori data yang ingin Anda telusuri</p>
-                </div>
+                    <h3 className="text-2xl md:text-4xl font-extrabold text-gray-900">Jelajahi Data Berdasarkan Modul</h3>
+                    <p className="mt-2 md:mt-3 text-sm md:text-base text-gray-500">Pilih kategori data yang ingin Anda telusuri</p>
+                </motion.div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                     {modules.map((mod, i) => (
-                        <Link
+                        <motion.div
                             key={mod.name}
-                            href={mod.href}
-                            className="group futuristic-card p-6 animate-slide-up opacity-0"
-                            style={{ animationDelay: `${i * 80}ms`, animationFillMode: "forwards" }}
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            transition={{ duration: 0.5, delay: i * 0.08, ease: "easeOut" }}
                         >
-                            <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${mod.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg`}>
-                                <mod.icon className="w-6 h-6 text-white" />
-                            </div>
-                            <h4 className="font-bold text-gray-900 mb-1 group-hover:text-primary-700 transition-colors">{mod.name}</h4>
-                            <p className="text-sm text-gray-500 mb-3">{mod.desc}</p>
-                            <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary-500 group-hover:gap-2 transition-all">
-                                Lihat Data <ArrowRight className="w-3.5 h-3.5" />
-                            </span>
-                        </Link>
+                            <Link
+                                href={mod.href}
+                                className="group futuristic-card p-4 md:p-6 block h-full"
+                            >
+                                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-gradient-to-br ${mod.color} flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform shadow-lg`}>
+                                    <mod.icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                                </div>
+                                <h4 className="font-bold text-gray-900 mb-1 group-hover:text-primary-700 transition-colors text-sm md:text-base">{mod.name}</h4>
+                                <p className="text-xs md:text-sm text-gray-500 mb-3 line-clamp-2 md:line-clamp-none">{mod.desc}</p>
+                                <span className="inline-flex items-center gap-1 text-xs md:text-sm font-semibold text-primary-500 group-hover:gap-2 transition-all">
+                                    Lihat Data <ArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                </span>
+                            </Link>
+                        </motion.div>
                     ))}
                 </div>
             </section>
@@ -443,15 +491,21 @@ export default function HomePage() {
             {
                 kelurahans.length > 0 && (
                     <section className="px-6 py-16 max-w-7xl mx-auto">
-                        <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-10 gap-4">
+                        <motion.div 
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            transition={{ duration: 0.6 }}
+                            className="flex flex-col md:flex-row md:items-end md:justify-between mb-10 gap-4"
+                        >
                             <div>
-                                <span className="inline-flex px-4 py-1.5 rounded-full bg-accent-500/10 text-accent-600 text-xs font-bold uppercase tracking-widest mb-3">
+                                <span className="inline-flex px-3 py-1 md:px-4 md:py-1.5 rounded-full bg-accent-500/10 text-accent-600 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-3">
                                     Wilayah
                                 </span>
-                                <h3 className="text-3xl md:text-4xl font-extrabold text-gray-900">
+                                <h3 className="text-2xl md:text-4xl font-extrabold text-gray-900">
                                     {stats.kelurahan} Kelurahan
                                 </h3>
-                                <p className="mt-2 text-gray-500">Wilayah {tenant?.nama || "Kecamatan"} Kota Bogor</p>
+                                <p className="mt-2 text-sm md:text-base text-gray-500">Wilayah {tenant?.nama || "Kecamatan"} Kota Bogor</p>
                             </div>
                             <div className="relative w-full md:w-72">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -460,46 +514,52 @@ export default function HomePage() {
                                     placeholder="Cari kelurahan..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 transition-all"
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 transition-all shadow-sm"
                                 />
                             </div>
-                        </div>
+                        </motion.div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                             {filteredKelurahans.map((kel, i) => (
-                                <Link
+                                <motion.div
                                     key={kel.id}
-                                    href={`/data/pemerintahan?kelurahan=${kel.id}`}
-                                    className="group futuristic-card p-5 animate-slide-up opacity-0"
-                                    style={{ animationDelay: `${i * 40}ms`, animationFillMode: "forwards" }}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true, margin: "-50px" }}
+                                    transition={{ duration: 0.4, delay: (i % 8) * 0.05, ease: "easeOut" }}
                                 >
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #3b82f6, #6366f1)" }}>
-                                            <MapPin className="w-5 h-5 text-white" />
+                                    <Link
+                                        href={`/data/pemerintahan?kelurahan=${kel.id}`}
+                                        className="group futuristic-card p-5 block h-full"
+                                    >
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, #3b82f6, #6366f1)" }}>
+                                                <MapPin className="w-5 h-5 text-white" />
+                                            </div>
+                                            <span className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors text-sm truncate">
+                                                {kel.nama}
+                                            </span>
                                         </div>
-                                        <span className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors text-sm truncate">
-                                            {kel.nama}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        {(kel.jumlah_rw ?? 0) > 0 && (
-                                            <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 font-bold px-2 py-1 rounded-md">
-                                                <span>{kel.jumlah_rw}</span> RW
-                                            </span>
-                                        )}
-                                        {(kel.jumlah_rt ?? 0) > 0 && (
-                                            <span className="inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-600 font-bold px-2 py-1 rounded-md">
-                                                <span>{kel.jumlah_rt}</span> RT
-                                            </span>
-                                        )}
-                                        {!(kel.jumlah_rw ?? 0) && !(kel.jumlah_rt ?? 0) && (
-                                            <span className="text-xs text-slate-400 italic">—</span>
-                                        )}
-                                    </div>
-                                    <div className="mt-3 flex items-center gap-1 text-xs text-indigo-500 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                                        Lihat Detail <ExternalLink className="w-3 h-3" />
-                                    </div>
-                                </Link>
+                                        <div className="flex items-center gap-3">
+                                            {(kel.jumlah_rw ?? 0) > 0 && (
+                                                <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 font-bold px-2 py-1 rounded-md">
+                                                    <span>{kel.jumlah_rw}</span> RW
+                                                </span>
+                                            )}
+                                            {(kel.jumlah_rt ?? 0) > 0 && (
+                                                <span className="inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-600 font-bold px-2 py-1 rounded-md">
+                                                    <span>{kel.jumlah_rt}</span> RT
+                                                </span>
+                                            )}
+                                            {!(kel.jumlah_rw ?? 0) && !(kel.jumlah_rt ?? 0) && (
+                                                <span className="text-xs text-slate-400 italic">—</span>
+                                            )}
+                                        </div>
+                                        <div className="mt-3 flex items-center gap-1 text-xs text-indigo-500 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                                            Lihat Detail <ExternalLink className="w-3 h-3" />
+                                        </div>
+                                    </Link>
+                                </motion.div>
                             ))}
                         </div>
                     </section>
@@ -539,25 +599,31 @@ export default function HomePage() {
 
 
             {/* ========== INFOGRAFIS / CTA ========== */}
-            <section className="px-6 py-20">
-                <div className="max-w-7xl mx-auto">
-                    <div className="relative overflow-hidden rounded-3xl bg-digital-batik text-white p-10 md:p-16">
+            <section className="px-4 md:px-6 py-12 md:py-20">
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.98, y: 30 }}
+                    whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-50px" }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="max-w-7xl mx-auto"
+                >
+                    <div className="relative overflow-hidden rounded-3xl bg-digital-batik text-white p-6 md:p-16 shadow-2xl">
                         <div className="absolute inset-0 bg-grid opacity-20" />
                         <div className="absolute top-0 right-0 w-72 h-72 bg-accent-400/10 rounded-full blur-3xl" />
                         <div className="absolute bottom-0 left-0 w-52 h-52 bg-gold-400/10 rounded-full blur-3xl" />
 
-                        <div className="relative z-10 grid md:grid-cols-2 gap-10 items-center">
-                            <div>
-                                <h3 className="text-3xl md:text-4xl font-extrabold leading-tight mb-4">
+                        <div className="relative z-10 grid lg:grid-cols-2 gap-8 md:gap-10 items-center">
+                            <div className="text-center lg:text-left">
+                                <h3 className="text-xl md:text-4xl font-extrabold leading-tight mb-3 md:mb-4">
                                     Data Transparan untuk <span className="gradient-text-gold">Pelayanan Lebih Baik</span>
                                 </h3>
-                                <p className="text-white/50 mb-8 text-lg leading-relaxed">
-                                    SIPADU KECAMATAN menyediakan data terpadu dari seluruh kelurahan se-kecamatan.
+                                <p className="text-white/70 md:text-white/50 mb-5 md:mb-8 text-xs md:text-lg leading-relaxed">
+                                    SIMDATA KECAMATAN menyediakan data terpadu dari seluruh kelurahan se-kecamatan.
                                     Akses data publik kapan saja, mendukung transparansi dan partisipasi masyarakat
                                     dalam pembangunan.
                                 </p>
-                                <div className="flex flex-wrap gap-3">
-                                    <Link href="#data" className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all shadow-xl">
+                                <div className="flex flex-wrap justify-center lg:justify-start gap-3">
+                                    <Link href="#data" className="px-5 py-2.5 md:px-6 md:py-3 text-xs md:text-base bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all shadow-xl">
                                         Jelajahi Data
                                     </Link>
                                     {/* <Link href="/peta" className="px-6 py-3 glass font-bold rounded-xl hover:bg-white/15 transition-all">
@@ -571,17 +637,24 @@ export default function HomePage() {
                                     { label: "Kelurahan", value: stats.kelurahan, icon: MapPin },
                                     { label: "Modul Data", value: `${modules.length}`, icon: BarChart3 },
                                     { label: "Update", value: "Real-time", icon: Activity },
-                                ].map((item) => (
-                                    <div key={item.label} className="glass rounded-2xl p-5 text-center">
-                                        <item.icon className="w-6 h-6 text-white/60 mx-auto mb-2" />
-                                        <div className="text-2xl font-extrabold">{item.value}</div>
-                                        <div className="text-xs text-white/50 mt-1">{item.label}</div>
-                                    </div>
+                                ].map((item, idx) => (
+                                    <motion.div 
+                                        key={item.label}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ duration: 0.5, delay: 0.2 + idx * 0.1 }}
+                                        className="glass rounded-2xl p-3 md:p-5 text-center"
+                                    >
+                                        <item.icon className="w-5 h-5 md:w-6 md:h-6 text-white/60 mx-auto mb-1.5 md:mb-2" />
+                                        <div className="text-lg md:text-2xl font-extrabold leading-tight">{item.value}</div>
+                                        <div className="text-[10px] md:text-xs text-white/50 mt-1">{item.label}</div>
+                                    </motion.div>
                                 ))}
                             </div>
                         </div>
                     </div>
-                </div>
+                </motion.div>
             </section>
 
             {/* ========== FOOTER ========== */}

@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Navbar } from "@/components/ui/navbar";
 import { Footer } from "@/components/ui/footer";
 import type { Kelurahan } from "@/types";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     BarChart3, MapPin, Users, ChevronLeft, Building2,
     Landmark, Activity, Search, ChevronDown, ChevronUp,
@@ -20,6 +21,27 @@ import {
     AreaChart, Area, RadarChart, Radar,
     PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line,
 } from "recharts";
+
+/* ============================================================
+   Animation Variants
+============================================================ */
+const fadeUp = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
+};
+
+const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: { staggerChildren: 0.1 }
+    }
+};
+
+const scaleIn = {
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: { opacity: 1, scale: 1, transition: { duration: 0.4, ease: "easeOut" } }
+};
 
 /* ============================================================
    Types
@@ -169,8 +191,8 @@ function ProfilSection({ tenant, kelurahans, selectedKelurahan, profiles, organi
     const totalLuas = displayedKelurahans.reduce((s, k) => s + (k.luas_km2 || 0), 0);
 
     return (
-        <section className="space-y-8">
-            <div className="flex items-center gap-3 mb-2">
+        <motion.section variants={staggerContainer} initial="hidden" animate="visible" className="space-y-8">
+            <motion.div variants={fadeUp} className="flex items-center gap-3 mb-2">
                 <div className="p-2.5 rounded-xl bg-indigo-50">
                     <Landmark className="w-5 h-5 text-indigo-600" />
                 </div>
@@ -180,12 +202,12 @@ function ProfilSection({ tenant, kelurahans, selectedKelurahan, profiles, organi
                     </h2>
                     <p className="text-sm text-slate-500">Informasi umum, visi misi, dan pimpinan wilayah</p>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Top Grid: Info & Leader */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left: Leader Card */}
-                <div className="lg:col-span-1">
+                <motion.div variants={fadeUp} className="lg:col-span-1">
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 text-center h-full relative overflow-hidden group">
                         <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-indigo-500 to-blue-600 opacity-10" />
 
@@ -212,11 +234,11 @@ function ProfilSection({ tenant, kelurahans, selectedKelurahan, profiles, organi
                             )}
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Right: Visi Misi */}
-                <div className="lg:col-span-2">
-                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 h-full relative">
+                <motion.div variants={fadeUp} className="lg:col-span-2">
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 md:p-8 h-full relative">
                         <div className="absolute top-0 right-0 p-6 opacity-5">
                             <QuoteIcon className="w-24 h-24 text-slate-900" />
                         </div>
@@ -246,11 +268,11 @@ function ProfilSection({ tenant, kelurahans, selectedKelurahan, profiles, organi
                             </div>
                         </div>
                     </div>
-                </div>
+                </motion.div>
             </div>
 
             {/* Middle: Info Stats & Location */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <motion.div variants={fadeUp} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="bg-gradient-to-r from-slate-50 to-white px-6 py-4 border-b border-slate-100 flex justify-between items-center">
                     <h3 className="font-bold text-slate-800">Informasi Wilayah</h3>
                     {!selectedKelurahan && <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg">Kecamatan</span>}
@@ -374,11 +396,11 @@ function ProfilSection({ tenant, kelurahans, selectedKelurahan, profiles, organi
                         </div>
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Tentang Wilayah */}
             {currentProfile?.tentang_wilayah && (
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                <motion.div variants={fadeUp} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
                     <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
                         <span className="w-1 h-5 bg-indigo-500 rounded-full" />
                         Tentang {selectedKelurahan ? `Kelurahan ${currentKelurahan?.nama}` : (tenant?.nama || 'Kecamatan')}
@@ -386,11 +408,11 @@ function ProfilSection({ tenant, kelurahans, selectedKelurahan, profiles, organi
                     <p className="text-slate-600 leading-relaxed text-sm whitespace-pre-line">
                         {currentProfile.tentang_wilayah}
                     </p>
-                </div>
+                </motion.div>
             )}
 
             {/* Struktur Organisasi */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+            <motion.div variants={fadeUp} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
                 <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2">
                     <span className="w-1 h-5 bg-indigo-500 rounded-full" />
                     Struktur Organisasi
@@ -432,7 +454,7 @@ function ProfilSection({ tenant, kelurahans, selectedKelurahan, profiles, organi
                         <p className="text-xs text-slate-400 mt-1">Tambahkan data melalui panel admin.</p>
                     </div>
                 )}
-            </div>
+            </motion.div>
 
             {/* Kelurahan Grid (Icons) - Only show if ALL */}
             {!selectedKelurahan && (
@@ -455,7 +477,7 @@ function ProfilSection({ tenant, kelurahans, selectedKelurahan, profiles, organi
                     </div>
                 </div>
             )}
-        </section>
+        </motion.section>
     );
 }
 
@@ -626,9 +648,9 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
     const activeTabData = TABS.find(t => t.key === activeTab);
 
     return (
-        <section className="space-y-6">
+        <motion.section variants={staggerContainer} initial="hidden" animate="visible" className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between flex-wrap gap-4">
+            <motion.div variants={fadeUp} className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-3">
                     <div className="p-2.5 rounded-xl bg-blue-50">
                         <Users className="w-5 h-5 text-blue-600" />
@@ -656,10 +678,10 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
                         ))}
                     </div>
                 )}
-            </div>
+            </motion.div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <motion.div variants={staggerContainer} className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 {[
                     { label: 'Total Penduduk', value: totalPenduduk.toLocaleString('id-ID'), sub: 'jiwa', icon: Users, color: 'bg-blue-50 text-blue-600', border: 'border-blue-100' },
                     { label: 'Laki-laki', value: totalLk.toLocaleString('id-ID'), sub: `${totalPenduduk > 0 ? ((totalLk / totalPenduduk) * 100).toFixed(1) : 0}%`, icon: UserCheck, color: 'bg-cyan-50 text-cyan-600', border: 'border-cyan-100' },
@@ -667,25 +689,25 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
                     { label: 'Jumlah KK', value: totalKK.toLocaleString('id-ID'), sub: 'kepala keluarga', icon: HomeIcon, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
                     { label: 'Sex Ratio', value: sexRatio, sub: 'LK per 100 PR', icon: TrendingUp, color: 'bg-violet-50 text-violet-600', border: 'border-violet-100' },
                 ].map((item) => (
-                    <div key={item.label} className={`bg-white p-4 rounded-2xl border ${item.border} shadow-sm hover:shadow-md transition-all`}>
+                    <motion.div variants={scaleIn} key={item.label} className={`bg-white p-4 rounded-2xl border ${item.border} shadow-sm hover:shadow-md transition-all`}>
                         <div className={`inline-flex p-2 rounded-xl ${item.color} mb-3`}>
                             <item.icon className="w-4 h-4" />
                         </div>
-                        <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">{item.label}</p>
-                        <h4 className="text-xl font-extrabold text-slate-800 mt-0.5">{item.value}</h4>
+                        <p className="text-[11px] md:text-xs text-slate-400 font-semibold uppercase tracking-wider leading-tight h-8 md:h-auto">{item.label}</p>
+                        <h4 className="text-lg md:text-xl font-extrabold text-slate-800 mt-1">{item.value}</h4>
                         <p className="text-[10px] text-slate-400 mt-0.5">{item.sub}</p>
-                    </div>
+                    </motion.div>
                 ))}
-            </div>
+            </motion.div>
 
             {/* Main Charts Row: Gender Bar + Gender Pie */}
             {!selectedKelurahan && kelBarData.length > 0 && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm min-h-[350px]">
                         <h3 className="text-base font-bold text-slate-800 mb-4">Penduduk per Kelurahan</h3>
-                        <div className="h-64">
+                        <div className="h-64 sm:h-72">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={kelBarData} barGap={2} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                                <BarChart data={kelBarData} barGap={2} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                     <XAxis dataKey="nama" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} dy={8} />
                                     <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}rb` : String(v)} />
@@ -697,18 +719,20 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
                             </ResponsiveContainer>
                         </div>
                     </div>
-                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between min-h-[350px]">
                         <h3 className="text-base font-bold text-slate-800 mb-2">Rasio Jenis Kelamin</h3>
-                        <div className="flex items-center justify-center h-48">
-                            <PieChart width={200} height={200}>
-                                <Pie data={[{ name: 'Laki-laki', value: totalLk }, { name: 'Perempuan', value: totalPr }]} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={4} dataKey="value">
-                                    <Cell fill="#3b82f6" />
-                                    <Cell fill="#f43f5e" />
-                                </Pie>
-                                <Tooltip formatter={(v: number) => v.toLocaleString('id-ID')} />
-                            </PieChart>
+                        <div className="flex items-center justify-center flex-1 min-h-[200px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={[{ name: 'Laki-laki', value: totalLk }, { name: 'Perempuan', value: totalPr }]} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={4} dataKey="value">
+                                        <Cell fill="#3b82f6" />
+                                        <Cell fill="#f43f5e" />
+                                    </Pie>
+                                    <Tooltip formatter={(v: number) => v.toLocaleString('id-ID')} />
+                                </PieChart>
+                            </ResponsiveContainer>
                         </div>
-                        <div className="space-y-2 mt-2">
+                        <div className="space-y-2 mt-4">
                             {[{ label: 'Laki-laki', val: totalLk, color: 'bg-blue-500' }, { label: 'Perempuan', val: totalPr, color: 'bg-rose-500' }].map(item => (
                                 <div key={item.label} className="flex justify-between items-center text-sm">
                                     <div className="flex items-center gap-2">
@@ -720,11 +744,11 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
                             ))}
                         </div>
                     </div>
-                </div>
+                </motion.div>
             )}
 
             {/* Dimension Tabs */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <motion.div variants={fadeUp} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 {/* Tab Nav */}
                 <div className="flex border-b border-slate-100 overflow-x-auto">
                     {TABS.map(tab => (
@@ -927,7 +951,7 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
                         )}
                     </div>
                 )}
-            </div>
+            </motion.div>
 
             {/* Summary Table per Kelurahan */}
             {!selectedKelurahan && filteredSummary.length > 0 && (
@@ -972,7 +996,7 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
                     </div>
                 </div>
             )}
-        </section>
+        </motion.section>
     );
 }
 
@@ -1047,8 +1071,8 @@ function LembagaSection({ data, kelurahans, selectedKelurahan }: { data: Lembaga
     const totalAktif = filteredData.filter((d) => d.status === "aktif").length;
 
     return (
-        <section className="space-y-6">
-            <div className="flex items-center gap-3 mb-2">
+        <motion.section variants={staggerContainer} initial="hidden" animate="visible" className="space-y-6">
+            <motion.div variants={fadeUp} className="flex items-center gap-3 mb-2">
                 <div className="p-2.5 rounded-xl bg-amber-50">
                     <Building2 className="w-5 h-5 text-amber-600" />
                 </div>
@@ -1058,37 +1082,37 @@ function LembagaSection({ data, kelurahans, selectedKelurahan }: { data: Lembaga
                         {selectedKelurahan ? "Daftar Lembaga di Kelurahan" : "RT, RW, PKK, Karang Taruna, dan lembaga lainnya"}
                     </p>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                    <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Lembaga</p>
-                    <h4 className="text-2xl font-extrabold text-slate-800 mt-1">{chartBaseData.length}</h4>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                    <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Aktif</p>
-                    <h4 className="text-2xl font-extrabold text-emerald-600 mt-1">{totalAktif}</h4>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                    <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Jenis Lembaga</p>
-                    <h4 className="text-2xl font-extrabold text-slate-800 mt-1">{groupedByJenis.length}</h4>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                    <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
-                        {selectedKelurahan ? "Rata-rata Anggota" : "Rata-rata/Kelurahan"}
+            <motion.div variants={staggerContainer} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <motion.div variants={scaleIn} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                    <p className="text-[11px] md:text-xs text-slate-400 font-semibold uppercase tracking-wider h-8 md:h-auto leading-tight">Total Lembaga</p>
+                    <h4 className="text-xl md:text-2xl font-extrabold text-slate-800 mt-1">{chartBaseData.length}</h4>
+                </motion.div>
+                <motion.div variants={scaleIn} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                    <p className="text-[11px] md:text-xs text-slate-400 font-semibold uppercase tracking-wider h-8 md:h-auto leading-tight">Aktif</p>
+                    <h4 className="text-xl md:text-2xl font-extrabold text-emerald-600 mt-1">{totalAktif}</h4>
+                </motion.div>
+                <motion.div variants={scaleIn} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                    <p className="text-[11px] md:text-xs text-slate-400 font-semibold uppercase tracking-wider h-8 md:h-auto leading-tight">Jenis Lembaga</p>
+                    <h4 className="text-xl md:text-2xl font-extrabold text-slate-800 mt-1">{groupedByJenis.length}</h4>
+                </motion.div>
+                <motion.div variants={scaleIn} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                    <p className="text-[11px] md:text-xs text-slate-400 font-semibold uppercase tracking-wider h-8 md:h-auto leading-tight">
+                        {selectedKelurahan ? "Rata-rata Anggota" : "Rata-rata/Kel"}
                     </p>
-                    <h4 className="text-2xl font-extrabold text-slate-800 mt-1">
+                    <h4 className="text-xl md:text-2xl font-extrabold text-slate-800 mt-1">
                         {selectedKelurahan
                             ? Math.round(chartBaseData.reduce((s, d) => s + (d.jumlah_anggota || 0), 0) / (chartBaseData.length || 1))
                             : (kelurahans.length > 0 ? Math.round(chartBaseData.length / kelurahans.length) : 0)
                         }
                     </h4>
-                </div>
-            </div>
+                </motion.div>
+            </motion.div>
 
             {/* Jenis Filter Icons */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <motion.div variants={fadeUp} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
                 <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Filter Jenis Lembaga</h4>
                 <div className="flex flex-wrap gap-2">
                     <button
@@ -1109,10 +1133,10 @@ function LembagaSection({ data, kelurahans, selectedKelurahan }: { data: Lembaga
                         </button>
                     ))}
                 </div>
-            </div>
+            </motion.div>
 
             {/* Charts Row */}
-            <div className={`grid grid-cols-1 ${!selectedKelurahan ? "lg:grid-cols-2" : ""} gap-6`}>
+            <motion.div variants={fadeUp} className={`grid grid-cols-1 ${!selectedKelurahan ? "lg:grid-cols-2" : ""} gap-6`}>
                 {/* Pie Chart: Always show */}
                 <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
                     <h3 className="text-base font-bold text-slate-800 mb-4">Komposisi Jenis Lembaga</h3>
@@ -1160,10 +1184,10 @@ function LembagaSection({ data, kelurahans, selectedKelurahan }: { data: Lembaga
                         </div>
                     </div>
                 )}
-            </div>
+            </motion.div>
 
             {/* Data Cards Grid */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <motion.div variants={fadeUp} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <h3 className="text-base font-bold text-slate-800">Daftar Lembaga ({filteredData.length})</h3>
                     <div className="relative">
@@ -1208,8 +1232,8 @@ function LembagaSection({ data, kelurahans, selectedKelurahan }: { data: Lembaga
                         <p className="font-medium">Tidak ada lembaga ditemukan</p>
                     </div>
                 )}
-            </div>
-        </section>
+            </motion.div>
+        </motion.section>
     );
 }
 
@@ -1356,19 +1380,19 @@ function PemerintahanContent() {
                                 <Landmark className="w-10 h-10 text-white" />
                             </div>
                             <div>
-                                <div className="flex items-center gap-2 text-white/60 text-xs font-bold uppercase tracking-[0.2em] mb-1">
+                                <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex items-center gap-2 text-white/60 text-xs font-bold uppercase tracking-[0.2em] mb-1">
                                     <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                                     Modul Data
-                                </div>
-                                <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">Pemerintahan</h1>
-                                <p className="mt-2 text-lg text-white/70 max-w-2xl leading-relaxed">
+                                </motion.div>
+                                <motion.h1 variants={fadeUp} initial="hidden" animate="visible" transition={{ delay: 0.1 }} className="text-3xl md:text-5xl font-extrabold leading-tight">Pemerintahan</motion.h1>
+                                <motion.p variants={fadeUp} initial="hidden" animate="visible" transition={{ delay: 0.2 }} className="mt-2 text-base md:text-lg text-white/70 max-w-2xl leading-relaxed">
                                     Data profil kecamatan, demografi kependudukan, dan lembaga kemasyarakatan.
-                                </p>
+                                </motion.p>
                             </div>
                         </div>
 
                         {/* Filter Dropdown */}
-                        <div className="w-full md:w-72 relative z-20">
+                        <motion.div variants={fadeUp} initial="hidden" animate="visible" transition={{ delay: 0.3 }} className="w-full md:w-72 relative z-20">
                             <label className="block text-xs font-bold text-white/70 uppercase tracking-wider mb-2">Filter Wilayah</label>
                             <div className="relative">
                                 <select
@@ -1383,31 +1407,31 @@ function PemerintahanContent() {
                                 </select>
                                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/70 pointer-events-none" />
                             </div>
-                        </div>
+                        </motion.div>
                     </div>
                 </div>
             </header>
 
             {/* Main Content */}
             <main className="px-6 max-w-7xl mx-auto -mt-16 relative z-20 pb-16">
-                {/* Section Tabs */}
-                <div className="flex items-center gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-10 overflow-x-auto">
+                {/* Section Tabs - Grid on mobile, inline on desktop */}
+                <div className="grid grid-cols-3 md:flex md:items-center gap-2 md:gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-10">
                     {sections.map((sec) => {
                         const isActive = activeSection === sec.key;
                         const colorMap: Record<string, string> = {
-                            indigo: "bg-indigo-50 text-indigo-700",
-                            blue: "bg-blue-50 text-blue-700",
-                            amber: "bg-amber-50 text-amber-700",
+                            indigo: "bg-indigo-50 text-indigo-700 border-indigo-200",
+                            blue: "bg-blue-50 text-blue-700 border-blue-200",
+                            amber: "bg-amber-50 text-amber-700 border-amber-200",
                         };
                         return (
                             <button
                                 key={sec.key}
                                 onClick={() => setActiveSection(sec.key)}
-                                className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${isActive ? colorMap[sec.color] + " shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                                className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-2 md:px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all text-center border ${isActive ? colorMap[sec.color] + " shadow-sm" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                                     }`}
                             >
-                                <sec.icon className="w-4 h-4" />
-                                {sec.label}
+                                <sec.icon className="w-4 h-4 flex-shrink-0" />
+                                <span className="leading-tight">{sec.label}</span>
                             </button>
                         );
                     })}
@@ -1420,17 +1444,25 @@ function PemerintahanContent() {
                         <p className="text-slate-500 font-medium">Memuat data pemerintahan...</p>
                     </div>
                 ) : (
-                    <div className="animate-fade-in">
-                        {activeSection === "profil" && (
-                            <ProfilSection tenant={tenant} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} profiles={profiles} organisasi={organisasi} />
-                        )}
-                        {activeSection === "kependudukan" && (
-                            <KependudukanSection kData={kData} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
-                        )}
-                        {activeSection === "lembaga" && (
-                            <LembagaSection data={lembagaData} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
-                        )}
-                    </div>
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={activeSection}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            {activeSection === "profil" && (
+                                <ProfilSection tenant={tenant} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} profiles={profiles} organisasi={organisasi} />
+                            )}
+                            {activeSection === "kependudukan" && (
+                                <KependudukanSection kData={kData} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
+                            )}
+                            {activeSection === "lembaga" && (
+                                <LembagaSection data={lembagaData} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
                 )}
             </main>
 

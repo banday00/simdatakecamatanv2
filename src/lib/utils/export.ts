@@ -102,7 +102,7 @@ export function exportToPDF(config: ExportConfig) {
             doc.setFontSize(7);
             doc.setTextColor(148, 163, 184);
             doc.text(
-                `SIDAKOTA — ${tenantName || ""}`,
+                `SIMDATA Kecamatan — ${tenantName || ""}`,
                 14,
                 pageH - 6
             );

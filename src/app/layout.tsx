@@ -1,12 +1,27 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { TenantProvider } from "@/lib/tenant/context";
 import { AuthProvider } from "@/lib/auth/context";
 import "./globals.css";
 
+export const viewport: Viewport = {
+    themeColor: "#ffffff",
+};
+
 export const metadata: Metadata = {
-    title: "SIDAKOTA - Sistem Data Kecamatan & Kelurahan Kota Bogor",
-    description:
-        "Dashboard data kecamatan dan kelurahan se-Kota Bogor. Informasi pemerintahan, kesehatan, pendidikan, ekonomi, infrastruktur, dan sosial.",
+    title: "SIMDATA Kecamatan - Sistem Data Kecamatan & Kelurahan Kota Bogor",
+    description: "Sistem Data Kecamatan & Kelurahan Kota Bogor - Portal Informasi Pemerintahan, Pendidikan, Kesehatan, dan Infrastruktur Terintegrasi.",
+    applicationName: "SIMDATA Kecamatan",
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: "default",
+        title: "SIMDATA Kecamatan",
+    },
+    icons: {
+        icon: "/favicon-32x32.png",
+    },
+    formatDetection: {
+        telephone: false,
+    },
 };
 
 export default function RootLayout({

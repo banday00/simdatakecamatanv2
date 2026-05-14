@@ -193,14 +193,15 @@ function InsidenSection({ incidents, kelurahans, selectedKelurahan }: { incident
                     </table>
                 </div>
                 {totalPages > 1 && (
-                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-sm text-slate-500">
-                            Menampilkan {Math.min(sortedData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(sortedData.length, currentPage * ITEMS_PER_PAGE)} dari {sortedData.length}
+                    <div className="p-5 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">
+                        <span className="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
+                            <span className="hidden sm:inline">Menampilkan {Math.min(sortedData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(sortedData.length, currentPage * ITEMS_PER_PAGE)} dari {sortedData.length}</span>
+                            <span className="sm:hidden">{sortedData.length} kejadian</span>
                         </span>
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Sebelumnya</button>
-                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{currentPage} / {totalPages}</span>
-                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
+                        <div className="flex items-center gap-1.5">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">←</button>
+                            <span className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 rounded-lg border border-slate-200">{currentPage} / {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">→</button>
                         </div>
                     </div>
                 )}
@@ -361,14 +362,15 @@ function BencanaSection({ disasters, kelurahans, selectedKelurahan }: { disaster
                 </div>
                 {paginatedData.length === 0 && <div className="p-8 text-center text-slate-500 bg-slate-50/50">Tidak ada zona rawan yang cocok.</div>}
                 {totalPages > 1 && (
-                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-sm text-slate-500">
-                            Menampilkan {Math.min(searchedData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(searchedData.length, currentPage * ITEMS_PER_PAGE)} dari {searchedData.length}
+                    <div className="p-5 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">
+                        <span className="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
+                            <span className="hidden sm:inline">Menampilkan {Math.min(searchedData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(searchedData.length, currentPage * ITEMS_PER_PAGE)} dari {searchedData.length}</span>
+                            <span className="sm:hidden">{searchedData.length} zona</span>
                         </span>
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Sebelumnya</button>
-                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{currentPage} / {totalPages}</span>
-                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
+                        <div className="flex items-center gap-1.5">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">←</button>
+                            <span className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 rounded-lg border border-slate-200">{currentPage} / {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">→</button>
                         </div>
                     </div>
                 )}
@@ -519,14 +521,15 @@ function KaderSection({ cadres, kelurahans, selectedKelurahan }: { cadres: any[]
                     </table>
                 </div>
                 {totalPages > 1 && (
-                    <div className="p-5 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-sm text-slate-500">
-                            Menampilkan {Math.min(tableData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(tableData.length, currentPage * ITEMS_PER_PAGE)} dari {tableData.length}
+                    <div className="p-5 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">
+                        <span className="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
+                            <span className="hidden sm:inline">Menampilkan {Math.min(tableData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(tableData.length, currentPage * ITEMS_PER_PAGE)} dari {tableData.length}</span>
+                            <span className="sm:hidden">{tableData.length} kelurahan</span>
                         </span>
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Sebelumnya</button>
-                            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{currentPage} / {totalPages}</span>
-                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
+                        <div className="flex items-center gap-1.5">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">←</button>
+                            <span className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 rounded-lg border border-slate-200">{currentPage} / {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">→</button>
                         </div>
                     </div>
                 )}
@@ -765,14 +768,17 @@ export default function KetentaramanPage() {
             </header>
 
             <main className="px-6 max-w-7xl mx-auto -mt-16 relative z-20 pb-16">
-                <div className="flex items-center gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-8 overflow-x-auto">
+                {/* Section Tabs - 2x2 grid on mobile, single row on desktop */}
+                <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-8">
                     {sections.map((section) => (
                         <button key={section.id} onClick={() => setActiveSection(section.id)}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeSection === section.id
-                                ? section.id === "analisis" ? "bg-slate-800 text-white shadow-md border border-slate-700 ring-1 ring-slate-900/10" : "bg-indigo-50 text-indigo-700 shadow-sm border border-white ring-1 ring-indigo-500/10"
-                                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-transparent"}`}>
-                            <section.icon className="w-4 h-4" />
-                            {section.label}
+                            className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-2 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all text-center border ${
+                                activeSection === section.id
+                                    ? section.id === "analisis" ? "bg-slate-800 text-white shadow-md border-slate-700 ring-1 ring-slate-900/10" : "bg-indigo-50 text-indigo-700 shadow-sm border-indigo-200 ring-1 ring-indigo-500/10"
+                                    : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                            }`}>
+                            <section.icon className={`w-4 h-4 flex-shrink-0 ${activeSection === section.id ? "" : "opacity-50"}`} />
+                            <span className="leading-tight">{section.label}</span>
                         </button>
                     ))}
                 </div>
