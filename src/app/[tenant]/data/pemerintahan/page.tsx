@@ -193,19 +193,58 @@ function ProfilSection({ tenant, kelurahans, selectedKelurahan, profiles, organi
 
     const totalRW = displayedKelurahans.reduce((s, k) => s + (k.jumlah_rw || 0), 0);
     const totalRT = displayedKelurahans.reduce((s, k) => s + (k.jumlah_rt || 0), 0);
-    const totalLuas = displayedKelurahans.reduce((s, k) => s + (k.luas_km2 || 0), 0);
+    const totalLuas = displayedKelurahans.reduce((s, k) => s + (Number(k.luas_km2) || 0), 0);
 
     return (
         <motion.section variants={staggerContainer} initial="hidden" animate="visible" className="space-y-8">
-            <motion.div variants={fadeUp} className="flex items-center gap-3 mb-2">
-                <div className="p-2.5 rounded-xl bg-indigo-50">
+            <motion.div variants={fadeUp} className="flex flex-col sm:flex-row sm:items-start gap-4 mb-2">
+                <div className="p-2.5 rounded-xl bg-indigo-50 flex-shrink-0 self-start">
                     <Landmark className="w-5 h-5 text-indigo-600" />
                 </div>
-                <div>
-                    <h2 className="text-xl font-extrabold text-slate-800">
-                        {selectedKelurahan ? `Profil Kelurahan ${currentKelurahan?.nama}` : "Profil Kecamatan"}
-                    </h2>
+                <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                        <h2 className="text-xl font-extrabold text-slate-800">
+                            {selectedKelurahan
+                                ? `Profil Kelurahan ${currentKelurahan?.nama}`
+                                : `Profil ${tenant?.nama ?? "Kecamatan"}`}
+                        </h2>
+                        {!selectedKelurahan && tenant?.kode_wilayah && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-bold tracking-wide border border-indigo-200">
+                                <Globe className="w-3 h-3" />
+                                {tenant.kode_wilayah}
+                            </span>
+                        )}
+                    </div>
                     <p className="text-sm text-slate-500">Informasi umum, visi misi, dan pimpinan wilayah</p>
+
+                    {/* Quick info strip — only when viewing kecamatan level 
+                    {!selectedKelurahan && (
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+                            {tenant?.alamat && (
+                                <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                                    <MapPin className="w-3 h-3 text-rose-400 flex-shrink-0" />
+                                    <span className="truncate max-w-[220px]">{tenant.alamat}</span>
+                                </span>
+                            )}
+                            {tenant?.telepon && (
+                                <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                                    <Phone className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                                    {tenant.telepon}
+                                </span>
+                            )}
+                            {tenant?.website && (
+                                <a
+                                    href={tenant.website.startsWith("http") ? tenant.website : `https://${tenant.website}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 hover:underline transition-colors"
+                                >
+                                    <Globe className="w-3 h-3 flex-shrink-0" />
+                                    {tenant.website.replace(/^https?:\/\//, "")}
+                                </a>
+                            )}
+                        </div>
+                    )} */}
                 </div>
             </motion.div>
 

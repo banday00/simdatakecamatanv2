@@ -68,7 +68,7 @@ function PublicStatCard({
     label, value, icon: Icon, gradient, delay = 0,
 }: { label: string; value: string | number; icon: React.ComponentType<{ className?: string }>; gradient: string; delay?: number }) {
     return (
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-50px" }}
@@ -185,7 +185,7 @@ export default function HomePage() {
                     <HeroBackground />
                     {/* Decorative Elements */}
                     <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-cyan-500/10 to-transparent pointer-events-none z-10" />
-                    <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-[#f8fafc] to-transparent z-10" />
+
                 </div>
 
                 {/* Mobile Background: Slate 900 (hidden on desktop) */}
@@ -193,7 +193,7 @@ export default function HomePage() {
                     {/* Glow effect */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-accent-400/10 rounded-full blur-3xl" />
                     <div className="absolute bottom-20 left-10 w-40 h-40 bg-gold-400/10 rounded-full blur-3xl" />
-                    
+
                     {/* SVG Curve Circle */}
                     <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none z-10 translate-y-[1px]">
                         <svg className="relative block w-full h-[40px] sm:h-[60px]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
@@ -208,13 +208,38 @@ export default function HomePage() {
                 </div>
 
                 {/* Hero Content Desktop */}
-                <div className="hidden md:flex relative z-10 px-6 pt-12 pb-40 max-w-7xl mx-auto w-full flex-grow flex-col justify-end">
-                    {/* Tulisan hero header telah dihilangkan sesuai permintaan, div ini sekarang melar memenuhi layar */}
+                <div className="hidden md:flex relative z-10 px-6 pt-16 pb-40 max-w-7xl mx-auto w-full flex-grow flex-col items-center justify-start">
+                    <motion.div
+                        initial={{ opacity: 0, y: -24 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.9, ease: "easeOut" }}
+                        className="text-center"
+                    >
+
+                        {/* Main headline */}
+                        <h1 className="text-3xl xl:text-5xl font-black tracking-tight text-white drop-shadow-2xl leading-none mb-3">
+                            BOGOR{" "}
+                            <span className="bg-gradient-to-r from-cyan-300 via-blue-300 to-indigo-300 bg-clip-text text-transparent">
+                                TERHUBUNG
+                            </span>
+                        </h1>
+
+                        {/* Sub-headline */}
+                        <p className="text-lg xl:text-2xl font-semibold text-white/80 tracking-widest uppercase mb-4 drop-shadow">
+                            SATU DATA, MAJU BERSAMA
+                        </p>
+
+
+                        {/* Tagline */}
+                        <p className="text-sm xl:text-base text-white/60 font-medium tracking-wide">
+                            Terkoneksi, Kota Bogor Berinovasi
+                        </p>
+                    </motion.div>
                 </div>
 
                 {/* Hero Content Mobile */}
                 <div className="md:hidden relative z-20 px-6 pt-12 pb-20 max-w-7xl mx-auto w-full flex-grow flex flex-col justify-center items-center text-center">
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, ease: "easeOut" }}
@@ -242,7 +267,7 @@ export default function HomePage() {
 
             {/* ========== DATA VISUALIZATION ========== */}
             <section className="px-6 py-20 max-w-7xl mx-auto" id="data">
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-50px" }}
@@ -258,7 +283,7 @@ export default function HomePage() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Bar Chart - Population per Kelurahan */}
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         whileInView={{ opacity: 1, scale: 1 }}
                         viewport={{ once: true, margin: "-50px" }}
@@ -300,7 +325,7 @@ export default function HomePage() {
                     </motion.div>
 
                     {/* Pie Chart - Facility Distribution */}
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         whileInView={{ opacity: 1, scale: 1 }}
                         viewport={{ once: true, margin: "-50px" }}
@@ -367,7 +392,7 @@ export default function HomePage() {
 
             {/* ========== MODULES GRID ========== */}
             <section className="px-6 py-16 max-w-7xl mx-auto">
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-50px" }}
@@ -412,7 +437,7 @@ export default function HomePage() {
             {
                 kelurahans.length > 0 && (
                     <section className="px-6 py-16 max-w-7xl mx-auto">
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true, margin: "-50px" }}
@@ -521,7 +546,7 @@ export default function HomePage() {
 
             {/* ========== INFOGRAFIS / CTA ========== */}
             <section className="px-4 md:px-6 py-12 md:py-20">
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, scale: 0.98, y: 30 }}
                     whileInView={{ opacity: 1, scale: 1, y: 0 }}
                     viewport={{ once: true, margin: "-50px" }}
@@ -559,7 +584,7 @@ export default function HomePage() {
                                     { label: "Modul Data", value: `${modules.length}`, icon: BarChart3 },
                                     { label: "Update", value: "Real-time", icon: Activity },
                                 ].map((item, idx) => (
-                                    <motion.div 
+                                    <motion.div
                                         key={item.label}
                                         initial={{ opacity: 0, y: 10 }}
                                         whileInView={{ opacity: 1, y: 0 }}

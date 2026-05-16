@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback } from "react";
 import gsap from "gsap";
 
-const IMAGE_HOLD_SECONDS = 5; // Waktu tunggu untuk gambar (2 detik)
+const IMAGE_HOLD_SECONDS = 0.5; // Waktu tunggu untuk gambar (2 detik)
 const CROSSFADE_DURATION = 1.2; // Durasi transisi fade
 
 export function HeroBackground() {
@@ -101,7 +101,7 @@ export function HeroBackground() {
             <img
                 src="/img_hero_header.jpg"
                 alt="Hero Background"
-                className="absolute inset-0 w-full h-full object-cover z-10"
+                className="absolute inset-0 w-full h-full object-cover object-top z-10"
             />
             {/* Video diletakkan di atas gambar (z-20) */}
             <video
@@ -109,7 +109,7 @@ export function HeroBackground() {
                 src="/vod_hero_header.mp4"
                 muted
                 playsInline
-                className="absolute inset-0 w-full h-full object-cover z-20"
+                className="absolute inset-0 w-full h-full object-cover object-top z-20"
             />
         </div>
     );

@@ -6,26 +6,27 @@ import { useAuth } from "@/lib/auth/context";
 import { useTenant } from "@/lib/tenant/context";
 import { useTenantPath } from "@/lib/tenant/use-tenant-path";
 import Link from "next/link";
+import Image from "next/image";
 import {
-    Shield, Eye, EyeOff, Loader2, AlertCircle, Lock, Mail,
-    ArrowLeft, CheckCircle2, X,
+    Eye, EyeOff, Loader2, AlertCircle, Lock, Mail,
+    ArrowLeft, CheckCircle2,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
-   Animated Background (CSS-only, no Three.js)
+   Light Animated Background
    ═══════════════════════════════════════════════════════════ */
 function AnimatedBackground() {
     return (
         <>
-            {/* Base gradient */}
-            <div className="fixed inset-0 -z-20 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900" />
-            {/* Animated orbs */}
-            <div className="fixed inset-0 -z-10 overflow-hidden">
-                <div className="absolute -top-40 -left-40 w-80 h-80 bg-blue-600/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: "4s" }} />
-                <div className="absolute top-1/2 -right-32 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl animate-pulse" style={{ animationDuration: "6s", animationDelay: "1s" }} />
-                <div className="absolute -bottom-20 left-1/3 w-72 h-72 bg-purple-500/15 rounded-full blur-3xl animate-pulse" style={{ animationDuration: "5s", animationDelay: "2s" }} />
-                {/* Grid pattern */}
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
+            {/* Soft light base */}
+            <div className="fixed inset-0 -z-20 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" />
+            {/* Subtle colour orbs */}
+            <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+                <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-200/50 rounded-full blur-3xl animate-pulse" style={{ animationDuration: "6s" }} />
+                <div className="absolute top-1/2 -right-24 w-80 h-80 bg-indigo-200/40 rounded-full blur-3xl animate-pulse" style={{ animationDuration: "8s", animationDelay: "1s" }} />
+                <div className="absolute -bottom-24 left-1/3 w-72 h-72 bg-sky-200/40 rounded-full blur-3xl animate-pulse" style={{ animationDuration: "7s", animationDelay: "2s" }} />
+                {/* Faint grid */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.04)_1px,transparent_1px)] bg-[size:60px_60px]" />
             </div>
         </>
     );
@@ -84,11 +85,9 @@ function LoginForm() {
         let n2 = Math.floor(Math.random() * 10);
         const op = Math.random() > 0.5 ? "+" : "-";
 
-        // Prevent negative results for simplicity
         if (op === "-" && n2 > n1) {
-            const temp = n1;
             setNum1(n2);
-            setNum2(temp);
+            setNum2(n1);
         } else {
             setNum1(n1);
             setNum2(n2);
@@ -97,7 +96,6 @@ function LoginForm() {
         setCaptchaInput("");
     };
 
-    // Initialize Captcha on mount
     useEffect(() => {
         generateCaptcha();
     }, []);
@@ -111,7 +109,6 @@ function LoginForm() {
         if (!captchaInput.trim()) { setError("Kode keamanan harus diisi"); return; }
         if (!consent) { setError("Anda harus menyetujui pernyataan pertanggungjawaban data."); return; }
 
-        // Validate Captcha
         const expectedAnswer = operator === "+" ? num1 + num2 : num1 - num2;
         if (parseInt(captchaInput, 10) !== expectedAnswer) {
             setError("Kode keamanan (jawaban hitungan) salah.");
@@ -126,7 +123,7 @@ function LoginForm() {
         if (result.error) {
             setError(result.error);
             setIsSubmitting(false);
-            generateCaptcha(); // regenerate on failed login
+            generateCaptcha();
         } else if (result.actionRequired === "force_change_password") {
             router.push(toTenantPath("/admin/force-rubah-password"));
         } else {
@@ -160,44 +157,65 @@ function LoginForm() {
         }
     }
 
-    // Determine if submit should be disabled
     const isCaptchaValid = captchaInput.trim() !== "" && parseInt(captchaInput, 10) === (operator === "+" ? num1 + num2 : num1 - num2);
     const isSubmitDisabled = isSubmitting || !email.trim() || !password.trim() || !isCaptchaValid || !consent;
 
-    return (
-        <div className="relative w-full max-w-[360px] z-10">
-            {/* Glassmorphism card */}
-            <div className="relative backdrop-blur-xl bg-slate-900/80 border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
-                {/* Gradient accent top */}
-                <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+    // Shared input style (light theme)
+    const inputCls = "w-full py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all focus:outline-none disabled:opacity-50";
 
-                <div className="p-6">
+    return (
+        <div className="relative w-full max-w-[380px] z-10">
+            {/* Card */}
+            <div className="relative bg-white border border-slate-200/80 rounded-3xl shadow-xl shadow-slate-200/60 overflow-hidden">
+                {/* Gradient accent top */}
+                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+
+                <div className="p-7">
                     {/* Header */}
-                    <div className="text-center mb-6">
-                        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30 mb-4">
-                            <Shield className="h-7 w-7 text-white" />
+                    <div className="text-center mb-7">
+                        {/* Logos row */}
+                        <div className="flex items-center justify-center gap-3 mb-4">
+                            <Image
+                                src="/bogor.png"
+                                alt="Logo Kota Bogor"
+                                width={52}
+                                height={52}
+                                className="object-contain drop-shadow-sm"
+                                priority
+                            />
+                            <div className="w-px h-10 bg-slate-200" />
+                            <div className="flex flex-col items-start">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Portal</span>
+                                <span className="text-lg font-extrabold text-slate-800 leading-tight">SIMDATA</span>
+                                <span className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wider">Kecamatan</span>
+                            </div>
                         </div>
-                        <h1 className="text-xl font-extrabold text-white">SIPADU KECAMATAN</h1>
-                        <p className="text-slate-300 text-xs mt-1">
-                            {tenant?.nama || "Panel Administrasi Kecamatan"}
+
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 mb-3">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Panel Admin</span>
+                        </div>
+
+                        <p className="text-slate-500 text-sm font-medium">
+                            {tenant?.nama || "Kecamatan — Kota Bogor"}
                         </p>
                     </div>
 
                     {/* Error */}
                     {error && !showResetPassword && (
-                        <div className="mb-6 p-4 bg-rose-500/20 border border-rose-500/30 rounded-xl flex items-center gap-3">
-                            <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
-                            <p className="text-rose-200 text-sm">{error}</p>
+                        <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-3">
+                            <AlertCircle className="h-4 w-4 text-rose-500 shrink-0" />
+                            <p className="text-rose-600 text-sm">{error}</p>
                         </div>
                     )}
 
                     {/* Login Form */}
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                    <form onSubmit={handleSubmit} className="space-y-4">
                         {/* Email */}
                         <div>
-                            <label className="block text-xs font-bold text-white mb-2">Email</label>
+                            <label className="block text-xs font-bold text-slate-600 mb-1.5">Email</label>
                             <div className="relative">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <input
                                     type="email"
                                     value={email}
@@ -205,16 +223,16 @@ function LoginForm() {
                                     placeholder="nama@kotabogor.go.id"
                                     autoComplete="email"
                                     disabled={isSubmitting}
-                                    className="w-full pl-11 pr-4 py-2.5 text-sm bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all focus:outline-none disabled:opacity-50"
+                                    className={`${inputCls} pl-10 pr-4`}
                                 />
                             </div>
                         </div>
 
                         {/* Password */}
                         <div>
-                            <label className="block text-xs font-bold text-white mb-2">Password</label>
+                            <label className="block text-xs font-bold text-slate-600 mb-1.5">Password</label>
                             <div className="relative">
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     value={password}
@@ -222,12 +240,12 @@ function LoginForm() {
                                     placeholder="••••••••"
                                     autoComplete="current-password"
                                     disabled={isSubmitting}
-                                    className="w-full pl-11 pr-11 py-2.5 text-sm bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all focus:outline-none disabled:opacity-50"
+                                    className={`${inputCls} pl-10 pr-11`}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                                 >
                                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
@@ -235,11 +253,11 @@ function LoginForm() {
                         </div>
 
                         {/* Forgot Password Link */}
-                        <div className="flex justify-end -mt-2">
+                        <div className="flex justify-end -mt-1">
                             <button
                                 type="button"
                                 onClick={() => { setShowResetPassword(!showResetPassword); setResetSuccess(false); setError(null); setResetEmail(email); }}
-                                className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                                className="text-xs text-indigo-500 hover:text-indigo-700 font-semibold transition-colors"
                             >
                                 Lupa Password?
                             </button>
@@ -247,21 +265,21 @@ function LoginForm() {
 
                         {/* Reset Password Inline */}
                         {showResetPassword && (
-                            <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl space-y-3">
+                            <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl space-y-3">
                                 {resetSuccess ? (
                                     <div className="flex items-center gap-3">
-                                        <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-                                        <p className="text-emerald-300 text-sm">Link reset password telah dikirim ke <strong>{resetEmail}</strong>. Periksa inbox atau folder spam.</p>
+                                        <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+                                        <p className="text-emerald-700 text-sm">Link reset password dikirim ke <strong>{resetEmail}</strong>. Cek inbox atau spam.</p>
                                     </div>
                                 ) : (
                                     <>
                                         {error && (
-                                            <div className="flex items-center gap-2 text-rose-300 text-sm">
+                                            <div className="flex items-center gap-2 text-rose-600 text-sm">
                                                 <AlertCircle className="h-4 w-4 shrink-0" />
                                                 <span>{error}</span>
                                             </div>
                                         )}
-                                        <p className="text-slate-300 text-sm">Masukkan email Anda untuk menerima link reset password.</p>
+                                        <p className="text-slate-600 text-sm">Masukkan email Anda untuk menerima link reset password.</p>
                                         <div className="flex gap-2">
                                             <div className="relative flex-1">
                                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -270,14 +288,14 @@ function LoginForm() {
                                                     value={resetEmail}
                                                     onChange={(e) => setResetEmail(e.target.value)}
                                                     placeholder="email@kotabogor.go.id"
-                                                    className="w-full pl-10 pr-3 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all focus:outline-none"
+                                                    className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-800 text-sm placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all focus:outline-none"
                                                 />
                                             </div>
                                             <button
                                                 type="button"
                                                 onClick={handleResetPassword}
                                                 disabled={resetLoading}
-                                                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg disabled:opacity-50 shrink-0 transition-colors"
+                                                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg disabled:opacity-50 shrink-0 transition-colors"
                                             >
                                                 {resetLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Kirim"}
                                             </button>
@@ -289,9 +307,9 @@ function LoginForm() {
 
                         {/* Math Captcha */}
                         <div>
-                            <label className="block text-sm font-bold text-white mb-2">Kode Keamanan</label>
+                            <label className="block text-xs font-bold text-slate-600 mb-1.5">Kode Keamanan</label>
                             <div className="flex items-center gap-3">
-                                <div className="flex items-center justify-center px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white font-mono text-lg font-bold min-w-[100px] shrink-0">
+                                <div className="flex items-center justify-center px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-800 font-mono text-base font-bold min-w-[100px] shrink-0 select-none">
                                     {num1} {operator} {num2} = ?
                                 </div>
                                 <input
@@ -301,26 +319,27 @@ function LoginForm() {
                                     placeholder="Hasil"
                                     required
                                     disabled={isSubmitting}
-                                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all focus:outline-none disabled:opacity-50 text-center font-mono text-lg"
+                                    className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all focus:outline-none disabled:opacity-50 text-center font-mono text-base"
                                 />
                             </div>
                         </div>
 
                         {/* Consent Toggle */}
-                        <div className="flex items-start gap-3 pt-2">
+                        <div className="flex items-start gap-3 pt-1">
                             <button
                                 type="button"
                                 role="switch"
                                 aria-checked={consent}
                                 onClick={() => setConsent(!consent)}
                                 disabled={isSubmitting}
-                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${consent ? 'bg-blue-500' : 'bg-slate-700'
-                                    }`}
+                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${consent ? 'bg-indigo-500' : 'bg-slate-200'}`}
                             >
-                                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${consent ? 'translate-x-5' : 'translate-x-0'
-                                    }`} />
+                                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${consent ? 'translate-x-4' : 'translate-x-0'}`} />
                             </button>
-                            <label className="text-[10px] text-slate-300 leading-tight cursor-pointer" onClick={() => !isSubmitting && setConsent(!consent)}>
+                            <label
+                                className="text-[11px] text-slate-500 leading-relaxed cursor-pointer"
+                                onClick={() => !isSubmitting && setConsent(!consent)}
+                            >
                                 Saya menyatakan bahwa data yang diinput adalah benar dan dapat dipertanggungjawabkan
                             </label>
                         </div>
@@ -329,12 +348,11 @@ function LoginForm() {
                         <button
                             type="submit"
                             disabled={isSubmitDisabled}
-                            className={`w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center gap-2 ${isSubmitDisabled ? 'opacity-50 cursor-not-allowed opacity-50 grayscale-[50%]' : 'hover:-translate-y-0.5'
-                                }`}
+                            className={`w-full mt-2 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-md shadow-indigo-200 transition-all flex items-center justify-center gap-2 ${isSubmitDisabled ? 'opacity-50 cursor-not-allowed grayscale-[30%]' : 'hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-200'}`}
                         >
                             {isSubmitting ? (
                                 <>
-                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                    <Loader2 className="h-4 w-4 animate-spin" />
                                     Memproses...
                                 </>
                             ) : (
@@ -344,16 +362,16 @@ function LoginForm() {
                     </form>
 
                     {/* Footer */}
-                    <p className="text-center text-slate-400 text-xs mt-6">
+                    <p className="text-center text-slate-400 text-[11px] mt-6 leading-relaxed">
                         Sistem Informasi Data Kecamatan Terpadu
                         <br />
-                        <span className="text-slate-500">© 2026 SIPADU KECAMATAN — {tenant?.nama || "Kota Bogor"}</span>
+                        <span className="text-slate-300">© 2026 SIMDATA KECAMATAN — {tenant?.nama || "Kota Bogor"}</span>
                     </p>
                 </div>
             </div>
 
-            {/* Decorative glow */}
-            <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-purple-500/20 rounded-3xl blur-2xl -z-10" />
+            {/* Soft glow below card */}
+            <div className="absolute -inset-4 bg-gradient-to-r from-blue-200/30 via-indigo-200/30 to-purple-200/30 rounded-3xl blur-2xl -z-10" />
         </div>
     );
 }
@@ -371,15 +389,15 @@ export default function LoginPage() {
             {/* Back to Home */}
             <Link
                 href={toTenantPath("/")}
-                className="fixed top-6 left-6 flex items-center gap-2 text-white/60 hover:text-white transition-colors z-50"
+                className="fixed top-6 left-6 flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors z-50 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-slate-200 shadow-sm"
             >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="text-sm font-medium">Kembali ke Beranda</span>
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span className="text-xs font-semibold">Beranda</span>
             </Link>
 
             <Suspense
                 fallback={
-                    <div className="flex items-center gap-2 text-white/70">
+                    <div className="flex items-center gap-2 text-slate-500">
                         <Loader2 className="w-5 h-5 animate-spin" />
                         Memuat...
                     </div>

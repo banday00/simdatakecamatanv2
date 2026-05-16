@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { BarChart3, MapPin, Newspaper, GraduationCap, Heart, Landmark, Shield, Hammer, Users, TrendingUp } from "lucide-react";
 import { useTenantPath } from "@/lib/tenant/use-tenant-path";
+import { useTenant } from "@/lib/tenant/context";
 
 const navLinks = [
     { label: "BSW", href: "https://bsw.kotabogor.go.id/" },
     { label: "Open Data", href: "https://opendata.kotabogor.go.id/" },
     { label: "Satu Peta", href: "https://satupeta.kotabogor.go.id/" },
     { label: "Satu Data", href: "https://satudata.kotabogor.go.id/" },
-
 ];
 
 const dataModules = [
@@ -20,8 +20,6 @@ const dataModules = [
     { label: "Sosial", href: "/data/sosial" },
     { label: "Ketentraman", href: "/data/ketentraman" },
 ];
-
-import { useTenant } from "@/lib/tenant/context";
 
 export function Footer() {
     const { tenant } = useTenant();
@@ -39,8 +37,8 @@ export function Footer() {
                                 className="w-9 h-10 object-contain drop-shadow-md"
                             />
                             <div>
-                                <p className="font-bold text-white text-lg leading-tight">SIPADU KECAMATAN</p>
-                                <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Sistem Pengelolaan Data Terpadu</p>
+                                <p className="font-bold text-white text-base leading-tight">SIMDATA KECAMATAN</p>
+                                <p className="text-[9px] text-slate-500 uppercase tracking-widest mt-0.5">Kota Bogor</p>
                             </div>
                         </div>
                         <p className="text-sm leading-relaxed text-slate-400">
@@ -110,7 +108,6 @@ export function Footer() {
                 </div>
                 <div className="border-t border-slate-800 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
                     <p className="text-xs">&copy; {new Date().getFullYear()} Pemerintah Kota Bogor. Hak cipta dilindungi.</p>
-
                 </div>
             </div>
         </footer>

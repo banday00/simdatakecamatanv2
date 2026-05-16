@@ -55,8 +55,9 @@ function BantuanSection({ assistance, kelurahans, selectedKelurahan }: { assista
     const kelMap = useMemo(() => new Map(kelurahans.map(k => [k.id, k.nama])), [kelurahans]);
     const filteredData = useMemo(() => selectedKelurahan ? assistance.filter(d => d.kelurahan_id === selectedKelurahan) : assistance, [assistance, selectedKelurahan]);
 
-    const totalPenerima = filteredData.reduce((acc, curr) => acc + (curr.jumlah_penerima || 0), 0);
-    const totalAnggaran = filteredData.reduce((acc, curr) => acc + (curr.total_anggaran || 0), 0);
+    const totalPenerima = filteredData.reduce((acc, curr) => acc + (Number(curr.jumlah_penerima) || 0), 0);
+    const totalAnggaran = filteredData.reduce((acc, curr) => acc + (Number(curr.total_anggaran) || 0), 0);
+    const fmtAnggaran = (v: number) => v >= 1e9 ? `Rp ${(v / 1e9).toFixed(2)} M` : v >= 1e6 ? `Rp ${(v / 1e6).toFixed(1)} Jt` : `Rp ${v.toLocaleString("id-ID")}`;
     const totalTersalurkan = filteredData.filter(d => d.status_penyaluran === "Tersalurkan").length;
     const persentaseTersalurkan = filteredData.length > 0 ? (totalTersalurkan / filteredData.length * 100).toFixed(1) : "0.0";
     // Rata-rata realisasi distribusi fisik (pct_tersalurkan field)
@@ -107,7 +108,7 @@ function BantuanSection({ assistance, kelurahans, selectedKelurahan }: { assista
         <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard label="Total Penerima" value={totalPenerima.toLocaleString("id-ID")} sub="Keluarga Penerima Manfaat" icon={Users} color="bg-indigo-50 text-indigo-600" border="border-indigo-100" />
-                <KpiCard label="Total Anggaran" value={`Rp ${(totalAnggaran / 1000000000).toFixed(1)} M`} icon={Banknote} color="bg-emerald-50 text-emerald-600" border="border-emerald-100" />
+                <KpiCard label="Total Anggaran" value={fmtAnggaran(totalAnggaran)} icon={Banknote} color="bg-emerald-50 text-emerald-600" border="border-emerald-100" />
                 <KpiCard label="% Status Tersalurkan" value={`${persentaseTersalurkan}%`} sub={`Realisasi rata-rata ${avgPct}%`} icon={HandHeart} color="bg-blue-50 text-blue-600" border="border-blue-100" />
                 <KpiCard label="Program Bantuan" value={typeBarData.length} icon={Heart} color="bg-rose-50 text-rose-600" border="border-rose-100" />
             </div>
@@ -497,14 +498,14 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
     const kelMap = useMemo(() => new Map(kelurahans.map(k => [k.id, k.nama])), [kelurahans]);
     const filteredData = useMemo(() => selectedKelurahan ? housing.filter(d => d.kelurahan_id === selectedKelurahan) : housing, [housing, selectedKelurahan]);
 
-    const totalRTLH = filteredData.reduce((a, c) => a + (c.jumlah_rtlh || 0), 0);
-    const sudahRehab = filteredData.reduce((a, c) => a + (c.sudah_direhabilitasi || 0), 0);
-    const belumRehab = filteredData.reduce((a, c) => a + (c.belum_direhabilitasi || 0), 0);
-    const totalAnggaran = filteredData.reduce((a, c) => a + (c.anggaran_rehabilitasi || 0), 0);
+    const totalRTLH = filteredData.reduce((a, c) => a + (Number(c.jumlah_rtlh) || 0), 0);
+    const sudahRehab = filteredData.reduce((a, c) => a + (Number(c.sudah_direhabilitasi) || 0), 0);
+    const belumRehab = filteredData.reduce((a, c) => a + (Number(c.belum_direhabilitasi) || 0), 0);
+    const totalAnggaran = filteredData.reduce((a, c) => a + (Number(c.anggaran_rehabilitasi) || 0), 0);
     const pctRehab = totalRTLH > 0 ? (sudahRehab / totalRTLH * 100).toFixed(1) : "0.0";
     const years = Array.from(new Set(filteredData.map(d => d.tahun))).sort((a: number, b: number) => b - a);
     const latestYear = years[0] || new Date().getFullYear();
-    const fmtAnggaran = (v: number) => v >= 1e9 ? `Rp ${(v / 1e9).toFixed(2)} M` : `Rp ${(v / 1e6).toFixed(1)} Jt`;
+    const fmtAnggaran = (v: number) => v >= 1e9 ? `Rp ${(v / 1e9).toFixed(2)} M` : v >= 1e6 ? `Rp ${(v / 1e6).toFixed(1)} Jt` : `Rp ${v.toLocaleString("id-ID")}`;
 
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 5;
@@ -600,18 +601,22 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {paginatedData.map((row, i) => {
-                                const pct = row.jumlah_rtlh > 0 ? ((row.sudah_direhabilitasi || 0) / row.jumlah_rtlh) * 100 : 0;
+                                const rowRTLH = Number(row.jumlah_rtlh) || 0;
+                                const rowSudah = Number(row.sudah_direhabilitasi) || 0;
+                                const rowBelum = Number(row.belum_direhabilitasi) || 0;
+                                const rowAnggaran = Number(row.anggaran_rehabilitasi) || 0;
+                                const pct = rowRTLH > 0 ? (rowSudah / rowRTLH) * 100 : 0;
                                 return (
                                     <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                                         <td className="px-5 py-4">
                                             <div className="font-semibold text-slate-800">{kelMap.get(row.kelurahan_id) || "-"}</div>
                                             <div className="text-xs text-slate-500">Tahun {row.tahun}</div>
                                         </td>
-                                        <td className="px-5 py-4 font-bold text-slate-700">{(row.jumlah_rtlh || 0).toLocaleString("id-ID")} Unit</td>
+                                        <td className="px-5 py-4 font-bold text-slate-700">{rowRTLH.toLocaleString("id-ID")} Unit</td>
                                         <td className="px-5 py-4">
                                             <div className="flex items-center justify-between text-xs mb-1">
-                                                <span className="font-medium text-emerald-600">{(row.sudah_direhabilitasi || 0).toLocaleString("id-ID")} Selesai</span>
-                                                <span className="text-slate-500">{(row.belum_direhabilitasi || 0).toLocaleString("id-ID")} Sisa</span>
+                                                <span className="font-medium text-emerald-600">{rowSudah.toLocaleString("id-ID")} Selesai</span>
+                                                <span className="text-slate-500">{rowBelum.toLocaleString("id-ID")} Sisa</span>
                                             </div>
                                             <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                                                 <div className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : pct >= 50 ? 'bg-blue-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(pct, 100)}%` }}></div>
@@ -619,7 +624,7 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
                                             <div className="text-[10px] text-right mt-0.5 font-bold text-slate-500">{pct.toFixed(1)}%</div>
                                         </td>
                                         <td className="px-5 py-4">
-                                            <div className="font-bold text-emerald-600">Rp {row.anggaran_rehabilitasi?.toLocaleString("id-ID") || 0}</div>
+                                            <div className="font-bold text-emerald-600">{fmtAnggaran(rowAnggaran)}</div>
                                             <div className="text-xs text-slate-500">Sumber: {row.sumber_dana || "-"}</div>
                                         </td>
                                     </tr>

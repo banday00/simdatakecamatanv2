@@ -7,7 +7,7 @@ export default async function TenantLandingPage() {
     const tenants = await listActiveTenants();
 
     return (
-        <main className="relative min-h-screen overflow-hidden bg-slate-950 text-white">
+        <main className="relative h-screen w-screen overflow-hidden bg-white text-slate-900">
             <Image
                 src="/img_landingpage.jpg"
                 alt=""
@@ -16,40 +16,37 @@ export default async function TenantLandingPage() {
                 sizes="100vw"
                 className="object-cover"
             />
-            <div className="absolute inset-0 bg-slate-950/65" />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,23,0.72)_0%,rgba(2,6,23,0.36)_48%,rgba(2,6,23,0.82)_100%)]" />
-
-            <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-10 md:px-10">
-                <header className="mx-auto max-w-4xl text-center">
-                    <div className="inline-flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-cyan-100/90">
-                        <Building2 className="h-4 w-4" />
+            <div className="relative mx-auto flex h-full max-w-5xl flex-col items-center justify-center px-4 py-6">
+                <header className="mx-auto max-w-3xl text-center">
+                    <div className="inline-flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-700">
+                        <Building2 className="h-3 w-3" />
                         SIMDATA Kecamatan
                     </div>
-                    <h1 className="mt-5 text-3xl font-extrabold leading-tight md:text-5xl">
+                    <h1 className="mt-3 text-2xl font-extrabold leading-tight text-slate-900 md:text-4xl">
                         Sistem Informasi Manajemen Data Kecamatan
                     </h1>
-                    <p className="mx-auto mt-4 max-w-2xl text-base font-medium leading-relaxed text-slate-100/90 md:text-lg">
+                    <p className="mx-auto mt-2 max-w-lg text-sm font-medium leading-relaxed text-slate-700 md:text-base">
                         Data terhubung, layanan cepat, keputusan tepat.
                     </p>
                 </header>
 
-                <section className="flex flex-1 items-center justify-center py-12">
-                    <div className="grid w-full max-w-5xl grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                <section className="mt-8 flex w-full justify-center">
+                    <div className="grid w-full max-w-xl grid-cols-3 gap-3">
                         {tenants.map((tenant) => (
                             <Link
                                 key={tenant.id}
                                 href={`/${tenant.slug}`}
-                                className="group flex min-h-36 flex-col items-center justify-center rounded-lg border border-white/20 bg-white/10 px-4 py-6 text-center shadow-2xl shadow-black/25 backdrop-blur-md transition-all hover:-translate-y-1 hover:border-cyan-200/70 hover:bg-white/[0.18] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-200"
+                                className="group flex flex-col items-center justify-center rounded-lg border border-slate-200/60 bg-white/80 px-2 py-3 text-center shadow-md shadow-slate-200/50 backdrop-blur-md transition-all hover:-translate-y-1 hover:border-cyan-500/50 hover:bg-white hover:shadow-lg hover:shadow-cyan-100/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-500"
                             >
-                                <div className="flex h-14 w-14 items-center justify-center rounded-full border border-cyan-100/35 bg-cyan-100/15 text-cyan-50 shadow-lg shadow-cyan-950/40 transition-transform group-hover:scale-105">
-                                    <MapPinned className="h-7 w-7" />
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-cyan-200/50 bg-cyan-50 text-cyan-600 shadow-sm shadow-cyan-100/40 transition-transform group-hover:scale-105">
+                                    <MapPinned className="h-4 w-4" />
                                 </div>
-                                <h2 className="mt-4 text-base font-extrabold leading-snug text-white md:text-lg">
-                                    {tenant.nama}
+                                <h2 className="mt-2 text-xs font-bold leading-snug text-slate-900 md:text-sm uppercase">
+                                    {tenant.nama.replace(/^Kecamatan\s+/i, '')}
                                 </h2>
-                                <div className="mt-3 flex items-center gap-1 text-xs font-bold uppercase tracking-[0.14em] text-cyan-100/85">
+                                <div className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-700">
                                     Buka
-                                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                                    <ArrowRight className="h-2.5 w-2.5 transition-transform group-hover:translate-x-1" />
                                 </div>
                             </Link>
                         ))}
@@ -57,7 +54,7 @@ export default async function TenantLandingPage() {
                 </section>
 
                 {tenants.length === 0 && (
-                    <div className="mx-auto mb-16 rounded-lg border border-white/15 bg-white/10 px-6 py-5 text-center text-slate-100 backdrop-blur-md">
+                    <div className="mx-auto mt-8 rounded-lg border border-slate-200/60 bg-white/80 px-5 py-3 text-center text-sm text-slate-700 backdrop-blur-md shadow-sm">
                         Belum ada kecamatan aktif yang tersedia.
                     </div>
                 )}
