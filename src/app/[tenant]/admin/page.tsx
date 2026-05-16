@@ -21,8 +21,6 @@ import {
     HandHeart,
     TrendingUp,
     ArrowUpRight,
-    Activity,
-    Calendar,
 } from "lucide-react";
 import {
     BarChart,
@@ -122,35 +120,8 @@ export default function AdminDashboard() {
         { label: "Artikel Berita", value: totalBerita, icon: Newspaper, color: "from-rose-500 to-pink-600", iconBg: "bg-rose-500/20" },
     ];
 
-    const now = new Date();
-    const greetingTime = now.getHours() < 12 ? "Pagi" : now.getHours() < 17 ? "Siang" : "Malam";
-
     return (
         <div className="space-y-6 animate-fade-in">
-            {/* Welcome Banner */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0c1222] via-[#131b30] to-[#0f172a] p-8 text-white">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(59,130,246,0.15),transparent_70%)]" />
-                <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl" />
-                <div className="relative z-10">
-                    <div className="flex items-center gap-2 text-cyan-300 text-xs font-bold uppercase tracking-[0.2em] mb-3">
-                        <Activity className="w-3.5 h-3.5" />
-                        <span>Panel Administrasi</span>
-                    </div>
-                    <h1 className="text-2xl md:text-3xl font-extrabold mb-2">
-                        Selamat {greetingTime} 👋
-                    </h1>
-                    <p className="text-white/50 text-sm max-w-xl">
-                        {tenant?.nama || "Kecamatan"} — Kelola {kelurahans.length} kelurahan, pantau data terintegrasi, dan publikasikan informasi terkini.
-                    </p>
-                    <div className="flex items-center gap-4 mt-5">
-                        <div className="flex items-center gap-2 text-xs text-white/40">
-                            <Calendar className="w-3.5 h-3.5" />
-                            {now.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             {/* Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {statCards.map((stat, i) => {

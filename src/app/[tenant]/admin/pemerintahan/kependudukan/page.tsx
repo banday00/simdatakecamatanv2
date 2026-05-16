@@ -356,7 +356,7 @@ function KependudukanFormModal({
                 className="relative w-full max-w-4xl mx-4 my-8 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
                 style={{ animation: "modalSlideIn 0.3s ease-out" }}
             >
-                <div className="h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shrink-0" />
+                <div className="h-1.5 bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-600 shrink-0" />
 
                 <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 shrink-0">
                     <div className="flex items-center gap-4">
@@ -758,7 +758,7 @@ export default function KependudukanPage() {
 
             <div className="flex flex-col lg:flex-row gap-6">
                 {/* Vertical Sidebar Navigation */}
-                <div className="w-full lg:w-64 shrink-0 space-y-1">
+                <div className="hidden w-full lg:w-64 shrink-0 space-y-1">
                     <h3 className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Kategori Data</h3>
                     <div className="bg-white rounded-2xl border border-slate-100 p-2 shadow-sm flex flex-col gap-1">
                         {TAB_CONFIG.map((tab) => {

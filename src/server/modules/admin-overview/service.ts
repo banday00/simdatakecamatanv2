@@ -44,7 +44,7 @@ export async function getAdminDashboardData(tenantSlug: string) {
 const activityLogQuerySchema = z.object({
     page: z.coerce.number().int().min(0).default(0),
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
-    action: z.enum(["login", "logout", "create", "update", "delete"]).optional(),
+    action: z.enum(["login", "logout", "create", "update", "delete", "backup"]).optional(),
     search: z.string().trim().max(120).optional(),
     dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),

@@ -23,7 +23,7 @@ import {
 
 function requireCanManageUsers(profile: UserProfile, tenantId: string) {
     requireTenantAccess(profile, tenantId);
-    requireRole(profile, ["super_admin", "admin_kecamatan"]);
+    requireRole(profile, ["super_admin"]);
 }
 
 async function assertKelurahanValid(role: UserProfile["role"], kelurahanId: string | null | undefined, tenantId: string) {

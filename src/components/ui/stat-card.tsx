@@ -8,6 +8,7 @@ type StatCardProps = {
     gradient?: string;
     trend?: { value: number; label: string };
     className?: string;
+    size?: "default" | "sm";
 };
 
 export function StatCard({
@@ -17,12 +18,19 @@ export function StatCard({
     gradient = "stat-gradient-blue",
     trend,
     className,
+    size = "default",
 }: StatCardProps) {
+    const compact = size === "sm";
+
     return (
-        <div className={cn("bg-white rounded-2xl border border-gray-100 p-6 shadow-card hover:shadow-elevated transition-all hover:-translate-y-0.5", className)}>
-            <div className="flex items-center justify-between mb-4">
-                <div className={cn("inline-flex p-3 rounded-xl text-white", gradient)}>
-                    <Icon className="w-6 h-6" />
+        <div className={cn(
+            "bg-white rounded-2xl border border-gray-100 shadow-card hover:shadow-elevated transition-all hover:-translate-y-0.5",
+            compact ? "p-4" : "p-6",
+            className
+        )}>
+            <div className={cn("flex items-center justify-between", compact ? "mb-3" : "mb-4")}>
+                <div className={cn("inline-flex rounded-xl text-white", compact ? "p-2.5" : "p-3", gradient)}>
+                    <Icon className={compact ? "w-4 h-4" : "w-6 h-6"} />
                 </div>
                 {trend && (
                     <span className={cn(
@@ -35,8 +43,8 @@ export function StatCard({
                     </span>
                 )}
             </div>
-            <p className="text-3xl font-bold text-gray-900 mb-1">{value}</p>
-            <p className="text-sm text-gray-500">{label}</p>
+            <p className={cn("font-bold text-gray-900 mb-1", compact ? "text-2xl" : "text-3xl")}>{value}</p>
+            <p className={cn("text-gray-500", compact ? "text-xs" : "text-sm")}>{label}</p>
             {trend && <p className="text-xs text-gray-400 mt-0.5">{trend.label}</p>}
         </div>
     );

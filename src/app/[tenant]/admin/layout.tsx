@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/context";
@@ -36,6 +37,7 @@ import {
     Loader2,
     Save,
     Activity,
+    DatabaseBackup,
 } from "lucide-react";
 
 const navGroups = [
@@ -136,6 +138,7 @@ const navGroups = [
         title: "PENGATURAN",
         items: [
             { label: "Pengguna", href: "/admin/pengguna", icon: Users },
+            { label: "Backup database", href: "/admin/backup-database", icon: DatabaseBackup },
             { label: "Log Aktivitas", href: "/admin/log-aktivitas", icon: Activity },
         ],
     },
@@ -170,8 +173,8 @@ function SidebarItem({ item, pathname, searchString, toTenantPath }: { item: Nav
                 className={cn(
                     "flex items-center gap-3 w-full px-3 py-2 rounded-lg text-[13px] transition-all duration-150",
                     isActive
-                        ? "bg-white/10 text-white font-semibold"
-                        : "text-slate-400 hover:text-white hover:bg-white/5"
+                        ? "bg-sky-100 text-sky-900 font-semibold shadow-sm"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                 )}
                 onClick={(e) => {
                     if (hasChildren) {
@@ -192,7 +195,7 @@ function SidebarItem({ item, pathname, searchString, toTenantPath }: { item: Nav
                 )}
             </Link>
             {hasChildren && open && (
-                <div className="ml-9 mt-0.5 space-y-0.5 border-l border-white/5 pl-3">
+                <div className="ml-9 mt-0.5 space-y-0.5 border-l border-slate-200 pl-3">
                     {(item as any).children.map((child: any) => (
                         <Link
                             key={child.href}
@@ -200,8 +203,8 @@ function SidebarItem({ item, pathname, searchString, toTenantPath }: { item: Nav
                             className={cn(
                                 "block px-3 py-1.5 rounded-md text-[12px] transition-colors",
                                 isHrefActive(child.href)
-                                    ? "text-cyan-300 font-semibold bg-white/5"
-                                    : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                                    ? "bg-sky-50 text-sky-800 font-semibold"
+                                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
                             )}
                         >
                             {child.label}
@@ -341,23 +344,30 @@ function AdminLayoutInner({
             {/* Sidebar */}
             <aside
                 className={cn(
-                    "fixed lg:static inset-y-0 left-0 z-50 w-[260px] bg-[#0c1222] flex flex-col transition-transform duration-300 lg:translate-x-0 border-r border-white/5",
+                    "fixed lg:static inset-y-0 left-0 z-50 w-[260px] bg-white flex flex-col transition-transform duration-300 lg:translate-x-0 border-r border-slate-200 shadow-sm",
                     sidebarOpen ? "translate-x-0" : "-translate-x-full"
                 )}
             >
                 {/* Logo */}
-                <div className="flex items-center gap-3 px-5 py-5 border-b border-white/5">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                        <BarChart3 className="w-5 h-5 text-white" />
+                <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-200">
+                    <div className="flex h-9 w-9 items-center justify-center shrink-0">
+                        <Image
+                            src="/bogor.png"
+                            alt="Logo Kabupaten Bogor"
+                            width={28}
+                            height={28}
+                            className="h-7 w-7 object-contain"
+                            priority
+                        />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h1 className="text-sm font-bold text-white tracking-tight">SIMDATA Kecamatan</h1>
+                        <h1 className="text-sm font-bold text-slate-900 tracking-tight">SIMDATA Kecamatan</h1>
                         <p className="text-[10px] text-slate-500 truncate uppercase tracking-widest">
                             {tenant?.nama || "Dashboard"}
                         </p>
                     </div>
                     <button
-                        className="lg:hidden text-slate-500 hover:text-white"
+                        className="lg:hidden text-slate-400 hover:text-slate-700"
                         onClick={() => setSidebarOpen(false)}
                     >
                         <X className="w-5 h-5" />
@@ -369,7 +379,10 @@ function AdminLayoutInner({
                     {navGroups.map((group) => {
                         // Filter items based on role
                         const visibleItems = group.items.filter(item => {
-                            if (item.label === "Pengaturan" || item.label === "Log Aktivitas") {
+                            if (item.label === "Pengguna" || item.label === "Backup database") {
+                                return profile?.role === "super_admin";
+                            }
+                            if (item.label === "Log Aktivitas") {
                                 return profile?.role === "admin_kecamatan" || profile?.role === "super_admin";
                             }
                             return true;
@@ -379,7 +392,7 @@ function AdminLayoutInner({
 
                         return (
                             <div key={group.title}>
-                                <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-600">
+                                <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
                                     {group.title}
                                 </p>
                                 <div className="space-y-0.5">

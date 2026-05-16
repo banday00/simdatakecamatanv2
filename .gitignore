@@ -12,6 +12,7 @@
 /tools/
 /docs/
 /backup/
+/backupdb/
 /supabase/
 
 # production

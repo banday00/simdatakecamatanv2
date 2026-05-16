@@ -22,7 +22,7 @@ export async function requireCurrentProfile(): Promise<UserProfile> {
 }
 
 export function canManageUsers(role: UserProfile["role"] | undefined) {
-    return role === "super_admin" || role === "admin_kecamatan";
+    return role === "super_admin";
 }
 
 export function canAccessTenant(profile: UserProfile | null, tenantId: string) {

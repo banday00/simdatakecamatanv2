@@ -167,8 +167,7 @@ function LoginForm() {
         <div className="relative w-full max-w-[380px] z-10">
             {/* Card */}
             <div className="relative bg-white border border-slate-200/80 rounded-3xl shadow-xl shadow-slate-200/60 overflow-hidden">
-                {/* Gradient accent top */}
-                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+
 
                 <div className="p-7">
                     {/* Header */}
@@ -363,7 +362,7 @@ function LoginForm() {
 
                     {/* Footer */}
                     <p className="text-center text-slate-400 text-[11px] mt-6 leading-relaxed">
-                        Sistem Informasi Data Kecamatan Terpadu
+                        Sistem Informasi Manajemen Data
                         <br />
                         <span className="text-slate-300">© 2026 SIMDATA KECAMATAN — {tenant?.nama || "Kota Bogor"}</span>
                     </p>

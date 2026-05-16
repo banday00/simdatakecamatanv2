@@ -81,7 +81,7 @@ export default function PenggunaAdminPage() {
     const [deleteRow, setDeleteRow] = useState<UserRow | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const isAuthorized = profile?.role === "admin_kecamatan" || profile?.role === "super_admin";
+    const isAuthorized = profile?.role === "super_admin";
 
     const fetchUsers = useCallback(async () => {
         if (!tenant?.slug || !isAuthorized) return;
@@ -185,6 +185,11 @@ export default function PenggunaAdminPage() {
 
     async function handleDelete() {
         if (!deleteRow || !tenant?.slug) return;
+        if (deleteRow.id === profile?.id) {
+            setDeleteRow(null);
+            alert("Tidak bisa menghapus akun sendiri.");
+            return;
+        }
         setIsSubmitting(true);
         try {
             const res = await fetch(`/api/tenants/${tenant.slug}/admin/users/${deleteRow.id}`, { method: "DELETE" });
@@ -206,11 +211,11 @@ export default function PenggunaAdminPage() {
                 description="Kelola akun admin kecamatan dan kelurahan"
             />
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Pengguna" value={totalUsers} icon={Users} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Admin Kecamatan" value={adminKec} icon={ShieldCheck} gradient="stat-gradient-soft-indigo" />
-                <StatCard label="Admin Kelurahan" value={adminKel} icon={Shield} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="Pengguna Aktif" value={activeUsers} icon={UserCheck} gradient="stat-gradient-soft-amber" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatCard size="sm" label="Total Pengguna" value={totalUsers} icon={Users} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Admin Kecamatan" value={adminKec} icon={ShieldCheck} gradient="stat-gradient-soft-indigo" />
+                <StatCard size="sm" label="Admin Kelurahan" value={adminKel} icon={Shield} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Pengguna Aktif" value={activeUsers} icon={UserCheck} gradient="stat-gradient-soft-amber" />
             </div>
 
             <DataTable<UserRow>
@@ -219,7 +224,13 @@ export default function PenggunaAdminPage() {
                 isLoading={isLoading}
                 onAdd={() => { setEditRow(null); setModalOpen(true); }}
                 onEdit={(row) => { setEditRow(row); setModalOpen(true); }}
-                onDelete={(row) => setDeleteRow(row)}
+                onDelete={(row) => {
+                    if (row.id === profile?.id) {
+                        alert("Tidak bisa menghapus akun sendiri.");
+                        return;
+                    }
+                    setDeleteRow(row);
+                }}
                 addLabel="Tambah Pengguna"
             />
 

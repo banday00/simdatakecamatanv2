@@ -40,6 +40,7 @@ const ACTION_CONFIG: Record<string, { label: string; color: string; bg: string; 
     create: { label: "Tambah", color: "text-emerald-700", bg: "bg-emerald-100", icon: "➕" },
     update: { label: "Edit",   color: "text-amber-700",   bg: "bg-amber-100",   icon: "✏️" },
     delete: { label: "Hapus",  color: "text-red-700",     bg: "bg-red-100",     icon: "🗑️" },
+    backup: { label: "Backup", color: "text-indigo-700",  bg: "bg-indigo-100",  icon: "DB" },
 };
 
 const PAGE_SIZE = 20;
@@ -170,6 +171,7 @@ export default function LogAktivitasPage() {
                             <option value="create">Tambah</option>
                             <option value="update">Edit</option>
                             <option value="delete">Hapus</option>
+                            <option value="backup">Backup</option>
                         </select>
                     </div>
 
