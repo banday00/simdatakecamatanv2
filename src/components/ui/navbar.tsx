@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useTenantPath } from "@/lib/tenant/use-tenant-path";
 import {
     BarChart3, MapPin, Newspaper, Shield, ChevronDown, HelpCircle,
     Landmark, Heart, GraduationCap, Hammer, HandHeart, ShieldCheck, TrendingUp, LayoutGrid,
@@ -79,6 +80,7 @@ const LAYANAN_ITEMS = [
 ];
 
 export function Navbar() {
+    const toTenantPath = useTenantPath();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [topikOpen, setTopikOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -123,9 +125,9 @@ export function Navbar() {
     return (
         <nav className="relative z-50 flex items-center justify-between px-8 md:px-12 py-5 w-full">
             <div className="flex items-center gap-3">
-                <Link href="/" className="flex items-center gap-2.5 group">
+                <Link href={toTenantPath("/")} className="flex items-center gap-2.5 group">
                     <img
-                        src="https://svc-supabase.kotabogor.go.id/storage/v1/object/public/public/logo_pemkot.png"
+                        src="/favicon-32x32.png"
                         alt="Logo Pemkot Bogor"
                         className="w-8 h-9 object-contain group-hover:scale-105 transition-transform drop-shadow-lg"
                     />
@@ -179,7 +181,7 @@ export function Navbar() {
                                     return (
                                         <Link
                                             key={item.href}
-                                            href={item.href}
+                                            href={toTenantPath(item.href)}
                                             onClick={() => setTopikOpen(false)}
                                             className="group flex items-start gap-3 p-3.5 rounded-xl hover:bg-white/8 transition-all"
                                         >
@@ -248,7 +250,7 @@ export function Navbar() {
                                     return (
                                         <Component
                                             key={item.href}
-                                            href={item.href}
+                                            href={isExternal ? item.href : toTenantPath(item.href)}
                                             {...extraProps}
                                             onClick={() => setLayananOpen(false)}
                                             className="group flex items-start gap-3 p-3.5 rounded-xl hover:bg-white/8 transition-all"
@@ -287,13 +289,13 @@ export function Navbar() {
                     <Newspaper className="w-4 h-4" /> Berita
                 </Link> */}
                 <Link
-                    href="/faq"
+                    href={toTenantPath("/faq")}
                     className="hidden sm:flex items-center gap-1.5 px-4 py-2 text-sm text-slate-200 hover:text-white rounded-lg hover:bg-white/10 transition-all border border-transparent hover:border-white/10"
                 >
                     <HelpCircle className="w-4 h-4" /> FAQ
                 </Link>
                 <Link
-                    href="/login"
+                    href={toTenantPath("/login")}
                     className="hidden sm:flex px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-gold-500 to-gold-600 text-white hover:from-gold-400 hover:to-gold-500 transition-all shadow-lg shadow-gold-500/20 items-center gap-2"
                 >
                     <Shield className="w-4 h-4" />
@@ -319,7 +321,7 @@ export function Navbar() {
                             {TOPIK_ITEMS.map((item) => (
                                 <Link
                                     key={item.href}
-                                    href={item.href}
+                                    href={toTenantPath(item.href)}
                                     onClick={() => setMobileMenuOpen(false)}
                                     className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 transition-colors"
                                 >
@@ -344,7 +346,7 @@ export function Navbar() {
                                 return (
                                     <Component
                                         key={item.href}
-                                        href={item.href}
+                                        href={isExternal ? item.href : toTenantPath(item.href)}
                                         {...extraProps}
                                         onClick={() => setMobileMenuOpen(false)}
                                         className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 transition-colors"
@@ -362,14 +364,14 @@ export function Navbar() {
                     {/* FAQ & Login */}
                     <div className="border-t border-white/10 pt-4 flex flex-col gap-2">
                         <Link
-                            href="/faq"
+                            href={toTenantPath("/faq")}
                             onClick={() => setMobileMenuOpen(false)}
                             className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 transition-colors text-slate-200 text-sm font-semibold"
                         >
                             <HelpCircle className="w-4 h-4" /> FAQ
                         </Link>
                         <Link
-                            href="/login"
+                            href={toTenantPath("/login")}
                             onClick={() => setMobileMenuOpen(false)}
                             className="mt-2 flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold rounded-xl bg-gradient-to-r from-gold-500 to-gold-600 text-white shadow-lg"
                         >

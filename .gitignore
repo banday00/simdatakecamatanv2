@@ -6,6 +6,13 @@
 # next.js
 /.next/
 /out/
+/public/sw.js
+/uploads/
+/tmp/
+/tools/
+/docs/
+/backup/
+/supabase/
 
 # production
 /build

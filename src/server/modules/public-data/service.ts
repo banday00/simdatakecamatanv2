@@ -1,0 +1,313 @@
+import "server-only";
+
+import type { QueryResultRow } from "pg";
+import { pool } from "@/db/client";
+import { getTenantBySlug } from "@/server/db/tenant";
+
+async function rows<T extends QueryResultRow = Record<string, unknown>>(sql: string, values: unknown[] = []) {
+    const result = await pool.query<T>(sql, values);
+    return result.rows;
+}
+
+async function one<T extends QueryResultRow = Record<string, unknown>>(sql: string, values: unknown[] = []) {
+    const result = await pool.query<T>(sql, values);
+    return result.rows[0] ?? null;
+}
+
+export async function getPublicKesehatanData(tenantSlug: string) {
+    const tenant = await getTenantBySlug(tenantSlug);
+    const [facilities, stunting, posyandu, maternal] = await Promise.all([
+        rows(
+            `SELECT hf.*, COALESCE(rjfk.nama, 'Lainnya') AS jenis_nama
+             FROM health_facilities hf
+             LEFT JOIN ref_jenis_fasilitas_kesehatan rjfk ON rjfk.id = hf.jenis_id
+             WHERE hf.tenant_id = $1
+             ORDER BY hf.created_at DESC, hf.nama ASC`,
+            [tenant.id]
+        ),
+        rows(
+            `SELECT *
+             FROM health_stunting_agregat_view
+             WHERE tenant_id = $1
+             ORDER BY tahun DESC, bulan DESC`,
+            [tenant.id]
+        ),
+        rows(
+            `SELECT *
+             FROM health_posyandu
+             WHERE tenant_id = $1
+             ORDER BY created_at DESC, nama ASC`,
+            [tenant.id]
+        ),
+        rows(
+            `SELECT *
+             FROM health_maternal
+             WHERE tenant_id = $1
+             ORDER BY created_at DESC, tahun DESC`,
+            [tenant.id]
+        ),
+    ]);
+
+    return { facilities, stunting, posyandu, maternal };
+}
+
+export async function getPublicKelurahans(tenantSlug: string) {
+    const tenant = await getTenantBySlug(tenantSlug);
+    return rows(
+        `SELECT *
+         FROM kelurahans
+         WHERE tenant_id = $1 AND is_active = true
+         ORDER BY nama ASC`,
+        [tenant.id]
+    );
+}
+
+export async function getPublicPendidikanData(tenantSlug: string) {
+    const tenant = await getTenantBySlug(tenantSlug);
+    const [facilities, participation] = await Promise.all([
+        rows(
+            `SELECT *
+             FROM edu_facilities
+             WHERE tenant_id = $1
+             ORDER BY created_at DESC, nama ASC`,
+            [tenant.id]
+        ),
+        rows(
+            `SELECT *
+             FROM edu_participation
+             WHERE tenant_id = $1
+             ORDER BY created_at DESC, tahun DESC`,
+            [tenant.id]
+        ),
+    ]);
+
+    return { facilities, participation };
+}
+
+export async function getPublicEkonomiData(tenantSlug: string) {
+    const tenant = await getTenantBySlug(tenantSlug);
+    const [sectors, facilities, potentials] = await Promise.all([
+        rows(
+            `SELECT ebs.*, COALESCE(rlu.nama, 'Lainnya') AS sektor
+             FROM econ_business_sectors ebs
+             LEFT JOIN ref_lapangan_usaha rlu ON rlu.id = ebs.sektor_id
+             WHERE ebs.tenant_id = $1
+             ORDER BY ebs.created_at DESC, ebs.tahun DESC`,
+            [tenant.id]
+        ),
+        rows(
+            `SELECT ef.*, COALESCE(res.nama, '-') AS jenis_nama
+             FROM econ_facilities ef
+             LEFT JOIN ref_ekonomi_sarana res ON res.id = ef.jenis_id
+             WHERE ef.tenant_id = $1
+             ORDER BY ef.created_at DESC, ef.nama ASC`,
+            [tenant.id]
+        ),
+        rows(
+            `SELECT ep.*, COALESCE(rlu.nama, '-') AS jenis_usaha
+             FROM econ_potential ep
+             LEFT JOIN ref_lapangan_usaha rlu ON rlu.id = ep.jenis_usaha_id
+             WHERE ep.tenant_id = $1
+             ORDER BY ep.created_at DESC, ep.nama_usaha ASC`,
+            [tenant.id]
+        ),
+    ]);
+
+    return { sectors, facilities, potentials };
+}
+
+export async function getPublicInfrastrukturData(tenantSlug: string) {
+    const tenant = await getTenantBySlug(tenantSlug);
+    const [sanitation, development, sports] = await Promise.all([
+        rows(
+            `SELECT *
+             FROM infra_sanitation
+             WHERE tenant_id = $1
+             ORDER BY created_at DESC, tahun DESC`,
+            [tenant.id]
+        ),
+        rows(
+            `SELECT *
+             FROM infra_development
+             WHERE tenant_id = $1
+             ORDER BY created_at DESC, tahun DESC`,
+            [tenant.id]
+        ),
+        rows(
+            `SELECT ios.*, COALESCE(rjso.nama, '-') AS jenis_nama
+             FROM infra_sports ios
+             LEFT JOIN ref_jenis_sarana_olahraga rjso ON rjso.id = ios.jenis_id
+             WHERE ios.tenant_id = $1
+             ORDER BY ios.created_at DESC, ios.nama ASC`,
+            [tenant.id]
+        ),
+    ]);
+
+    return { sanitation, development, sports };
+}
+
+export async function getPublicSosialData(tenantSlug: string) {
+    const tenant = await getTenantBySlug(tenantSlug);
+    const [assistance, disability, housing, religious] = await Promise.all([
+        rows(`SELECT * FROM social_assistance WHERE tenant_id = $1 ORDER BY created_at DESC, tahun DESC`, [tenant.id]),
+        rows(`SELECT * FROM social_disability WHERE tenant_id = $1 ORDER BY created_at DESC, tahun DESC`, [tenant.id]),
+        rows(`SELECT * FROM social_rtlh WHERE tenant_id = $1 ORDER BY created_at DESC, tahun DESC`, [tenant.id]),
+        rows(`SELECT * FROM social_religious WHERE tenant_id = $1 ORDER BY created_at DESC, nama ASC`, [tenant.id]),
+    ]);
+
+    return { assistance, disability, housing, religious };
+}
+
+export async function getPublicKetentramanData(tenantSlug: string) {
+    const tenant = await getTenantBySlug(tenantSlug);
+    const [incidents, disasters, cadres] = await Promise.all([
+        rows(`SELECT * FROM security_incidents WHERE tenant_id = $1 ORDER BY created_at DESC, tanggal DESC`, [tenant.id]),
+        rows(`SELECT * FROM security_disaster_zones WHERE tenant_id = $1 ORDER BY created_at DESC, tahun_data DESC`, [tenant.id]),
+        rows(`SELECT * FROM security_cadres WHERE tenant_id = $1 ORDER BY created_at DESC, tahun DESC`, [tenant.id]),
+    ]);
+
+    return { incidents, disasters, cadres };
+}
+
+export async function getPublicPemerintahanData(tenantSlug: string) {
+    const tenant = await getTenantBySlug(tenantSlug);
+    const [
+        periodes, summary,
+        agama, refAgama,
+        goldar, refGoldar,
+        pendidikan, refPendidikan,
+        pekerjaan, refPekerjaan,
+        statusKawin, refStatusKawin,
+        kelompokUmur, refKelompokUmur,
+        umurTunggal,
+        dokumenKtp, dokumenKia, dokumenAkta,
+        lembaga, profiles, organisasi,
+    ] = await Promise.all([
+        rows(`SELECT id, tahun, semester, keterangan FROM gov_ref_periode ORDER BY tahun, semester`),
+        rows(`SELECT id, kelurahan_id, periode_id, jml_penduduk_lk, jml_penduduk_pr, jml_penduduk_total, jml_kk_lk, jml_kk_pr, jml_kk_total FROM gov_fact_populasi_summary WHERE tenant_id = $1`, [tenant.id]),
+        rows(`SELECT id, kelurahan_id, periode_id, agama_id AS dim_id, jml_lk, jml_pr, total FROM gov_fact_populasi_agama WHERE tenant_id = $1`, [tenant.id]),
+        rows(`SELECT id, nama_agama AS nama FROM ref_agama ORDER BY id`),
+        rows(`SELECT id, kelurahan_id, periode_id, goldar_id AS dim_id, jml_lk, jml_pr, total FROM gov_fact_populasi_golongan_darah WHERE tenant_id = $1`, [tenant.id]),
+        rows(`SELECT id, nama_goldar AS nama FROM ref_golongan_darah ORDER BY id`),
+        rows(`SELECT id, kelurahan_id, periode_id, pendidikan_id AS dim_id, jml_lk, jml_pr, total FROM gov_fact_populasi_pendidikan WHERE tenant_id = $1`, [tenant.id]),
+        rows(`SELECT id, jenjang_pendidikan AS nama FROM ref_pendidikan ORDER BY id`),
+        rows(`SELECT id, kelurahan_id, periode_id, pekerjaan_id AS dim_id, jml_lk, jml_pr, total FROM gov_fact_populasi_pekerjaan WHERE tenant_id = $1`, [tenant.id]),
+        rows(`SELECT id, jenis_pekerjaan AS nama FROM ref_pekerjaan ORDER BY id`),
+        rows(`SELECT id, kelurahan_id, periode_id, status_kawin_id AS dim_id, jml_lk, jml_pr, total FROM gov_fact_populasi_status_kawin WHERE tenant_id = $1`, [tenant.id]),
+        rows(`SELECT id, status AS nama FROM ref_status_kawin ORDER BY id`),
+        rows(`SELECT id, kelurahan_id, periode_id, kelompok_umur_id, jml_lk, jml_pr, total FROM gov_fact_populasi_kelompok_umur WHERE tenant_id = $1`, [tenant.id]),
+        rows(`SELECT id, rentang_umur FROM ref_kelompok_umur ORDER BY id`),
+        rows(`SELECT id, kelurahan_id, periode_id, umur, jml_lk, jml_pr, total FROM gov_fact_populasi_umur_tunggal WHERE tenant_id = $1`, [tenant.id]),
+        rows(`SELECT id, kelurahan_id, periode_id, wajib_ktp_lk, wajib_ktp_pr, wajib_ktp_total, punya_ktp_lk, punya_ktp_pr, punya_ktp_total FROM gov_fact_dokumen_ktp WHERE tenant_id = $1`, [tenant.id]),
+        rows(`SELECT id, kelurahan_id, periode_id, wajib_kia_lk, wajib_kia_pr, wajib_kia_total, punya_kia_lk, punya_kia_pr, punya_kia_total FROM gov_fact_dokumen_kia WHERE tenant_id = $1`, [tenant.id]),
+        rows(`SELECT id, kelurahan_id, periode_id, penduduk_0_18_lk, penduduk_0_18_pr, penduduk_0_18_total, punya_akta_lk, punya_akta_pr, punya_akta_total FROM gov_fact_dokumen_akta_lahir WHERE tenant_id = $1`, [tenant.id]),
+        rows(`SELECT * FROM gov_institutions WHERE tenant_id = $1 ORDER BY jenis, nama`, [tenant.id]),
+        rows(`SELECT * FROM gov_profiles WHERE tenant_id = $1 ORDER BY tahun DESC`, [tenant.id]),
+        rows(`SELECT * FROM gov_organisasi WHERE tenant_id = $1 AND is_active = true ORDER BY urutan, id`, [tenant.id]),
+    ]);
+
+    return {
+        kData: {
+            periodes, summary,
+            agama, refAgama,
+            goldar, refGoldar,
+            pendidikan, refPendidikan,
+            pekerjaan, refPekerjaan,
+            statusKawin, refStatusKawin,
+            kelompokUmur, refKelompokUmur,
+            umurTunggal,
+            dokumenKtp, dokumenKia, dokumenAkta,
+        },
+        lembaga,
+        profiles,
+        organisasi,
+    };
+}
+
+export async function getPublicHomeData(tenantSlug: string) {
+    const tenant = await getTenantBySlug(tenantSlug);
+    const [
+        counts,
+        populationRows,
+        latestStuntingPeriod,
+        news,
+    ] = await Promise.all([
+        one<{
+            health_count: number;
+            edu_count: number;
+            umkm_count: number;
+            posyandu_count: number;
+            ibadah_count: number;
+            olahraga_count: number;
+            proyek_count: number;
+        }>(
+            `SELECT
+                (SELECT COUNT(*)::int FROM health_facilities WHERE tenant_id = $1) AS health_count,
+                (SELECT COUNT(*)::int FROM edu_facilities WHERE tenant_id = $1) AS edu_count,
+                (SELECT COUNT(*)::int FROM econ_potential WHERE tenant_id = $1 AND status = 'aktif') AS umkm_count,
+                (SELECT COUNT(*)::int FROM health_posyandu WHERE tenant_id = $1) AS posyandu_count,
+                (SELECT COUNT(*)::int FROM social_religious WHERE tenant_id = $1) AS ibadah_count,
+                (SELECT COUNT(*)::int FROM infra_sports WHERE tenant_id = $1) AS olahraga_count,
+                (SELECT COUNT(*)::int FROM infra_development WHERE tenant_id = $1 AND status = 'berjalan') AS proyek_count`,
+            [tenant.id]
+        ),
+        rows<{
+            kelurahan_id: string;
+            jml_penduduk_lk: number;
+            jml_penduduk_pr: number;
+        }>(
+            `SELECT DISTINCT ON (kelurahan_id)
+                    kelurahan_id, jml_penduduk_lk, jml_penduduk_pr
+             FROM gov_fact_populasi_summary
+             WHERE tenant_id = $1
+             ORDER BY kelurahan_id, periode_id DESC`,
+            [tenant.id]
+        ),
+        one<{ tahun: number; bulan: number }>(
+            `SELECT tahun, bulan
+             FROM health_stunting_agregat_view
+             WHERE tenant_id = $1
+             ORDER BY tahun DESC, bulan DESC
+             LIMIT 1`,
+            [tenant.id]
+        ),
+        rows(
+            `SELECT id, judul, slug, ringkasan, gambar, published_at, kategori
+             FROM news_articles
+             WHERE tenant_id = $1 AND status = 'published'
+             ORDER BY published_at DESC
+             LIMIT 3`,
+            [tenant.id]
+        ),
+    ]);
+
+    let stuntingTotal = 0;
+    let stuntingPct = 0;
+    if (latestStuntingPeriod) {
+        const stuntingRows = await rows<{ balita_total: number; balita_stunting: number }>(
+            `SELECT balita_total, balita_stunting
+             FROM health_stunting_agregat_view
+             WHERE tenant_id = $1 AND tahun = $2 AND bulan = $3`,
+            [tenant.id, latestStuntingPeriod.tahun, latestStuntingPeriod.bulan]
+        );
+        const totalBalita = stuntingRows.reduce((sum, row) => sum + (Number(row.balita_total) || 0), 0);
+        stuntingTotal = stuntingRows.reduce((sum, row) => sum + (Number(row.balita_stunting) || 0), 0);
+        const rawPct = totalBalita > 0 ? Math.round((stuntingTotal / totalBalita) * 1000) / 10 : 0;
+        stuntingPct = rawPct < 95 ? rawPct : 0;
+    }
+
+    const stats = {
+        penduduk: populationRows.reduce((sum, row) => sum + (row.jml_penduduk_lk || 0) + (row.jml_penduduk_pr || 0), 0),
+        fasilitas_kesehatan: counts?.health_count ?? 0,
+        sarana_pendidikan: counts?.edu_count ?? 0,
+        umkm: counts?.umkm_count ?? 0,
+        stunting_pct: stuntingPct,
+        stunting_kasus: stuntingTotal,
+        posyandu: counts?.posyandu_count ?? 0,
+        tempat_ibadah: counts?.ibadah_count ?? 0,
+        sarana_olahraga: counts?.olahraga_count ?? 0,
+        proyek_berjalan: counts?.proyek_count ?? 0,
+    };
+
+    return { stats, populationRows, news };
+}

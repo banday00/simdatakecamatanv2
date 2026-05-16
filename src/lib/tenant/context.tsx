@@ -7,7 +7,6 @@ import {
     useEffect,
     type ReactNode,
 } from "react";
-import { createClient } from "@/lib/supabase/client";
 import type { Tenant, Kelurahan } from "@/types";
 
 type TenantContextType = {
@@ -33,52 +32,33 @@ export function TenantProvider({
 }) {
     const [tenant, setTenant] = useState<Tenant | null>(initialTenant ?? null);
     const [kelurahans, setKelurahans] = useState<Kelurahan[]>([]);
-    const [isLoading, setIsLoading] = useState(!initialTenant);
+    const [isLoading, setIsLoading] = useState(!!initialTenant);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (initialTenant) {
-            loadKelurahans(initialTenant.id);
+            setTenant(initialTenant);
+            setError(null);
+            setIsLoading(true);
+            loadKelurahans(initialTenant.slug);
             return;
         }
 
-        async function loadTenant() {
-            try {
-                const supabase = createClient();
-                const slug =
-                    process.env.NEXT_PUBLIC_DEFAULT_TENANT_SLUG || "bogorutara";
-
-                const { data, error: fetchError } = await supabase
-                    .from("tenants")
-                    .select("*")
-                    .eq("slug", slug)
-                    .eq("is_active", true)
-                    .single();
-
-                if (fetchError) throw fetchError;
-                setTenant(data as Tenant);
-                await loadKelurahans(data.id);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "Failed to load tenant");
-            } finally {
-                setIsLoading(false);
-            }
-        }
-
-        loadTenant();
+        setTenant(null);
+        setKelurahans([]);
+        setError("Tenant not set");
+        setIsLoading(false);
     }, [initialTenant]);
 
-    async function loadKelurahans(tenantId: string) {
+    async function loadKelurahans(tenantSlug: string) {
         try {
-            const supabase = createClient();
-            const { data } = await supabase
-                .from("kelurahans")
-                .select("*")
-                .eq("tenant_id", tenantId)
-                .eq("is_active", true)
-                .order("nama");
+            const response = await fetch(`/api/tenants/${tenantSlug}/kelurahans`, { cache: "no-store" });
+            const result = await response.json();
+            if (!response.ok || result.error || !result.data) {
+                throw new Error(result.error?.message ?? "Gagal memuat kelurahan.");
+            }
 
-            setKelurahans((data as Kelurahan[]) || []);
+            setKelurahans((result.data as Kelurahan[]) || []);
         } catch {
             // Non-critical error
         } finally {

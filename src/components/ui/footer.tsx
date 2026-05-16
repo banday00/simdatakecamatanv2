@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { BarChart3, MapPin, Newspaper, GraduationCap, Heart, Landmark, Shield, Hammer, Users, TrendingUp } from "lucide-react";
+import { useTenantPath } from "@/lib/tenant/use-tenant-path";
 
 const navLinks = [
     { label: "BSW", href: "https://bsw.kotabogor.go.id/" },
@@ -24,6 +25,7 @@ import { useTenant } from "@/lib/tenant/context";
 
 export function Footer() {
     const { tenant } = useTenant();
+    const toTenantPath = useTenantPath();
 
     return (
         <footer className="bg-slate-900 text-slate-400 relative">
@@ -32,7 +34,7 @@ export function Footer() {
                     <div className="lg:col-span-1">
                         <div className="flex items-center gap-3 mb-4">
                             <img
-                                src={tenant?.logo || "https://svc-supabase.kotabogor.go.id/storage/v1/object/public/public/logo_pemkot.png"}
+                                src={tenant?.logo || "/favicon-32x32.png"}
                                 alt="Logo Pemkot"
                                 className="w-9 h-10 object-contain drop-shadow-md"
                             />
@@ -97,7 +99,7 @@ export function Footer() {
                         <ul className="space-y-2.5">
                             {dataModules.map((m) => (
                                 <li key={m.href}>
-                                    <Link href={m.href} className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2">
+                                    <Link href={toTenantPath(m.href)} className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2">
                                         <span className="w-1 h-1 rounded-full bg-slate-700"></span>
                                         {m.label}
                                     </Link>

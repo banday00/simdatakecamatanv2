@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Calendar, Newspaper, ArrowRight, User, Tag } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
+import { useTenantPath } from "@/lib/tenant/use-tenant-path";
 
 interface NewsItem {
     id: string;
@@ -16,6 +17,8 @@ interface NewsItem {
 }
 
 export default function NewsCard({ item }: { item: NewsItem }) {
+    const toTenantPath = useTenantPath();
+
     return (
         <div className="group relative flex flex-col h-full bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden hover:-translate-y-1">
             {/* Image Container */}
@@ -57,7 +60,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
 
                 {/* Title */}
                 <h3 className="text-lg font-bold text-slate-800 mb-3 line-clamp-2 leading-tight group-hover:text-primary-600 transition-colors">
-                    <Link href={`/berita/${item.slug}`} className="focus:outline-none">
+                    <Link href={toTenantPath(`/berita/${item.slug}`)} className="focus:outline-none">
                         <span className="absolute inset-0" aria-hidden="true" />
                         {item.judul}
                     </Link>

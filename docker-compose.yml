@@ -1,6 +1,19 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: sidakota-db
+    restart: always
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-sidakota}
+      - POSTGRES_USER=${POSTGRES_USER:-sidakota}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sidakota}
+    volumes:
+      - sidakota-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
   app:
     container_name: sidakota-app
     build:
@@ -10,9 +23,20 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - DATABASE_URL=${DATABASE_URL:-postgres://sidakota:sidakota@db:5432/sidakota}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_URL=${AUTH_URL}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - NEXT_PUBLIC_DEFAULT_TENANT_SLUG=${NEXT_PUBLIC_DEFAULT_TENANT_SLUG}
+      - NEXT_PUBLIC_UPLOAD_BASE_URL=${NEXT_PUBLIC_UPLOAD_BASE_URL:-/uploads}
+      - UPLOAD_DIR=${UPLOAD_DIR:-/app/uploads}
+    volumes:
+      - sidakota-uploads:/app/uploads
+    depends_on:
+      - db
     env_file:
       - .env.local
+
+volumes:
+  sidakota-db-data:
+  sidakota-uploads:

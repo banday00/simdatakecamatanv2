@@ -1,170 +1,173 @@
+import { hash } from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { z } from "zod";
+import { pool } from "@/db/client";
+import { getCurrentProfile, canManageUsers } from "@/lib/auth/server";
 
-// POST — Create a new user (Supabase Auth + user_profiles insert)
+const userRoleSchema = z.enum(["super_admin", "admin_kecamatan", "admin_kelurahan"]);
+
+const createUserSchema = z.object({
+    email: z.email("Email tidak valid.").trim().toLowerCase(),
+    password: z.string().min(8, "Password minimal 8 karakter.").max(128),
+    nama_lengkap: z.string().trim().min(2, "Nama minimal 2 karakter.").max(160),
+    nip: z.string().trim().max(40).nullable().optional(),
+    jabatan: z.string().trim().max(120).nullable().optional(),
+    role: userRoleSchema,
+    kelurahan_id: z.uuid().nullable().optional(),
+    tenant_id: z.uuid("Tenant tidak valid."),
+});
+
+const updatePasswordSchema = z.object({
+    userId: z.uuid("User tidak valid."),
+    password: z.string().min(8, "Password minimal 8 karakter.").max(128),
+});
+
+const deleteUserSchema = z.object({
+    userId: z.uuid("User tidak valid."),
+});
+
 export async function POST(req: NextRequest) {
     try {
-        // Verify the caller is authenticated and has the right role
-        const serverSupa = await createServerSupabaseClient();
-        const { data: { user: caller } } = await serverSupa.auth.getUser();
-        if (!caller) {
+        const callerProfile = await getCurrentProfile();
+        if (!callerProfile) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
-        // Check caller role from user_profiles
-        const { data: callerProfile } = await serverSupa
-            .schema("sidakota")
-            .from("user_profiles")
-            .select("role")
-            .eq("id", caller.id)
-            .single();
-
-        if (!callerProfile || !["super_admin", "admin_kecamatan"].includes(callerProfile.role)) {
+        if (!canManageUsers(callerProfile.role)) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        const body = await req.json();
-        const { email, password, nama_lengkap, nip, jabatan, role, kelurahan_id, tenant_id } = body;
+        const parsed = createUserSchema.safeParse(await req.json().catch(() => ({})));
+        if (!parsed.success) {
+            return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Input tidak valid." }, { status: 400 });
+        }
+        const { email, password, nama_lengkap, nip, jabatan, role, kelurahan_id, tenant_id } = parsed.data;
 
-        if (!email || !password || !nama_lengkap || !role || !tenant_id) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        if (callerProfile.role !== "super_admin" && callerProfile.tenant_id !== tenant_id) {
+            return NextResponse.json({ error: "Cannot create users for another tenant" }, { status: 403 });
+        }
+        if (role === "super_admin" && callerProfile.role !== "super_admin") {
+            return NextResponse.json({ error: "Only super admin can create super admin users" }, { status: 403 });
         }
 
-        // Use admin client to create auth user
-        const adminSupa = createAdminClient();
-        const { data: authData, error: authError } = await adminSupa.auth.admin.createUser({
-            email,
-            password,
-            email_confirm: true,
-            user_metadata: {
-                password_changed_at: null,
-            }
-        });
-
-        if (authError) {
-            return NextResponse.json({ error: authError.message }, { status: 400 });
+        const passwordHash = await hash(password, 12);
+        const client = await pool.connect();
+        try {
+            await client.query("BEGIN");
+            const userResult = await client.query<{ id: string }>(
+                `INSERT INTO users (email, password_hash, password_reset_required)
+                 VALUES ($1, $2, true)
+                 RETURNING id`,
+                [email, passwordHash]
+            );
+            const userId = userResult.rows[0].id;
+            await client.query(
+                `INSERT INTO user_profiles
+                    (id, tenant_id, nama_lengkap, nip, jabatan, role, kelurahan_id, is_active)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, true)`,
+                [
+                    userId,
+                    tenant_id,
+                    nama_lengkap,
+                    nip || null,
+                    jabatan || null,
+                    role,
+                    role === "admin_kelurahan" ? kelurahan_id : null,
+                ]
+            );
+            await client.query("COMMIT");
+            return NextResponse.json({ success: true, userId });
+        } catch (error) {
+            await client.query("ROLLBACK");
+            throw error;
+        } finally {
+            client.release();
         }
-
-        // Insert user_profiles row
-        const { error: profileError } = await adminSupa
-            .schema("sidakota")
-            .from("user_profiles")
-            .insert({
-                id: authData.user.id,
-                tenant_id,
-                nama_lengkap,
-                nip: nip || null,
-                jabatan: jabatan || null,
-                role,
-                kelurahan_id: role === "admin_kelurahan" ? kelurahan_id : null,
-                is_active: true,
-            });
-
-        if (profileError) {
-            // Rollback: delete the auth user if profile insert fails
-            await adminSupa.auth.admin.deleteUser(authData.user.id);
-            return NextResponse.json({ error: profileError.message }, { status: 400 });
-        }
-
-        return NextResponse.json({ success: true, userId: authData.user.id });
-    } catch (err: any) {
-        return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 });
+    } catch (err) {
+        const message = err instanceof Error ? err.message : "Internal Server Error";
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }
 
-// DELETE — Delete a user (Supabase Auth + user_profiles)
 export async function DELETE(req: NextRequest) {
     try {
-        const serverSupa = await createServerSupabaseClient();
-        const { data: { user: caller } } = await serverSupa.auth.getUser();
-        if (!caller) {
+        const callerProfile = await getCurrentProfile();
+        if (!callerProfile) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
-        const { data: callerProfile } = await serverSupa
-            .schema("sidakota")
-            .from("user_profiles")
-            .select("role")
-            .eq("id", caller.id)
-            .single();
-
-        if (!callerProfile || !["super_admin", "admin_kecamatan"].includes(callerProfile.role)) {
+        if (!canManageUsers(callerProfile.role)) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
         const { searchParams } = new URL(req.url);
-        const userId = searchParams.get("userId");
-        if (!userId) {
-            return NextResponse.json({ error: "userId required" }, { status: 400 });
+        const parsed = deleteUserSchema.safeParse({ userId: searchParams.get("userId") });
+        if (!parsed.success) {
+            return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "userId required" }, { status: 400 });
         }
+        const { userId } = parsed.data;
 
-        // Prevent self-deletion
-        if (userId === caller.id) {
+        if (userId === callerProfile.id) {
             return NextResponse.json({ error: "Tidak bisa menghapus akun sendiri" }, { status: 400 });
         }
 
-        const adminSupa = createAdminClient();
-
-        // Delete profile first
-        await adminSupa
-            .schema("sidakota")
-            .from("user_profiles")
-            .delete()
-            .eq("id", userId);
-
-        // Then delete auth user
-        const { error: authError } = await adminSupa.auth.admin.deleteUser(userId);
-        if (authError) {
-            return NextResponse.json({ error: authError.message }, { status: 400 });
+        if (callerProfile.role !== "super_admin") {
+            const target = await pool.query(
+                `SELECT tenant_id, role FROM user_profiles WHERE id = $1 LIMIT 1`,
+                [userId]
+            );
+            const targetProfile = target.rows[0];
+            if (!targetProfile || targetProfile.tenant_id !== callerProfile.tenant_id || targetProfile.role === "super_admin") {
+                return NextResponse.json({ error: "Cannot delete users from another tenant" }, { status: 403 });
+            }
         }
 
+        await pool.query(`DELETE FROM users WHERE id = $1`, [userId]);
         return NextResponse.json({ success: true });
-    } catch (err: any) {
-        return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 });
+    } catch (err) {
+        const message = err instanceof Error ? err.message : "Internal Server Error";
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }
 
-// PATCH — Update an existing user's password
 export async function PATCH(req: NextRequest) {
     try {
-        const serverSupa = await createServerSupabaseClient();
-        const { data: { user: caller } } = await serverSupa.auth.getUser();
-        if (!caller) {
+        const callerProfile = await getCurrentProfile();
+        if (!callerProfile) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
-        const { data: callerProfile } = await serverSupa
-            .schema("sidakota")
-            .from("user_profiles")
-            .select("role")
-            .eq("id", caller.id)
-            .single();
-
-        if (!callerProfile || !["super_admin", "admin_kecamatan"].includes(callerProfile.role)) {
+        if (!canManageUsers(callerProfile.role)) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        const body = await req.json();
-        const { userId, password } = body;
+        const parsed = updatePasswordSchema.safeParse(await req.json().catch(() => ({})));
+        if (!parsed.success) {
+            return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Input tidak valid." }, { status: 400 });
+        }
+        const { userId, password } = parsed.data;
 
-        if (!userId || !password) {
-            return NextResponse.json({ error: "userId and password are required" }, { status: 400 });
+        if (callerProfile.role !== "super_admin") {
+            const target = await pool.query(
+                `SELECT tenant_id, role FROM user_profiles WHERE id = $1 LIMIT 1`,
+                [userId]
+            );
+            const targetProfile = target.rows[0];
+            if (!targetProfile || targetProfile.tenant_id !== callerProfile.tenant_id || targetProfile.role === "super_admin") {
+                return NextResponse.json({ error: "Cannot update users from another tenant" }, { status: 403 });
+            }
         }
 
-        const adminSupa = createAdminClient();
-
-        const { error: authError } = await adminSupa.auth.admin.updateUserById(
-            userId,
-            { password }
+        const passwordHash = await hash(password, 12);
+        await pool.query(
+            `UPDATE users
+             SET password_hash = $1,
+                 password_reset_required = true,
+                 updated_at = now()
+             WHERE id = $2`,
+            [passwordHash, userId]
         );
 
-        if (authError) {
-            return NextResponse.json({ error: authError.message }, { status: 400 });
-        }
-
         return NextResponse.json({ success: true });
-    } catch (err: any) {
-        return NextResponse.json({ error: err.message || "Internal Server Error" }, { status: 500 });
+    } catch (err) {
+        const message = err instanceof Error ? err.message : "Internal Server Error";
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

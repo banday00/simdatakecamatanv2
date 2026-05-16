@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback } from "react";
 import gsap from "gsap";
 
-const IMAGE_HOLD_SECONDS = 0; // Waktu tunggu untuk gambar (2 detik)
+const IMAGE_HOLD_SECONDS = 5; // Waktu tunggu untuk gambar (2 detik)
 const CROSSFADE_DURATION = 1.2; // Durasi transisi fade
 
 export function HeroBackground() {

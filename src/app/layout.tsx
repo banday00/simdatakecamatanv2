@@ -1,6 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { TenantProvider } from "@/lib/tenant/context";
-import { AuthProvider } from "@/lib/auth/context";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -44,9 +42,7 @@ export default function RootLayout({
                 />
             </head>
             <body>
-                <TenantProvider>
-                    <AuthProvider>{children}</AuthProvider>
-                </TenantProvider>
+                {children}
             </body>
         </html>
     );

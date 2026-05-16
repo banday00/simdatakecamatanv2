@@ -1,5 +1,8 @@
+"use client";
+
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { useTenantPath } from "@/lib/tenant/use-tenant-path";
 
 type BreadcrumbItem = {
     label: string;
@@ -19,6 +22,8 @@ export function PageHeader({
     breadcrumbs,
     actions,
 }: PageHeaderProps) {
+    const toTenantPath = useTenantPath();
+
     return (
         <div className="mb-6">
             {/* Breadcrumbs */}
@@ -29,7 +34,7 @@ export function PageHeader({
                             {i > 0 && <ChevronRight className="w-3 h-3" />}
                             {item.href ? (
                                 <Link
-                                    href={item.href}
+                                    href={toTenantPath(item.href)}
                                     className="hover:text-primary-600 transition-colors"
                                 >
                                     {item.label}

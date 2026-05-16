@@ -3,19 +3,16 @@
 import {
     createContext,
     useContext,
-    useState,
-    useEffect,
     type ReactNode,
 } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { logActivity } from "@/lib/activity-logger";
+import { SessionProvider, signIn as nextAuthSignIn, signOut as nextAuthSignOut, useSession } from "next-auth/react";
 import type { UserProfile } from "@/types";
-import type { User, Session } from "@supabase/supabase-js";
+import type { AppSessionUser } from "@/lib/auth/types";
 
 type AuthContextType = {
-    user: User | null;
+    user: AppSessionUser | null;
     profile: UserProfile | null;
-    session: Session | null;
+    session: { user: AppSessionUser } | null;
     isLoading: boolean;
     signIn: (email: string, password: string) => Promise<{ error: string | null; actionRequired?: string }>;
     signOut: () => Promise<void>;
@@ -30,209 +27,84 @@ const AuthContext = createContext<AuthContextType>({
     signOut: async () => { },
 });
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [session, setSession] = useState<Session | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    const supabase = createClient();
-
-    useEffect(() => {
-        // Get initial session
-        supabase.auth.getSession().then(({ data: { session: s } }) => {
-            setSession(s);
-            setUser(s?.user ?? null);
-            if (s?.user) loadProfile(s.user.id);
-            else setIsLoading(false);
+async function logAuthActivity(action: "login" | "logout") {
+    try {
+        await fetch("/api/auth/activity", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action }),
         });
-
-        // Listen for auth changes
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, s) => {
-            setSession(s);
-            setUser(s?.user ?? null);
-            if (s?.user) loadProfile(s.user.id);
-            else {
-                setProfile(null);
-                setIsLoading(false);
-            }
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
-
-    async function loadProfile(userId: string) {
-        try {
-            const { data } = await supabase
-                .from("user_profiles")
-                .select("*")
-                .eq("id", userId)
-                .single();
-
-            setProfile(data as UserProfile | null);
-        } catch {
-            // Profile might not exist yet
-        } finally {
-            setIsLoading(false);
-        }
+    } catch {
+        // Activity logging must never block auth UX.
     }
+}
+
+function AuthContextBridge({ children }: { children: ReactNode }) {
+    const { data, status, update } = useSession();
+    const user = data?.user ?? null;
+    const profile = user?.profile ?? null;
 
     async function signIn(email: string, password: string) {
-        try {
-            // Check lockout first
-            const { data: isLocked } = await supabase.rpc("check_login_lockout", {
-                p_email: email,
-            });
+        const result = await nextAuthSignIn("credentials", {
+            email,
+            password,
+            redirect: false,
+        });
 
-            if (isLocked) {
-                // Log the attempt
-                await supabase.from("login_attempts").insert({
-                    email,
-                    success: false,
-                    failure_reason: "account_locked",
-                });
-                return {
-                    error: "Akun terkunci. Terlalu banyak percobaan login gagal. Coba lagi dalam 15 menit.",
-                    actionRequired: undefined,
-                };
-            }
+        if (result?.error) {
+            return { error: "Email atau password salah.", actionRequired: undefined };
+        }
 
-            const { data: authData, error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
+        const session = await update();
+        const nextUser = session?.user ?? user;
 
-            if (error) {
-                // Log failed attempt
-                await supabase.from("login_attempts").insert({
-                    email,
-                    success: false,
-                    failure_reason: "invalid_password",
-                });
-                return { error: "Email atau password salah.", actionRequired: undefined };
-            }
+        if (nextUser?.profile) {
+            logAuthActivity("login");
+        }
 
-            // Check if user is active
-            if (authData.user) {
-                const { data: profile } = await supabase
-                    .schema("sidakota")
-                    .from("user_profiles")
-                    .select("is_active")
-                    .eq("id", authData.user.id)
-                    .single();
+        if (nextUser?.passwordResetRequired) {
+            return { error: null, actionRequired: "force_change_password" };
+        }
 
-                if (profile && profile.is_active === false) {
-                    // Sign out immediately
-                    await supabase.auth.signOut();
-
-                    // Log failed attempt due to inactive account
-                    await supabase.from("login_attempts").insert({
-                        email,
-                        success: false,
-                        failure_reason: "inactive_account",
-                    });
-
-                    return { error: "Akun Anda telah dinonaktifkan. Silakan hubungi administrator.", actionRequired: undefined };
-                }
-            }
-
-            // Check if user is forced to change password because it is their first login (password_changed_at is strictly null)
-            const passwordChangedAt = authData.user?.user_metadata?.password_changed_at;
-            if (passwordChangedAt === null) {
-                // Log success but flag as needing password reset
-                await supabase.from("login_attempts").insert({
-                    email,
-                    success: true,
-                    failure_reason: "first_login_requires_password_change"
-                });
+        if (nextUser?.passwordChangedAt) {
+            const lastUpdatedDate = new Date(nextUser.passwordChangedAt);
+            const daysSinceUpdate = (Date.now() - lastUpdatedDate.getTime()) / (1000 * 3600 * 24);
+            if (daysSinceUpdate > 365) {
                 return { error: null, actionRequired: "force_change_password" };
             }
-
-            // Check if password has expired (older than 365 days)
-            // If we have passwordChangedAt defined, use it. Otherwise fallback to user.updated_at
-            if (passwordChangedAt) {
-                const lastUpdatedDate = new Date(passwordChangedAt);
-                const daysSinceUpdate = (Date.now() - lastUpdatedDate.getTime()) / (1000 * 3600 * 24);
-
-                if (daysSinceUpdate > 365) {
-                    await supabase.from("login_attempts").insert({
-                        email,
-                        success: true,
-                        failure_reason: "password_expired_requires_change"
-                    });
-                    return { error: null, actionRequired: "force_change_password" };
-                }
-            } else if (authData.user?.updated_at) {
-                const lastUpdatedDate = new Date(authData.user.updated_at);
-                const daysSinceUpdate = (Date.now() - lastUpdatedDate.getTime()) / (1000 * 3600 * 24);
-
-                if (daysSinceUpdate > 365) {
-                    await supabase.from("login_attempts").insert({
-                        email,
-                        success: true,
-                        failure_reason: "password_expired_requires_change"
-                    });
-                    return { error: null, actionRequired: "force_change_password" };
-                }
-            }
-
-            // Log success
-            await supabase.from("login_attempts").insert({
-                email,
-                success: true,
-            });
-
-            // Log activity with IP + user agent
-            const userProfile = authData.user ? await supabase
-                .schema("sidakota")
-                .from("user_profiles")
-                .select("tenant_id, nama_lengkap")
-                .eq("id", authData.user.id)
-                .single() : null;
-
-            logActivity({
-                action: "login",
-                module: "auth",
-                detail: `Login berhasil: ${email}`,
-                userId: authData.user?.id,
-                userEmail: email,
-                userName: userProfile?.data?.nama_lengkap || email,
-                tenantId: userProfile?.data?.tenant_id || undefined,
-            });
-
-            return { error: null, actionRequired: undefined };
-        } catch {
-            return { error: "Terjadi kesalahan. Coba lagi.", actionRequired: undefined };
         }
+
+        return { error: null, actionRequired: undefined };
     }
 
     async function signOut() {
-        // Log logout before clearing session
         if (user && profile) {
-            logActivity({
-                action: "logout",
-                module: "auth",
-                detail: `Logout: ${profile.nama_lengkap || user.email}`,
-                userId: user.id,
-                userEmail: user.email || undefined,
-                userName: profile.nama_lengkap || undefined,
-                tenantId: profile.tenant_id || undefined,
-            });
+            await logAuthActivity("logout");
         }
-        await supabase.auth.signOut();
-        setUser(null);
-        setProfile(null);
-        setSession(null);
+        await nextAuthSignOut({ redirect: false });
     }
 
     return (
         <AuthContext.Provider
-            value={{ user, profile, session, isLoading, signIn, signOut }}
+            value={{
+                user,
+                profile,
+                session: data?.user ? { user: data.user } : null,
+                isLoading: status === "loading",
+                signIn,
+                signOut,
+            }}
         >
             {children}
         </AuthContext.Provider>
+    );
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+    return (
+        <SessionProvider refetchInterval={5 * 60}>
+            <AuthContextBridge>{children}</AuthContextBridge>
+        </SessionProvider>
     );
 }
 
