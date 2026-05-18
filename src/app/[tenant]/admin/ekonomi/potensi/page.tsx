@@ -192,10 +192,10 @@ export default function PotensiPage() {
                 breadcrumbs={[{ label: "Dashboard", href: "/admin" }, { label: "Ekonomi", href: "/admin/ekonomi" }, { label: "Potensi" }]} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total UMKM" value={totalUMKM.toLocaleString("id-ID")} icon={Store} gradient="stat-gradient-soft-blue" />
-                <StatCard label="UMKM Aktif" value={activeUMKM.toLocaleString("id-ID")} icon={TrendingUp} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="Serapan Tenaga Kerja" value={`${totalTK.toLocaleString("id-ID")} org`} icon={Users} gradient="stat-gradient-soft-amber" />
-                <StatCard label="Total Omzet/Bulan" value={`Rp ${totalOmzet >= 1e9 ? (totalOmzet / 1e9).toFixed(1) + " M" : (totalOmzet / 1e6).toFixed(0) + " jt"}`} icon={Banknote} gradient="stat-gradient-soft-rose" />
+                <StatCard size="sm" label="Total UMKM" value={totalUMKM.toLocaleString("id-ID")} icon={Store} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="UMKM Aktif" value={activeUMKM.toLocaleString("id-ID")} icon={TrendingUp} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Serapan Tenaga Kerja" value={`${totalTK.toLocaleString("id-ID")} org`} icon={Users} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Total Omzet/Bulan" value={`Rp ${totalOmzet >= 1e9 ? (totalOmzet / 1e9).toFixed(1) + " M" : (totalOmzet / 1e6).toFixed(0) + " jt"}`} icon={Banknote} gradient="stat-gradient-soft-rose" />
             </div>
 
             <DataTable columns={columns} data={enrichedData} isLoading={isLoading}

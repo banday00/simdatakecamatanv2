@@ -22,7 +22,7 @@ const INDICATORS = [
     { key: "balita", label: "Jumlah Balita", table: "health_stunting", col: "balita_total", color: "#7c3aed" },
     { key: "sanitasi", label: "Sanitasi Layak (%)", table: "infra_sanitation", col: "akses_sanitasi_persen", color: "#059669" },
     { key: "air_bersih", label: "Air Bersih (%)", table: "infra_sanitation", col: "akses_air_bersih_persen", color: "#0ea5e9" },
-    { key: "rtlh", label: "Rumah Tidak Layak", table: "social_rtlh", col: "jumlah_rtlh", color: "#ef4444" },
+    { key: "rtlh", label: "Penerima RTLH", table: "social_rtlh_recipients", col: "jumlah_rtlh", color: "#ef4444" },
 ] as const;
 
 const BAR_COLORS = ["#2563eb", "#059669", "#d97706", "#e11d48", "#7c3aed", "#0891b2"];
@@ -61,7 +61,6 @@ export default function PerbandinganPage() {
             if (!response.ok || result.error || !result.data) {
                 throw new Error(result.error?.message ?? "Gagal memuat data perbandingan.");
             }
-
             setData((result.data.rows as KelData[]) || []);
         } catch (e) {
             console.error("Error", e);
@@ -107,7 +106,6 @@ export default function PerbandinganPage() {
     /* ── Radar data ── */
     const radarData = useMemo(() => {
         if (data.length === 0 || selectedIndicators.length < 3) return [];
-        // Normalize values 0-100 for radar
         const maxVals: Record<string, number> = {};
         for (const key of selectedIndicators) {
             maxVals[key] = Math.max(...data.map((d) => Number(d[key]) || 0), 1);
@@ -155,11 +153,11 @@ export default function PerbandinganPage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Kelurahan" value={kelurahans.length} icon={Users} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Kelurahan Dipilih" value={selectedKels.length} icon={GitCompareArrows} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="Indikator Aktif" value={selectedIndicators.length} icon={GitCompareArrows} gradient="stat-gradient-soft-amber" />
-                <StatCard label="Data Tersedia" value={data.filter((d) => Object.keys(d).length > 2).length} icon={GitCompareArrows} gradient="stat-gradient-soft-rose" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatCard size="sm" label="Total Kelurahan" value={kelurahans.length} icon={Users} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Kelurahan Dipilih" value={selectedKels.length} icon={GitCompareArrows} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Indikator Aktif" value={selectedIndicators.length} icon={GitCompareArrows} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Data Tersedia" value={data.filter((d) => Object.keys(d).length > 2).length} icon={GitCompareArrows} gradient="stat-gradient-soft-rose" />
             </div>
 
             {/* Controls */}

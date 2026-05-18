@@ -76,11 +76,11 @@ export default function KeagamaanPage() {
             <PageHeader title="Sarana Tempat Ibadah" description="Basis data inventarisasi tempat ibadah dan fasilitas keagamaan wilayah."
                 breadcrumbs={[{ label: "Dashboard", href: "/admin" }, { label: "Sosial", href: "/admin/sosial" }, { label: "Keagamaan" }]} />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Sarana Ibadah" value={data.length} icon={Church} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Masjid & Musholla" value={masjid} icon={Building} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="Gereja" value={gereja} icon={MapPin} gradient="stat-gradient-soft-amber" />
-                <StatCard label="Cakupan Kelurahan" value={totalKelurahan} icon={BarChart3} gradient="stat-gradient-soft-rose" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatCard size="sm" label="Total Sarana Ibadah" value={data.length} icon={Church} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Masjid & Musholla" value={masjid} icon={Building} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Gereja" value={gereja} icon={MapPin} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Cakupan Kelurahan" value={totalKelurahan} icon={BarChart3} gradient="stat-gradient-soft-rose" />
             </div>
 
             <DataTable columns={columns} data={enrichedData} isLoading={isLoading}

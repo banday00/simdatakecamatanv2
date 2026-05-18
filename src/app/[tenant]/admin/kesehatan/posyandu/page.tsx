@@ -244,10 +244,10 @@ export default function PosyanduAdminPage() {
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Posyandu" value={totalPosyandu} icon={Heart} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="Strata Mandiri" value={totalMandiri} icon={ShieldCheck} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Total Kader" value={totalKader} icon={Activity} gradient="stat-gradient-soft-indigo" />
-                <StatCard label="Total Sasaran" value={totalSasaran} icon={Target} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Total Posyandu" value={totalPosyandu} icon={Heart} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Strata Mandiri" value={totalMandiri} icon={ShieldCheck} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Total Kader" value={totalKader} icon={Activity} gradient="stat-gradient-soft-indigo" />
+                <StatCard size="sm" label="Total Sasaran" value={totalSasaran} icon={Target} gradient="stat-gradient-soft-amber" />
             </div>
 
             <DataTable

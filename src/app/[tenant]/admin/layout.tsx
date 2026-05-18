@@ -113,6 +113,8 @@ const navGroups = [
                     { label: "Disabilitas", href: "/admin/sosial/disabilitas" },
                     { label: "RTLH", href: "/admin/sosial/perumahan" },
                     { label: "Keagamaan", href: "/admin/sosial/keagamaan" },
+                    { label: "Master Disabilitas", href: "/admin/sosial/master-disabilitas" },
+                    { label: "Master Bantuan", href: "/admin/sosial/master-bantuan" },
                 ],
             },
             {
@@ -121,19 +123,21 @@ const navGroups = [
                     { label: "Kader", href: "/admin/ketentraman/kader" },
                     { label: "Rawan Bencana", href: "/admin/ketentraman/bencana" },
                     { label: "Insiden", href: "/admin/ketentraman/insiden" },
+
                 ],
             },
         ],
     },
     {
-        title: "KONTEN & ANALISIS",
+        title: "ANALISIS",
         items: [
-            { label: "Berita", href: "/admin/berita", icon: Newspaper },
-            { label: "WebGIS", href: "/admin/peta", icon: Map },
+            // { label: "Berita", href: "/admin/berita", icon: Newspaper },
+            // { label: "WebGIS", href: "/admin/peta", icon: Map },
             { label: "Perbandingan", href: "/admin/perbandingan", icon: GitCompareArrows },
             { label: "Analisis Tren", href: "/admin/tren", icon: TrendingUp },
         ],
     },
+
     {
         title: "PENGATURAN",
         items: [

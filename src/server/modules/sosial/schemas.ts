@@ -28,6 +28,11 @@ const nullableLongitude = z.preprocess(
 const nonNegativeInt = z.coerce.number().int().min(0).default(0);
 const money = z.coerce.number().min(0).default(0);
 const percentage = z.coerce.number().min(0).max(100).default(0);
+const shortDigitText = (label: string) =>
+    z.coerce
+        .string()
+        .trim()
+        .regex(/^\d{1,3}$/, `${label} harus berupa 1-3 digit angka.`);
 
 export const bantuanPayloadSchema = z.object({
     kelurahan_id: uuidSchema,
@@ -87,33 +92,13 @@ export const keagamaanPayloadSchema = z.object({
     lokasi: value.lokasi ?? value.alamat,
 }));
 
-export const perumahanPayloadSchema = z.object({
-    kelurahan_id: uuidSchema,
-    tahun: tahunSchema,
-    rtlh_total: nonNegativeInt,
-    rtlh_diperbaiki: nonNegativeInt,
-    anggaran: nullableNumber(),
-    jumlah_rtlh: nonNegativeInt,
-    sudah_direhabilitasi: nonNegativeInt,
-    belum_direhabilitasi: nonNegativeInt,
-    anggaran_rehabilitasi: money,
-    sumber_dana: z.string().trim().min(1, "Sumber dana wajib diisi.").max(120),
-}).transform((value) => {
-    const belum = Math.max(0, value.jumlah_rtlh - value.sudah_direhabilitasi);
-    return {
-        ...value,
-        belum_direhabilitasi: belum,
-        rtlh_total: value.jumlah_rtlh,
-        rtlh_diperbaiki: value.sudah_direhabilitasi,
-        anggaran: value.anggaran_rehabilitasi,
-    };
-});
+// perumahanPayloadSchema: now in dedicated module at src/server/modules/perumahan/schemas.ts
 
 export const sosialResourceSchemas = {
     bantuan: bantuanPayloadSchema,
-    disabilitas: disabilitasPayloadSchema,
+    // disabilitas: now handled by dedicated module
     keagamaan: keagamaanPayloadSchema,
-    perumahan: perumahanPayloadSchema,
+    // perumahan: now handled by dedicated module
 } as const;
 
 export type SosialResource = keyof typeof sosialResourceSchemas;

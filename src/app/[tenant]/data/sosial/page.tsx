@@ -270,10 +270,10 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
             if (searchQuery) {
                 const q = searchQuery.toLowerCase();
                 const kelName = kelMap.get(s.kelurahan_id)?.toLowerCase() || "";
-                return (s.tahun?.toString().includes(q)) || (kelName.includes(q)) || (s.jenis_disabilitas?.toLowerCase().includes(q));
+                return (kelName.includes(q)) || (s.jenis_disabilitas?.toLowerCase().includes(q));
             }
             return true;
-        }).sort((a,b) => b.tahun - a.tahun || a.kelurahan_id.localeCompare(b.kelurahan_id));
+        }).sort((a,b) => a.kelurahan_id.localeCompare(b.kelurahan_id));
     }, [disability, selectedKelurahan, searchQuery, kelMap]);
 
     const totalPages = Math.ceil(filteredTableData.length / ITEMS_PER_PAGE);
@@ -285,8 +285,7 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
     const totalPenyandang = filteredData.reduce((acc, curr) => acc + (curr.jumlah || 0), 0);
     const totalBantuan = filteredData.reduce((acc, curr) => acc + (curr.penerima_bantuan || 0), 0);
     const persentaseBantuan = totalPenyandang > 0 ? (totalBantuan / totalPenyandang * 100).toFixed(1) : "0.0";
-    const years = Array.from(new Set(filteredData.map(d => d.tahun))).sort((a: number, b: number) => b - a);
-    const latestYear = years[0] || new Date().getFullYear();
+    const latestYear = new Date().getFullYear();
 
     // Charts
     const typeBarData = useMemo(() => {
@@ -305,14 +304,7 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
     }, [filteredData]);
 
     const ageBarData = useMemo(() => {
-        const anak = filteredData.reduce((acc, curr) => acc + (curr.usia_anak || 0), 0);
-        const dewasa = filteredData.reduce((acc, curr) => acc + (curr.usia_dewasa || 0), 0);
-        const lansia = filteredData.reduce((acc, curr) => acc + (curr.usia_lansia || 0), 0);
-        return [
-            { name: "Anak (<18)", value: anak },
-            { name: "Dewasa", value: dewasa },
-            { name: "Lansia (>60)", value: lansia }
-        ].filter(d => d.value > 0);
+        return [] as { name: string; value: number }[];
     }, [filteredData]);
 
     const kelTimelineData = useMemo(() => {
@@ -426,10 +418,8 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
                     <table className="w-full text-sm text-left whitespace-nowrap">
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50/80 border-b border-slate-200 font-semibold">
                             <tr>
-                                <th className="px-6 py-4 text-center">Tahun</th>
                                 <th className="px-6 py-4">Kelurahan</th>
                                 <th className="px-6 py-4">Jenis Disabilitas</th>
-                                <th className="px-6 py-4 text-right">Anak/Dewasa/Lansia</th>
                                 <th className="px-6 py-4 text-right">L / P</th>
                                 <th className="px-6 py-4 text-right">Total Kasus</th>
                                 <th className="px-6 py-4 text-right">Penerima Bantuan</th>
@@ -438,9 +428,6 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
                         <tbody className="divide-y divide-slate-100">
                             {paginatedData.map((row, i) => (
                                 <tr key={row.id || i} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="px-6 py-4 text-center">
-                                        <span className="font-mono text-slate-600 bg-slate-100 px-2.5 py-1 rounded text-xs">{row.tahun}</span>
-                                    </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
                                             <MapPin className="w-4 h-4 text-indigo-500" />
@@ -448,9 +435,6 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 font-bold text-slate-700">{row.jenis_disabilitas || "-"}</td>
-                                    <td className="px-6 py-4 text-right font-medium text-slate-600">
-                                        {(row.usia_anak || 0)} / {(row.usia_dewasa || 0)} / {(row.usia_lansia || 0)}
-                                    </td>
                                     <td className="px-6 py-4 text-right font-medium text-slate-600">
                                         <span className="text-blue-600">{(row.laki_laki || 0)} L</span> / <span className="text-pink-600">{(row.perempuan || 0)} P</span>
                                     </td>
@@ -464,7 +448,7 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
                             ))}
                             {filteredTableData.length === 0 && (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
                                         <Search className="w-8 h-8 mx-auto mb-3 text-slate-300" />
                                         <p className="text-sm">Tidak ada data disabilitas</p>
                                     </td>
@@ -498,52 +482,72 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
     const kelMap = useMemo(() => new Map(kelurahans.map(k => [k.id, k.nama])), [kelurahans]);
     const filteredData = useMemo(() => selectedKelurahan ? housing.filter(d => d.kelurahan_id === selectedKelurahan) : housing, [housing, selectedKelurahan]);
 
-    const totalRTLH = filteredData.reduce((a, c) => a + (Number(c.jumlah_rtlh) || 0), 0);
-    const sudahRehab = filteredData.reduce((a, c) => a + (Number(c.sudah_direhabilitasi) || 0), 0);
-    const belumRehab = filteredData.reduce((a, c) => a + (Number(c.belum_direhabilitasi) || 0), 0);
-    const totalAnggaran = filteredData.reduce((a, c) => a + (Number(c.anggaran_rehabilitasi) || 0), 0);
-    const pctRehab = totalRTLH > 0 ? (sudahRehab / totalRTLH * 100).toFixed(1) : "0.0";
-    const years = Array.from(new Set(filteredData.map(d => d.tahun))).sort((a: number, b: number) => b - a);
+    const totalPenerima = filteredData.reduce((total, row) => total + (Number(row.jumlah_penerima) || 0), 0);
+    const totalTunai = filteredData
+        .filter((row) => row.kategori === "Bantuan Sosial Tunai")
+        .reduce((total, row) => total + (Number(row.jumlah_penerima) || 0), 0);
+    const totalTidakTerencana = filteredData
+        .filter((row) => row.kategori === "Bantuan Sosial Tidak Terencana")
+        .reduce((total, row) => total + (Number(row.jumlah_penerima) || 0), 0);
+    const years = Array.from(new Set(filteredData.map((row) => Number(row.tahun) || 0))).filter(Boolean).sort((a: number, b: number) => b - a);
     const latestYear = years[0] || new Date().getFullYear();
-    const fmtAnggaran = (v: number) => v >= 1e9 ? `Rp ${(v / 1e9).toFixed(2)} M` : v >= 1e6 ? `Rp ${(v / 1e6).toFixed(1)} Jt` : `Rp ${v.toLocaleString("id-ID")}`;
 
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 5;
     const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
     const paginatedData = useMemo(() => filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE), [filteredData, currentPage]);
 
-    const danaPieData = useMemo(() => {
-        const s: Record<string, number> = {};
-        filteredData.forEach(d => { const k = d.sumber_dana || "Lainnya"; s[k] = (s[k] || 0) + (d.anggaran_rehabilitasi || 0); });
-        return Object.entries(s).map(([name, value]) => ({ name, value })).filter(d => d.value > 0).sort((a, b) => b.value - a.value);
+    const kategoriPieData = useMemo(() => {
+        const counts: Record<string, number> = {};
+        filteredData.forEach((row) => {
+            const key = row.kategori || "Lainnya";
+            counts[key] = (counts[key] || 0) + (Number(row.jumlah_penerima) || 0);
+        });
+        return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
     }, [filteredData]);
 
     const kelBarData = useMemo(() => {
         if (selectedKelurahan) return [];
-        const c: Record<string, { name: string; Sudah: number; Belum: number; Total: number }> = {};
-        filteredData.forEach(d => {
-            const nama = kelMap.get(d.kelurahan_id);
+        const counts: Record<string, { name: string; Tunai: number; TidakTerencana: number; Total: number }> = {};
+        filteredData.forEach((row) => {
+            const nama = kelMap.get(row.kelurahan_id);
             if (!nama) return;
-            if (!c[nama]) c[nama] = { name: nama, Sudah: 0, Belum: 0, Total: 0 };
-            c[nama].Sudah += (d.sudah_direhabilitasi || 0);
-            c[nama].Belum += (d.belum_direhabilitasi || 0);
-            c[nama].Total += (d.jumlah_rtlh || 0);
+            if (!counts[nama]) counts[nama] = { name: nama, Tunai: 0, TidakTerencana: 0, Total: 0 };
+            const jumlah = Number(row.jumlah_penerima) || 0;
+            if (row.kategori === "Bantuan Sosial Tunai") {
+                counts[nama].Tunai += jumlah;
+            } else {
+                counts[nama].TidakTerencana += jumlah;
+            }
+            counts[nama].Total += jumlah;
         });
-        return Object.values(c).sort((a, b) => b.Total - a.Total).slice(0, 10);
+        return Object.values(counts).sort((a, b) => b.Total - a.Total).slice(0, 10);
     }, [filteredData, kelMap, selectedKelurahan]);
+
+    const yearBarData = useMemo(() => {
+        const counts: Record<number, number> = {};
+        filteredData.forEach((row) => {
+            const year = Number(row.tahun) || 0;
+            if (!year) return;
+            counts[year] = (counts[year] || 0) + (Number(row.jumlah_penerima) || 0);
+        });
+        return Object.entries(counts)
+            .map(([year, value]) => ({ year, value }))
+            .sort((a, b) => Number(a.year) - Number(b.year));
+    }, [filteredData]);
 
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard label="Total RTLH" value={totalRTLH.toLocaleString("id-ID")} sub={`Data tahun ${latestYear}`} icon={HomeIcon} color="bg-amber-50 text-amber-600" border="border-amber-100" />
-                <KpiCard label="Sudah Rehab" value={sudahRehab.toLocaleString("id-ID")} sub="Unit rehabilitasi selesai" icon={HomeIcon} color="bg-emerald-50 text-emerald-600" border="border-emerald-100" />
-                <KpiCard label="Belum Rehab" value={belumRehab.toLocaleString("id-ID")} sub="Menunggu intervensi" icon={Activity} color="bg-rose-50 text-rose-600" border="border-rose-100" />
-                <KpiCard label="Cakupan Rehab" value={`${pctRehab}%`} sub="Sesuai Permen PUPR 13/2018" icon={TrendingUp} color="bg-blue-50 text-blue-600" border="border-blue-100" />
+                <KpiCard label="Total Penerima" value={totalPenerima.toLocaleString("id-ID")} sub={`Agregat data tahun ${latestYear}`} icon={HomeIcon} color="bg-amber-50 text-amber-600" border="border-amber-100" />
+                <KpiCard label="Bansos Tunai" value={totalTunai.toLocaleString("id-ID")} sub="Penerima bantuan terdata" icon={Users} color="bg-emerald-50 text-emerald-600" border="border-emerald-100" />
+                <KpiCard label="Tidak Terencana" value={totalTidakTerencana.toLocaleString("id-ID")} sub="Penerima bantuan insidental" icon={Activity} color="bg-rose-50 text-rose-600" border="border-rose-100" />
+                <KpiCard label="Kategori Aktif" value={kategoriPieData.length.toLocaleString("id-ID")} sub="Jenis dukungan RTLH" icon={TrendingUp} color="bg-blue-50 text-blue-600" border="border-blue-100" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h3 className="text-base font-bold text-slate-800 mb-6">Progress Rehabilitasi RTLH per Kelurahan</h3>
+                    <h3 className="text-base font-bold text-slate-800 mb-6">Sebaran Penerima RTLH per Kelurahan</h3>
                     {kelBarData.length > 0 ? (
                         <div className="h-72">
                             <ResponsiveContainer width="100%" height="100%">
@@ -551,10 +555,10 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                     <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} angle={-45} textAnchor="end" axisLine={false} tickLine={false} dy={10} height={60} interval={0} />
                                     <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toLocaleString("id-ID")} />
-                                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Unit"]} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Penerima"]} />
                                     <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
-                                    <Bar dataKey="Sudah" name="Sudah Rehab" stackId="a" fill="#10b981" maxBarSize={40} />
-                                    <Bar dataKey="Belum" name="Belum Rehab" stackId="a" fill="#f59e0b" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                                    <Bar dataKey="Tunai" name="Bantuan Sosial Tunai" stackId="a" fill="#10b981" maxBarSize={40} />
+                                    <Bar dataKey="TidakTerencana" name="Bantuan Sosial Tidak Terencana" stackId="a" fill="#f59e0b" radius={[6, 6, 0, 0]} maxBarSize={40} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -563,74 +567,79 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
                     )}
                 </div>
                 <div className="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h3 className="text-base font-bold text-slate-800 mb-6">Sumber Dana Rehabilitasi</h3>
+                    <h3 className="text-base font-bold text-slate-800 mb-6">Komposisi Kategori Bantuan</h3>
                     <div className="h-72 relative">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
-                                <Pie data={danaPieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value">
-                                    {danaPieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                                <Pie data={kategoriPieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value">
+                                    {kategoriPieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                                 </Pie>
-                                <Tooltip formatter={(v: number) => fmtAnggaran(v)} contentStyle={{ borderRadius: 8, fontSize: "12px" }} />
+                                <Tooltip formatter={(v: number) => `${v.toLocaleString("id-ID")} penerima`} contentStyle={{ borderRadius: 8, fontSize: "12px" }} />
                                 <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                             </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none pb-6">
                             <div className="text-center">
-                                <span className="block text-xl font-black text-slate-800">{fmtAnggaran(totalAnggaran)}</span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Anggaran</span>
+                                <span className="block text-xl font-black text-slate-800">{totalPenerima.toLocaleString("id-ID")}</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Penerima</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <h3 className="text-base font-bold text-slate-800 mb-6">Tren Penerima RTLH per Tahun</h3>
+                <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={yearBarData} margin={{ top: 10, right: 10, left: -20, bottom: 10 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                            <XAxis dataKey="year" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toLocaleString("id-ID")} />
+                            <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Penerima"]} />
+                            <Bar dataKey="value" name="Penerima" fill="#0f766e" radius={[8, 8, 0, 0]} maxBarSize={52} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                    <h3 className="text-base font-bold text-slate-800">Detail Status RTLH</h3>
-                    <span className="text-xs font-bold text-amber-600 px-3 py-1 bg-amber-100 rounded-lg">{totalRTLH.toLocaleString("id-ID")} RTLH</span>
+                    <h3 className="text-base font-bold text-slate-800">Ringkasan Penerima RTLH</h3>
+                    <span className="text-xs font-bold text-amber-600 px-3 py-1 bg-amber-100 rounded-lg">{totalPenerima.toLocaleString("id-ID")} penerima</span>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100 font-semibold">
                             <tr>
                                 <th className="px-5 py-4">Tahun / Kelurahan</th>
-                                <th className="px-5 py-4">Jumlah RTLH</th>
-                                <th className="px-5 py-4">Progress Rehab</th>
-                                <th className="px-5 py-4">Anggaran & Sumber</th>
+                                <th className="px-5 py-4">Kategori</th>
+                                <th className="px-5 py-4">Jumlah Penerima</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {paginatedData.map((row, i) => {
-                                const rowRTLH = Number(row.jumlah_rtlh) || 0;
-                                const rowSudah = Number(row.sudah_direhabilitasi) || 0;
-                                const rowBelum = Number(row.belum_direhabilitasi) || 0;
-                                const rowAnggaran = Number(row.anggaran_rehabilitasi) || 0;
-                                const pct = rowRTLH > 0 ? (rowSudah / rowRTLH) * 100 : 0;
+                                const totalRow = Number(row.jumlah_penerima) || 0;
                                 return (
                                     <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                                         <td className="px-5 py-4">
                                             <div className="font-semibold text-slate-800">{kelMap.get(row.kelurahan_id) || "-"}</div>
                                             <div className="text-xs text-slate-500">Tahun {row.tahun}</div>
                                         </td>
-                                        <td className="px-5 py-4 font-bold text-slate-700">{rowRTLH.toLocaleString("id-ID")} Unit</td>
                                         <td className="px-5 py-4">
-                                            <div className="flex items-center justify-between text-xs mb-1">
-                                                <span className="font-medium text-emerald-600">{rowSudah.toLocaleString("id-ID")} Selesai</span>
-                                                <span className="text-slate-500">{rowBelum.toLocaleString("id-ID")} Sisa</span>
-                                            </div>
-                                            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                                                <div className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : pct >= 50 ? 'bg-blue-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(pct, 100)}%` }}></div>
-                                            </div>
-                                            <div className="text-[10px] text-right mt-0.5 font-bold text-slate-500">{pct.toFixed(1)}%</div>
+                                            <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                                                row.kategori === "Bantuan Sosial Tunai"
+                                                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                                    : "border-amber-200 bg-amber-50 text-amber-700"
+                                            }`}>
+                                                {row.kategori}
+                                            </span>
                                         </td>
-                                        <td className="px-5 py-4">
-                                            <div className="font-bold text-emerald-600">{fmtAnggaran(rowAnggaran)}</div>
-                                            <div className="text-xs text-slate-500">Sumber: {row.sumber_dana || "-"}</div>
-                                        </td>
+                                        <td className="px-5 py-4 font-bold text-slate-700">{totalRow.toLocaleString("id-ID")} penerima</td>
                                     </tr>
                                 );
                             })}
-                            {paginatedData.length === 0 && <tr><td colSpan={4} className="text-center py-8 text-slate-500">Tidak ada data RTLH.</td></tr>}
+                            {paginatedData.length === 0 && <tr><td colSpan={3} className="text-center py-8 text-slate-500">Tidak ada ringkasan penerima RTLH.</td></tr>}
                         </tbody>
                     </table>
                 </div>
@@ -638,7 +647,7 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
                     <div className="p-5 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">
                         <span className="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
                             <span className="hidden sm:inline">Menampilkan {(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(filteredData.length, currentPage * ITEMS_PER_PAGE)} dari {filteredData.length}</span>
-                            <span className="sm:hidden">{filteredData.length} RTLH</span>
+                            <span className="sm:hidden">{filteredData.length} ringkasan</span>
                         </span>
                         <div className="flex items-center gap-1.5">
                             <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">←</button>
@@ -831,7 +840,7 @@ function AnalisisSection({ assistance, disability, housing, religious, kelurahan
                 kelurahan: nama,
                 bantuan: assistance.filter(d => d.kelurahan_id === k.id).reduce((s, r) => s + (r.jumlah_penerima || 0), 0),
                 disabilitas: disability.filter(d => d.kelurahan_id === k.id).reduce((s, r) => s + (r.jumlah || 0), 0),
-                rtlh_belum: housing.filter(d => d.kelurahan_id === k.id).reduce((s, r) => s + (r.belum_direhabilitasi || 0), 0),
+                rtlh_penerima: housing.filter(d => d.kelurahan_id === k.id).reduce((s, r) => s + (r.jumlah_penerima || 0), 0),
                 tempat_ibadah: religious.filter(d => d.kelurahan_id === k.id).length,
                 skor: 0
             };
@@ -840,13 +849,13 @@ function AnalisisSection({ assistance, disability, housing, religious, kelurahan
         // Calculate scores (1-100 relative to max)
         const maxBantuan = Math.max(...Object.values(stats).map(s => s.bantuan), 1);
         const maxDisabilitas = Math.max(...Object.values(stats).map(s => s.disabilitas), 1);
-        const maxRtlh = Math.max(...Object.values(stats).map(s => s.rtlh_belum), 1);
+        const maxRtlh = Math.max(...Object.values(stats).map(s => s.rtlh_penerima), 1);
         const maxIbadah = Math.max(...Object.values(stats).map(s => s.tempat_ibadah), 1);
 
         Object.values(stats).forEach(s => {
             s.skorBantuan = (s.bantuan / maxBantuan) * 100;
             s.skorDisabilitas = (s.disabilitas / maxDisabilitas) * 100;
-            s.skorRtlh = (s.rtlh_belum / maxRtlh) * 100; // Higher = more un-rehabbed (need more intervention)
+            s.skorRtlh = (s.rtlh_penerima / maxRtlh) * 100;
             s.skorIbadah = (s.tempat_ibadah / maxIbadah) * 100; // Normalizing just for shape
 
             // Composite "Vulnerability" score (higher = needs more attention)
@@ -869,7 +878,7 @@ function AnalisisSection({ assistance, disability, housing, religious, kelurahan
         return [
             { subject: "Beban Bantuan", A: current.skorBantuan, B: avgBantuan, fullMark: 100 },
             { subject: "Beban Disabilitas", A: current.skorDisabilitas, B: avgDisabilitas, fullMark: 100 },
-            { subject: "Kebutuhan RTLH", A: current.skorRtlh, B: avgRtlh, fullMark: 100 },
+            { subject: "Penerima RTLH", A: current.skorRtlh, B: avgRtlh, fullMark: 100 },
             { subject: "Fasilitas Agama", A: current.skorIbadah, B: kelStats.reduce((s, k) => s + k.skorIbadah, 0) / kelStats.length || 0, fullMark: 100 }
         ];
     }, [kelStats, selectedKelurahan, kelMap]);
@@ -896,7 +905,7 @@ function AnalisisSection({ assistance, disability, housing, religious, kelurahan
 
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
                     <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">Indeks Kerentanan Sosial</h3>
-                    <p className="text-sm text-slate-500 mb-4">Skor komposit dari beban bantuan sosial, penyandang disabilitas, dan kebutuhan rehabilitasi RTLH.</p>
+                    <p className="text-sm text-slate-500 mb-4">Skor komposit dari beban bantuan sosial, penyandang disabilitas, dan jumlah penerima bantuan RTLH.</p>
 
                     <div className="flex-1 overflow-auto pr-2 space-y-3">
                         {kelStats.map((k, i) => (
@@ -925,8 +934,8 @@ function AnalisisSection({ assistance, disability, housing, religious, kelurahan
                                         <div className="text-xs font-bold text-slate-700">{k.disabilitas.toLocaleString("id-ID")} org</div>
                                     </div>
                                     <div>
-                                        <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Sisa RTLH</div>
-                                        <div className="text-xs font-bold text-rose-600">{k.rtlh_belum.toLocaleString("id-ID")} unit</div>
+                                        <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">RTLH</div>
+                                        <div className="text-xs font-bold text-rose-600">{k.rtlh_penerima.toLocaleString("id-ID")} warga</div>
                                     </div>
                                     <div>
                                         <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">T. Ibadah</div>
@@ -941,6 +950,16 @@ function AnalisisSection({ assistance, disability, housing, religious, kelurahan
 
             {/* Methodology note */}
             <div className="mt-6 p-5 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-500 leading-relaxed space-y-2">
+                <p className="font-bold text-slate-700 text-sm">Cara Perhitungan Indeks Kerentanan Sosial</p>
+                <p>Indeks ini merupakan skor komposit tertimbang yang mengukur tingkat kebutuhan intervensi sosial suatu kelurahan, skala 0-100:</p>
+                <ul className="list-disc list-inside space-y-1 pl-2">
+                    <li><span className="font-semibold text-slate-700">Beban Bantuan (30%)</span> - Total penerima bantuan sosial relatif terhadap kelurahan dengan penerima tertinggi.</li>
+                    <li><span className="font-semibold text-slate-700">Beban Disabilitas (30%)</span> - Jumlah penyandang disabilitas relatif terhadap kelurahan dengan jumlah tertinggi.</li>
+                    <li><span className="font-semibold text-slate-700">Penerima RTLH (40%)</span> - Jumlah warga penerima bantuan RTLH relatif terhadap kelurahan dengan jumlah tertinggi.</li>
+                </ul>
+                <p className="text-slate-400">Formula: <span className="font-mono bg-slate-100 px-1 rounded">Skor = (Bantuan x 0.3) + (Disabilitas x 0.3) + (RTLH x 0.4)</span>. Skor lebih tinggi berarti kebutuhan intervensi lebih besar.</p>
+            </div>
+            <div className="hidden">
                 <p className="font-bold text-slate-700 text-sm">📊 Cara Perhitungan Indeks Kerentanan Sosial</p>
                 <p>Indeks ini merupakan skor komposit tertimbang yang mengukur tingkat kebutuhan intervensi sosial suatu kelurahan, skala 0–100:</p>
                 <ul className="list-disc list-inside space-y-1 pl-2">

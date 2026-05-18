@@ -1,6 +1,9 @@
 import { NextRequest } from "next/server";
 import { created, handleApiError, ok } from "@/server/http/response";
-import { createAdminHealthResource, listAdminHealthResource } from "@/server/modules/kesehatan/service";
+import {
+    listAdminStuntingChildren,
+    createAdminStuntingMeasurement,
+} from "@/server/modules/kesehatan/stunting-service";
 
 type RouteContext = {
     params: Promise<{ tenant: string }>;
@@ -9,7 +12,7 @@ type RouteContext = {
 export async function GET(_req: NextRequest, context: RouteContext) {
     try {
         const { tenant } = await context.params;
-        return ok(await listAdminHealthResource(tenant, "stuntingBnba"));
+        return ok(await listAdminStuntingChildren(tenant));
     } catch (error) {
         return handleApiError(error);
     }
@@ -18,7 +21,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 export async function POST(req: NextRequest, context: RouteContext) {
     try {
         const { tenant } = await context.params;
-        return created(await createAdminHealthResource(tenant, "stuntingBnba", req));
+        return created(await createAdminStuntingMeasurement(tenant, req));
     } catch (error) {
         return handleApiError(error);
     }

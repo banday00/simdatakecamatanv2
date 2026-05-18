@@ -81,16 +81,17 @@ export default function InsidenPage() {
         catch (err) { alert(err instanceof Error ? err.message : "Gagal menghapus log kejadian."); } finally { setIsSubmitting(false); }
     }
 
+
     return (
         <div className="animate-fade-in space-y-6">
             <PageHeader title="Rekapitulasi Kejadian & Insiden" description="Pencatatan taktis peristiwa kedaruratan bencana, musibah, beserta pelacakan distribusi penanganan korbannya."
                 breadcrumbs={[{ label: "Dashboard", href: "/admin" }, { label: "Ketentraman & Keamanan", href: "/admin/ketentraman" }, { label: "Log Kejadian" }]} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Histori Insiden" value={data.length.toLocaleString("id-ID")} icon={Siren} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Dampak Korban Fisik" value={totalKorban.toLocaleString("id-ID")} icon={Users} gradient="stat-gradient-soft-rose" />
-                <StatCard label="Eskalasi Pengungsi" value={totalPengungsi.toLocaleString("id-ID")} icon={Home} gradient="stat-gradient-soft-amber" />
-                <StatCard label="Kasus Belum Tuntas" value={openCases.toLocaleString("id-ID")} icon={AlertCircle} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Total Histori Insiden" value={data.length.toLocaleString("id-ID")} icon={Siren} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Dampak Korban Fisik" value={totalKorban.toLocaleString("id-ID")} icon={Users} gradient="stat-gradient-soft-rose" />
+                <StatCard size="sm" label="Eskalasi Pengungsi" value={totalPengungsi.toLocaleString("id-ID")} icon={Home} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Kasus Belum Tuntas" value={openCases.toLocaleString("id-ID")} icon={AlertCircle} gradient="stat-gradient-soft-emerald" />
             </div>
 
             <DataTable columns={columns} data={enrichedData} isLoading={isLoading}

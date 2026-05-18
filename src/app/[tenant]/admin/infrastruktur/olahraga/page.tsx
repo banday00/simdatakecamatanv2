@@ -184,10 +184,10 @@ export default function OlahragaPage() {
                 breadcrumbs={[{ label: "Dashboard", href: "/admin" }, { label: "Infrastruktur", href: "/admin/infrastruktur" }, { label: "Olahraga" }]} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Fasilitas" value={rawData.length} icon={Trophy} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Kondisi Baik" value={baikCount} icon={CheckCircle} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="Perlu Perbaikan" value={perbaikanCount} icon={BarChart3} gradient="stat-gradient-soft-amber" />
-                <StatCard label="Jangkauan Kelurahan" value={`${uniqKelCount} kel`} icon={MapPin} gradient="stat-gradient-soft-rose" />
+                <StatCard size="sm" label="Total Fasilitas" value={rawData.length} icon={Trophy} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Kondisi Baik" value={baikCount} icon={CheckCircle} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Perlu Perbaikan" value={perbaikanCount} icon={BarChart3} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Jangkauan Kelurahan" value={`${uniqKelCount} kel`} icon={MapPin} gradient="stat-gradient-soft-rose" />
             </div>
 
             <DataTable columns={columns} data={enrichedData} isLoading={isLoading}

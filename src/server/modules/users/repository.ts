@@ -161,10 +161,26 @@ export async function updateUserPassword(userId: string, passwordHash: string) {
 }
 
 export async function deleteUserById(userId: string) {
-    const result = await pool.query<{ id: string }>(
-        `DELETE FROM users WHERE id = $1 RETURNING id`,
-        [userId]
-    );
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+        await client.query(
+            `UPDATE activity_logs
+             SET user_id = NULL
+             WHERE user_id = $1`,
+            [userId]
+        );
+        const result = await client.query<{ id: string }>(
+            `DELETE FROM users WHERE id = $1 RETURNING id`,
+            [userId]
+        );
+        await client.query("COMMIT");
 
-    return result.rows[0] ?? null;
+        return result.rows[0] ?? null;
+    } catch (error) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw error;
+    } finally {
+        client.release();
+    }
 }

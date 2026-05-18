@@ -60,17 +60,6 @@ export const healthResources: Record<HealthResource, ResourceConfig> = {
         ],
         orderBy: "nama ASC, created_at DESC",
     },
-    stuntingBnba: {
-        table: "health_stunting_bnba",
-        columns: [
-            "id", "tenant_id", "kelurahan_id", "posyandu_id", "nik_anak", "nama_anak",
-            "jenis_kelamin", "tanggal_lahir", "nama_ortu", "alamat", "rt_rw", "tanggal_pengukuran",
-            "berat_badan", "tinggi_badan", "status_tbu", "status_bbu", "intervensi_diterima",
-            "created_at", "updated_at",
-        ],
-        orderBy: "tanggal_pengukuran DESC, nama_anak ASC",
-        updateTimestamp: true,
-    },
 };
 
 function columnList(resource: HealthResource) {

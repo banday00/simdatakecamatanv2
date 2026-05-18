@@ -58,7 +58,7 @@ const trendIndicatorConfigs = {
     prevalensi: { table: "health_stunting", yearCol: "tahun" },
     sanitasi: { table: "infra_sanitation", yearCol: "tahun" },
     air_bersih: { table: "infra_sanitation", yearCol: "tahun" },
-    rtlh: { table: "social_rtlh", yearCol: "tahun" },
+    rtlh: { table: "social_rtlh_recipients", yearCol: "tahun" },  // queries are custom-built below (JOIN through penduduk→keluarga)
     bantuan: { table: "social_assistance", yearCol: "tahun" },
 } as const;
 
@@ -136,9 +136,15 @@ const comparisonIndicatorConfigs = {
     rtlh: {
         column: "jumlah_rtlh",
         sql: `SELECT DISTINCT ON (kelurahan_id) kelurahan_id, jumlah_rtlh AS value
-              FROM social_rtlh
-              WHERE tenant_id = $1 AND kelurahan_id = ANY($2::uuid[])
-              ORDER BY kelurahan_id, tahun DESC, created_at DESC`,
+              FROM (
+                  SELECT k.kelurahan_id, r.tahun, COUNT(*)::int AS jumlah_rtlh
+                  FROM social_rtlh_recipients r
+                  JOIN penduduk p ON p.id = r.penduduk_id
+                  JOIN keluarga k ON k.id = p.keluarga_id
+                  WHERE k.tenant_id = $1 AND k.kelurahan_id = ANY($2::uuid[])
+                  GROUP BY k.kelurahan_id, r.tahun
+              ) rtlh_yearly
+              ORDER BY kelurahan_id, tahun DESC`,
     },
 } as const;
 
@@ -253,12 +259,23 @@ export async function getAdminTrendData(tenantSlug: string, rawQuery: Record<str
     const config = trendIndicatorConfigs[query.indicator];
 
     const [rowsResult, periodesResult] = await Promise.all([
-        pool.query(
-            `SELECT *
-             FROM ${config.table}
-             WHERE tenant_id = $1`,
-            [tenant.id]
-        ),
+        query.indicator === "rtlh"
+            ? pool.query(
+                `SELECT k.kelurahan_id, r.tahun, COUNT(*)::int AS jumlah_rtlh
+                 FROM social_rtlh_recipients r
+                 JOIN penduduk p ON p.id = r.penduduk_id
+                 JOIN keluarga k ON k.id = p.keluarga_id
+                 WHERE k.tenant_id = $1
+                 GROUP BY k.kelurahan_id, r.tahun
+                 ORDER BY r.tahun ASC, k.kelurahan_id ASC`,
+                [tenant.id]
+            )
+            : pool.query(
+                `SELECT *
+                 FROM ${config.table}
+                 WHERE tenant_id = $1`,
+                [tenant.id]
+            ),
         config.yearCol === "periode_id"
             ? pool.query<{ id: number; tahun: number }>(
                 `SELECT id, tahun

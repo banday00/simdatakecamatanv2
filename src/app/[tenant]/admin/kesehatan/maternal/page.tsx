@@ -185,10 +185,10 @@ export default function MaternalAdminPage() {
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Ibu Hamil" value={totalIbuHamil} icon={HeartPulse} gradient="stat-gradient-soft-amber" />
-                <StatCard label="Total Ibu Bersalin" value={totalIbuBersalin} icon={Activity} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Bayi Lahir Hidup" value={totalBayiLahir} icon={Baby} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="Akseptor KB Aktif" value={totalKB} icon={Stethoscope} gradient="stat-gradient-soft-indigo" />
+                <StatCard size="sm" label="Total Ibu Hamil" value={totalIbuHamil} icon={HeartPulse} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Total Ibu Bersalin" value={totalIbuBersalin} icon={Activity} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Bayi Lahir Hidup" value={totalBayiLahir} icon={Baby} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Akseptor KB Aktif" value={totalKB} icon={Stethoscope} gradient="stat-gradient-soft-indigo" />
             </div>
 
             <DataTable

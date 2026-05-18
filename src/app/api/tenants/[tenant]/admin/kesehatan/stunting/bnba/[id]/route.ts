@@ -1,6 +1,9 @@
 import { NextRequest } from "next/server";
 import { handleApiError, ok } from "@/server/http/response";
-import { deleteAdminHealthResource, updateAdminHealthResource } from "@/server/modules/kesehatan/service";
+import {
+    updateAdminStuntingMeasurement,
+    deleteAdminStuntingMeasurement,
+} from "@/server/modules/kesehatan/stunting-service";
 import { uuidSchema } from "@/server/validation/common";
 
 type RouteContext = {
@@ -10,7 +13,7 @@ type RouteContext = {
 export async function PATCH(req: NextRequest, context: RouteContext) {
     try {
         const { tenant, id } = await context.params;
-        return ok(await updateAdminHealthResource(tenant, "stuntingBnba", uuidSchema.parse(id), req));
+        return ok(await updateAdminStuntingMeasurement(tenant, uuidSchema.parse(id), req));
     } catch (error) {
         return handleApiError(error);
     }
@@ -19,7 +22,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 export async function DELETE(req: NextRequest, context: RouteContext) {
     try {
         const { tenant, id } = await context.params;
-        return ok(await deleteAdminHealthResource(tenant, "stuntingBnba", uuidSchema.parse(id), req));
+        return ok(await deleteAdminStuntingMeasurement(tenant, uuidSchema.parse(id), req));
     } catch (error) {
         return handleApiError(error);
     }

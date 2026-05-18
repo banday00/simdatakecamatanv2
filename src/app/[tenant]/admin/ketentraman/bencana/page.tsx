@@ -64,16 +64,17 @@ export default function BencanaPage() {
         catch (err) { alert(err instanceof Error ? err.message : "Gagal menghapus data zona rawan."); } finally { setIsSubmitting(false); }
     }
 
+
     return (
         <div className="animate-fade-in space-y-6">
             <PageHeader title="Peta Kerawanan Bencana" description="Pemetaan zona risiko tinggi, sarana mitigasi, dan infrastruktur kedaruratan wilayah."
                 breadcrumbs={[{ label: "Dashboard", href: "/admin" }, { label: "Ketentraman & Keamanan", href: "/admin/ketentraman" }, { label: "Titik Bencana" }]} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Zonasi Petakan" value={data.length.toLocaleString("id-ID")} icon={MapPin} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Kawasan Risiko Tinggi" value={tinggi.toLocaleString("id-ID")} icon={AlertOctagon} gradient="stat-gradient-soft-rose" />
-                <StatCard label="Kawasan Risiko Sedang" value={sedang.toLocaleString("id-ID")} icon={TriangleAlert} gradient="stat-gradient-soft-amber" />
-                <StatCard label="Estimasi Terdampak" value={totalKK.toLocaleString("id-ID")} icon={Users} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Total Zonasi Petakan" value={data.length.toLocaleString("id-ID")} icon={MapPin} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Kawasan Risiko Tinggi" value={tinggi.toLocaleString("id-ID")} icon={AlertOctagon} gradient="stat-gradient-soft-rose" />
+                <StatCard size="sm" label="Kawasan Risiko Sedang" value={sedang.toLocaleString("id-ID")} icon={TriangleAlert} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Estimasi Terdampak" value={totalKK.toLocaleString("id-ID")} icon={Users} gradient="stat-gradient-soft-emerald" />
             </div>
 
             <DataTable columns={columns} data={data} isLoading={isLoading}

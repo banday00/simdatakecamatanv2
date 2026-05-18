@@ -94,11 +94,11 @@ export default function BantuanSosialPage() {
             <PageHeader title="Bantuan Sosial" description="Data PKH, BPNT, BST, dan distribusi bantuan sosial lainnya"
                 breadcrumbs={[{ label: "Dashboard", href: "/admin" }, { label: "Sosial", href: "/admin/sosial" }, { label: "Bantuan" }]} />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Histori Bantuan" value={data.length} icon={BarChart3} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Total Penerima Bantuan" value={totalPenerima.toLocaleString("id-ID")} icon={Users} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="Total Anggaran" value={`Rp ${(totalAnggaran / 1e9).toFixed(1)} M`} icon={Banknote} gradient="stat-gradient-soft-amber" />
-                <StatCard label="Bantuan Tersalurkan" value={tersalurkan} icon={HandHeart} gradient="stat-gradient-soft-rose" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatCard size="sm" label="Total Histori Bantuan" value={data.length} icon={BarChart3} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Total Penerima Bantuan" value={totalPenerima.toLocaleString("id-ID")} icon={Users} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Total Anggaran" value={`Rp ${(totalAnggaran / 1e9).toFixed(1)} M`} icon={Banknote} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Bantuan Tersalurkan" value={tersalurkan} icon={HandHeart} gradient="stat-gradient-soft-rose" />
             </div>
 
             <DataTable columns={columns} data={enrichedData} isLoading={isLoading}

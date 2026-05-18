@@ -1,35 +1,55 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createPortal } from "react-dom";
 import { useTenant } from "@/lib/tenant/context";
 import { useAuth } from "@/lib/auth/context";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { DeleteConfirm } from "@/components/ui/delete-confirm";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
-import { Baby, AlertTriangle, TrendingDown, Target, X, Loader2, Save, MapPin, Activity, ClipboardList, ListFilter, Plus, Trash2, FileText, Calendar } from "lucide-react";
+import { StuntingFormModal } from "./stunting-form-modal";
+import {
+    Baby, AlertTriangle, TrendingDown, Target,
+    ClipboardList, ListFilter, FileText, Plus,
+    ChevronDown, ChevronUp, Trash2, Edit3, Ruler,
+} from "lucide-react";
 
-type StuntingBNBARow = Record<string, unknown> & {
-    id: string;
-    tenant_id?: string;
+/* ═══ Types ═══ */
+type ChildCard = {
+    penduduk_id: string;
+    nik: string;
+    nama: string;
+    jenis_kelamin: string | null;
+    tanggal_lahir: string | null;
+    nama_ibu_kandung: string | null;
+    no_kk: string | null;
+    alamat: string | null;
+    rt: string | null;
+    rw: string | null;
     kelurahan_id: string;
-    posyandu_id?: string;
-    nik_anak: string;
-    nama_anak: string;
-    jenis_kelamin: "L" | "P";
-    tanggal_lahir: string;
-    nama_ortu: string;
-    alamat?: string;
-    rt_rw?: string;
+    total_pemeriksaan: number;
+    latest_tanggal: string | null;
+    latest_status_tbu: string | null;
+    latest_status_bbu: string | null;
+    latest_berat_badan: number | null;
+    latest_tinggi_badan: number | null;
+};
+
+type MeasurementRow = {
+    id: string;
+    penduduk_id: string;
+    kelurahan_id: string;
+    posyandu_id: string | null;
+    nama_ortu: string | null;
     tanggal_pengukuran: string;
-    berat_badan: number;
-    tinggi_badan: number;
+    berat_badan: number | null;
+    tinggi_badan: number | null;
     status_tbu: string;
     status_bbu: string;
     intervensi_diterima: string[];
 };
-type StuntingRow = Record<string, unknown> & {
+
+type StuntingAgregatRow = {
     id: string;
     kelurahan_id?: string;
     tahun: number;
@@ -40,694 +60,348 @@ type StuntingRow = Record<string, unknown> & {
     balita_gizi_kurang?: number;
 };
 
-const columns: Column<StuntingRow>[] = [
+/* ═══ Agregat Columns ═══ */
+const agregatColumns: Column<StuntingAgregatRow>[] = [
     { key: "kelurahan_nama", label: "Kelurahan", sortable: true },
     { key: "tahun", label: "Tahun", sortable: true },
+    { key: "balita_total", label: "Balita", sortable: true, render: (v) => Number(v ?? 0).toLocaleString("id-ID") },
+    { key: "balita_stunting", label: "Stunting", sortable: true, render: (v) => <span className="font-medium text-red-600">{Number(v ?? 0).toLocaleString("id-ID")}</span> },
     {
-        key: "balita_total",
-        label: "Balita",
-        sortable: true,
-        render: (val) => Number(val ?? 0).toLocaleString("id-ID"),
+        key: "prevalensi", label: "Prevalensi", sortable: true, render: (v) => {
+            const n = Number(v ?? 0);
+            return <span className={`font-semibold ${n > 20 ? "text-red-600" : n > 10 ? "text-amber-600" : "text-green-600"}`}>{n.toFixed(1)}%</span>;
+        }
     },
-    {
-        key: "balita_stunting",
-        label: "Stunting",
-        sortable: true,
-        render: (val) => <span className="font-medium text-red-600">{Number(val ?? 0).toLocaleString("id-ID")}</span>,
-    },
-    {
-        key: "prevalensi",
-        label: "Prevalensi",
-        sortable: true,
-        render: (val) => {
-            const v = Number(val ?? 0);
-            return (
-                <span className={`font-semibold ${v > 20 ? "text-red-600" : v > 10 ? "text-amber-600" : "text-green-600"}`}>
-                    {v.toFixed(1)}%
-                </span>
-            );
-        },
-    },
-    {
-        key: "balita_gizi_buruk",
-        label: "Gizi Buruk",
-        render: (val) => Number(val ?? 0).toLocaleString("id-ID"),
-    },
+    { key: "balita_gizi_buruk", label: "Gizi Buruk", render: (v) => Number(v ?? 0).toLocaleString("id-ID") },
 ];
 
-const bnbaColumns: Column<StuntingBNBARow>[] = [
-    { key: "kelurahan_nama", label: "Kelurahan", sortable: true },
-    { key: "nik_anak", label: "NIK", sortable: true, render: (val) => <span className="font-mono text-xs text-slate-500">{String(val)}</span> },
-    { key: "nama_anak", label: "Nama Anak", sortable: true, render: (val, r) => (
-        <div>
-            <div className="font-semibold text-slate-800">{String(val)}</div>
-            <div className="text-[10px] text-slate-400 capitalize">{r.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'}</div>
-        </div>
-    )},
-    { key: "tanggal_pengukuran", label: "Tgl Pengukuran", sortable: true, render: (val) => <span className="text-sm">{String(val)}</span> },
-    { key: "status_tbu", label: "Status (TB/U)", sortable: true, render: (val) => {
-        const status = String(val);
-        const isStunting = status === 'Sangat Pendek' || status === 'Pendek';
-        return <span className={`inline-flex px-2 py-0.5 text-[10px] uppercase font-bold tracking-widest rounded-md border ${isStunting ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>{status}</span>;
-    }},
-    { key: "status_bbu", label: "Status (BB/U)", sortable: true, render: (val) => {
-        const status = String(val);
-        const isBuruk = status === 'Gizi Buruk';
-        const isKurang = status === 'Gizi Kurang';
-        return <span className={`inline-flex px-2 py-0.5 text-[10px] uppercase font-bold tracking-widest rounded-md border ${isBuruk ? 'bg-red-50 text-red-700 border-red-200' : isKurang ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>{status}</span>;
-    }},
-];
+/* ═══ Status Badge ═══ */
+function StatusBadge({ status, type }: { status: string; type: "tbu" | "bbu" }) {
+    const isBad = type === "tbu"
+        ? status === "Sangat Pendek" || status === "Pendek"
+        : status === "Gizi Buruk" || status === "Gizi Kurang";
+    const isWarning = type === "tbu" ? status === "Pendek" : status === "Gizi Kurang";
+    const cls = isBad
+        ? isWarning ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-red-50 text-red-700 border-red-200"
+        : "bg-emerald-50 text-emerald-700 border-emerald-200";
+    return <span className={`inline-flex px-2 py-0.5 text-[10px] uppercase font-bold tracking-widest rounded-md border ${cls}`}>{status}</span>;
+}
 
-const bulanOptions = Array.from({ length: 12 }, (_, i) => ({
-    label: new Date(2000, i).toLocaleString("id-ID", { month: "long" }),
-    value: String(i + 1)
-}));
-
+/* ═══════════════════════════════════════════
+   Main Page
+   ═══════════════════════════════════════════ */
 export default function StuntingPage() {
     const { tenant, kelurahans } = useTenant();
     const { profile } = useAuth();
-    const [activeTab, setActiveTab] = useState<"bnba" | "agregat">("bnba");
 
-    const [bnbaData, setBnbaData] = useState<StuntingBNBARow[]>([]);
-    const [agregatData, setAgregatData] = useState<StuntingRow[]>([]);
+    const [activeTab, setActiveTab] = useState<"bnba" | "agregat">("bnba");
+    const [children, setChildren] = useState<ChildCard[]>([]);
+    const [agregatData, setAgregatData] = useState<StuntingAgregatRow[]>([]);
     const [posyandu, setPosyandu] = useState<{ id: string; nama: string; kelurahan_id: string }[]>([]);
-    const [isLoadingBnba, setIsLoadingBnba] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
     const [isLoadingAgregat, setIsLoadingAgregat] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Expanded child + measurements
+    const [expandedChild, setExpandedChild] = useState<string | null>(null);
+    const [measurements, setMeasurements] = useState<MeasurementRow[]>([]);
+    const [isLoadingMeas, setIsLoadingMeas] = useState(false);
+
+    // Modal state
     const [modalOpen, setModalOpen] = useState(false);
-    const [editRow, setEditRow] = useState<StuntingBNBARow | null>(null);
-    const [deleteRow, setDeleteRow] = useState<StuntingBNBARow | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [editMeasurement, setEditMeasurement] = useState<MeasurementRow | null>(null);
+    const [modalChild, setModalChild] = useState<ChildCard | null>(null);
+
+    // Delete state
+    const [deleteRow, setDeleteRow] = useState<MeasurementRow | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const isKelurahanAdmin = profile?.role === "admin_kelurahan";
     const filterKelurahanId = isKelurahanAdmin ? profile?.kelurahan_id ?? null : null;
+    const kelurahanOptions = isKelurahanAdmin
+        ? kelurahans.filter((k) => k.id === filterKelurahanId).map((k) => ({ label: k.nama, value: k.id }))
+        : kelurahans.map((k) => ({ label: k.nama, value: k.id }));
 
-    const fetchBnba = useCallback(async () => {
+    const apiBase = `/api/tenants/${tenant?.slug}/admin/kesehatan/stunting`;
+
+    /* ─── Fetch ─── */
+    const fetchChildren = useCallback(async () => {
         if (!tenant?.slug) return;
-        setIsLoadingBnba(true);
-        setError(null);
+        setIsLoading(true); setError(null);
         try {
-            const res = await fetch(`/api/tenants/${tenant.slug}/admin/kesehatan/stunting/bnba`);
+            const res = await fetch(`${apiBase}/bnba`);
             const json = await res.json();
-            if (!res.ok || json.error) {
-                throw new Error(json.error?.message || "Gagal memuat data stunting BNBA");
-            }
-            setBnbaData(json.data || []);
-        } catch (err) {
-            const message = err instanceof Error ? err.message : "Gagal memuat data stunting BNBA";
-            setError(message);
-            console.error("[Stunting BNBA] fetchBnba:", err);
-        } finally {
-            setIsLoadingBnba(false);
-        }
-    }, [tenant?.slug]);
+            if (!res.ok || json.error) throw new Error(json.error?.message || "Gagal memuat data");
+            setChildren(json.data || []);
+        } catch (err: any) { setError(err.message); } finally { setIsLoading(false); }
+    }, [tenant?.slug, apiBase]);
 
     const fetchAgregat = useCallback(async () => {
         if (!tenant?.slug) return;
         setIsLoadingAgregat(true);
-        setError(null);
         try {
-            const res = await fetch(`/api/tenants/${tenant.slug}/admin/kesehatan/stunting/agregat`);
+            const res = await fetch(`${apiBase}/agregat`);
             const json = await res.json();
-            if (!res.ok || json.error) {
-                throw new Error(json.error?.message || "Gagal memuat agregat stunting");
-            }
+            if (!res.ok || json.error) throw new Error(json.error?.message || "Gagal memuat agregat");
             setAgregatData(json.data || []);
-        } catch (err) {
-            const message = err instanceof Error ? err.message : "Gagal memuat agregat stunting";
-            setError(message);
-            console.error("[Stunting Agregat] fetchAgregat:", err);
-        } finally {
-            setIsLoadingAgregat(false);
-        }
-    }, [tenant?.slug]);
+        } catch (err: any) { setError(err.message); } finally { setIsLoadingAgregat(false); }
+    }, [tenant?.slug, apiBase]);
 
     const fetchPosyandu = useCallback(async () => {
         if (!tenant?.slug) return;
         try {
             const res = await fetch(`/api/tenants/${tenant.slug}/admin/kesehatan/posyandu`);
             const json = await res.json();
-            if (!res.ok || json.error) {
-                throw new Error(json.error?.message || "Gagal memuat referensi posyandu");
-            }
             setPosyandu(json.data || []);
-        } catch (err) {
-            console.error("[Stunting] fetchPosyandu:", err);
-        }
+        } catch { /* ignore */ }
     }, [tenant?.slug]);
 
-    useEffect(() => {
-        fetchBnba();
-        fetchAgregat();
-        fetchPosyandu();
-    }, [fetchBnba, fetchAgregat, fetchPosyandu]);
+    useEffect(() => { fetchChildren(); fetchAgregat(); fetchPosyandu(); }, [fetchChildren, fetchAgregat, fetchPosyandu]);
 
-    const kelurahanOptions = isKelurahanAdmin
-        ? kelurahans.filter((k) => k.id === filterKelurahanId).map((k) => ({ label: k.nama, value: k.id }))
-        : kelurahans.map((k) => ({ label: k.nama, value: k.id }));
+    const fetchMeasurements = useCallback(async (pendudukId: string) => {
+        if (!tenant?.slug) return;
+        setIsLoadingMeas(true);
+        try {
+            const res = await fetch(`${apiBase}/bnba/children/${pendudukId}`);
+            const json = await res.json();
+            setMeasurements(json.data || []);
+        } catch { setMeasurements([]); } finally { setIsLoadingMeas(false); }
+    }, [tenant?.slug, apiBase]);
 
-    // Enrich aggregate data
-    const enrichedAgregat = agregatData.map((row) => {
-        const total = Number(row.balita_total) || 0;
-        const stunting = Number(row.balita_stunting) || 0;
-        const prevalensi = total > 0 ? (stunting / total) * 100 : 0;
-        return {
-            ...row,
-            id: row.id || `${row.kelurahan_id}-${row.tahun}-${row.bulan}`,
-            kelurahan_nama: kelurahans.find((k) => k.id === row.kelurahan_id)?.nama || "—",
-            prevalensi,
-        };
+    const toggleExpand = (pendudukId: string) => {
+        if (expandedChild === pendudukId) { setExpandedChild(null); setMeasurements([]); }
+        else { setExpandedChild(pendudukId); fetchMeasurements(pendudukId); }
+    };
+
+    /* ─── Actions ─── */
+    const handleAddNew = () => { setModalChild(null); setEditMeasurement(null); setModalOpen(true); };
+    const handleAddForChild = (child: ChildCard) => { setModalChild(child); setEditMeasurement(null); setModalOpen(true); };
+    const handleEditMeas = (meas: MeasurementRow, child: ChildCard) => { setModalChild(child); setEditMeasurement(meas); setModalOpen(true); };
+
+    const handleSubmit = async (payload: Record<string, unknown>) => {
+        const isEdit = !!editMeasurement;
+        const url = isEdit ? `${apiBase}/bnba/${editMeasurement!.id}` : `${apiBase}/bnba`;
+        const res = await fetch(url, { method: isEdit ? "PATCH" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+        const json = await res.json();
+        if (!res.ok || json.error) throw new Error(json.error?.message || "Gagal menyimpan");
+        setModalOpen(false); setEditMeasurement(null); setModalChild(null);
+        await fetchChildren(); await fetchAgregat();
+        if (expandedChild) fetchMeasurements(expandedChild);
+    };
+
+    const handleDelete = async () => {
+        if (!deleteRow) return;
+        setIsDeleting(true);
+        try {
+            const res = await fetch(`${apiBase}/bnba/${deleteRow.id}`, { method: "DELETE" });
+            const json = await res.json();
+            if (!res.ok || json.error) throw new Error(json.error?.message || "Gagal menghapus");
+            setDeleteRow(null);
+            await fetchChildren(); await fetchAgregat();
+            if (expandedChild) fetchMeasurements(expandedChild);
+        } catch (err: any) { alert(err.message); } finally { setIsDeleting(false); }
+    };
+
+    /* ─── Stats ─── */
+    const totalAnak = children.length;
+    const totalStunting = children.filter(c => c.latest_status_tbu === "Pendek" || c.latest_status_tbu === "Sangat Pendek").length;
+    const totalPemeriksaan = children.reduce((s, c) => s + (Number(c.total_pemeriksaan) || 0), 0);
+    const prevalensi = totalAnak > 0 ? (totalStunting / totalAnak) * 100 : 0;
+
+    /* ─── Enrich agregat ─── */
+    const enrichedAgregat = agregatData.map((r) => {
+        const t = Number(r.balita_total) || 0, s = Number(r.balita_stunting) || 0;
+        return { ...r, id: r.id || `${r.kelurahan_id}-${r.tahun}-${r.bulan}`, kelurahan_nama: kelurahans.find(k => k.id === r.kelurahan_id)?.nama || "—", prevalensi: t > 0 ? (s / t) * 100 : 0 };
     });
 
-    // Enrich BNBA data
-    const enrichedBnba = bnbaData.map((row) => ({
-        ...row,
-        kelurahan_nama: kelurahans.find((k) => k.id === row.kelurahan_id)?.nama || "—",
-    }));
+    const kelMap = new Map(kelurahans.map(k => [k.id, k.nama]));
 
-    // Stats calculations from the Aggregate View
-    const totalBalita = agregatData.reduce((s, r) => s + (Number(r.balita_total) || 0), 0);
-    const totalStunting = agregatData.reduce((s, r) => s + (Number(r.balita_stunting) || 0), 0);
-    const avgPrevalensi = totalBalita > 0 ? (totalStunting / totalBalita) * 100 : 0;
-
-    async function handleSubmit(formData: Record<string, unknown>) {
-        setIsSubmitting(true);
+    /* ─── Search NIK ─── */
+    const searchNIK = async (nik: string) => {
+        if (!tenant?.slug || nik.length < 16) return null;
         try {
-            if (!tenant?.slug) throw new Error("Tenant belum tersedia.");
-            const url = editRow
-                ? `/api/tenants/${tenant.slug}/admin/kesehatan/stunting/bnba/${editRow.id}`
-                : `/api/tenants/${tenant.slug}/admin/kesehatan/stunting/bnba`;
-            const res = await fetch(url, {
-                method: editRow ? "PATCH" : "POST",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify(formData),
-            });
+            const res = await fetch(`${apiBase}/bnba/search?nik=${nik}`);
             const json = await res.json();
-            if (!res.ok || json.error) {
-                throw new Error(json.error?.message || "Gagal menyimpan data stunting BNBA");
-            }
-            await Promise.all([fetchBnba(), fetchAgregat(), fetchPosyandu()]);
-            setModalOpen(false);
-            setEditRow(null);
-        } catch (err: any) {
-            console.error("[Stunting BNBA] handleSubmit:", err);
-            alert(`Gagal menyimpan: ${err?.message || 'Silakan coba lagi'}`);
-        } finally { setIsSubmitting(false); }
-    }
-
-    async function handleDelete() {
-        if (!deleteRow || !tenant?.slug) return;
-        setIsSubmitting(true);
-        try { 
-            const res = await fetch(`/api/tenants/${tenant.slug}/admin/kesehatan/stunting/bnba/${deleteRow.id}`, {
-                method: "DELETE",
-            });
-            const json = await res.json();
-            if (!res.ok || json.error) {
-                throw new Error(json.error?.message || "Gagal menghapus data stunting BNBA");
-            }
-            await Promise.all([fetchBnba(), fetchAgregat()]);
-            setDeleteRow(null); 
-        }
-        catch (err: any) {
-            console.error("[Stunting BNBA] handleDelete:", err);
-            alert(`Gagal menghapus: ${err?.message || 'Silakan coba lagi'}`);
-        }
-        finally { setIsSubmitting(false); }
-    }
+            return json.data || null;
+        } catch { return null; }
+    };
 
     return (
         <div className="animate-fade-in space-y-6">
-            <PageHeader
-                title="Data Stunting BNBA"
-                description="Pencatatan rincian status gizi balita By Name By Address (E-PPGBM Nasional) terintegrasi Posyandu"
-                breadcrumbs={[
-                    { label: "Dashboard", href: "/admin" },
-                    { label: "Kesehatan", href: "/admin/kesehatan" },
-                    { label: "Stunting / E-PPGBM" },
-                ]}
-            />
+            <PageHeader title="Data Stunting BNBA" description="Pencatatan rincian status gizi balita By Name By Address (E-PPGBM Nasional)" breadcrumbs={[{ label: "Dashboard", href: "/admin" }, { label: "Kesehatan", href: "/admin/kesehatan" }, { label: "Stunting / E-PPGBM" }]} />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Balita Pendataan" value={totalBalita.toLocaleString("id-ID")} icon={Baby} gradient="stat-gradient-blue" />
-                <StatCard label="Kasus Stunting" value={totalStunting.toLocaleString("id-ID")} icon={AlertTriangle} gradient="stat-gradient-rose" />
-                <StatCard label="Prevalensi Rata-rata" value={`${avgPrevalensi.toFixed(1)}%`} icon={TrendingDown} gradient="stat-gradient-amber" />
-                <StatCard label="Target Nasional" value="14%" icon={Target} gradient="stat-gradient-emerald" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatCard size="sm" label="Anak Terdaftar" value={totalAnak.toLocaleString("id-ID")} icon={Baby} gradient="stat-gradient-blue" />
+                <StatCard size="sm" label="Kasus Stunting" value={totalStunting.toLocaleString("id-ID")} icon={AlertTriangle} gradient="stat-gradient-rose" />
+                <StatCard size="sm" label="Prevalensi" value={`${prevalensi.toFixed(1)}%`} icon={TrendingDown} gradient="stat-gradient-amber" />
+                <StatCard size="sm" label="Total Pemeriksaan" value={totalPemeriksaan.toLocaleString("id-ID")} icon={Target} gradient="stat-gradient-emerald" />
             </div>
 
+            {/* Tabs */}
             <div className="flex border-b border-gray-200">
-                <button
-                    onClick={() => setActiveTab("bnba")}
-                    className={`flex items-center gap-2 px-6 py-3.5 text-sm font-semibold border-b-2 transition-colors ${
-                        activeTab === "bnba" 
-                        ? "border-blue-600 text-blue-700 bg-blue-50/50" 
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }`}
-                >
-                    <ClipboardList className="w-4 h-4" />
-                    Data Individu (BNBA)
+                <button onClick={() => setActiveTab("bnba")} className={`flex items-center gap-2 px-6 py-3.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "bnba" ? "border-blue-600 text-blue-700 bg-blue-50/50" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+                    <ClipboardList className="w-4 h-4" /> Data Anak (BNBA)
                 </button>
-                <button
-                    onClick={() => setActiveTab("agregat")}
-                    className={`flex items-center gap-2 px-6 py-3.5 text-sm font-semibold border-b-2 transition-colors ${
-                        activeTab === "agregat" 
-                        ? "border-blue-600 text-blue-700 bg-blue-50/50" 
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }`}
-                >
-                    <FileText className="w-4 h-4" />
-                    Laporan Agregasi Otomatis
+                <button onClick={() => setActiveTab("agregat")} className={`flex items-center gap-2 px-6 py-3.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "agregat" ? "border-blue-600 text-blue-700 bg-blue-50/50" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+                    <FileText className="w-4 h-4" /> Agregasi Otomatis
                 </button>
             </div>
 
+            {/* Tab Content */}
             <div className="pt-2">
                 {activeTab === "bnba" ? (
-                    <DataTable
-                        columns={bnbaColumns} data={enrichedBnba} isLoading={isLoadingBnba}
-                        onAdd={() => { setEditRow(null); setModalOpen(true); }}
-                        onEdit={(row) => { setEditRow(row as StuntingBNBARow); setModalOpen(true); }}
-                        onDelete={(row) => setDeleteRow(row as StuntingBNBARow)}
-                        addLabel="Tambah Data Anak" searchPlaceholder="Cari NIK atau Nama..."
-                    />
+                    <div className="space-y-4">
+                        {/* Header + Add Button */}
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm text-gray-500">{totalAnak} anak terdaftar</p>
+                            <button onClick={handleAddNew} className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-lg shadow-blue-600/25">
+                                <Plus className="w-4 h-4" /> Tambah Anak & Pengukuran
+                            </button>
+                        </div>
+
+                        {isLoading ? (
+                            <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" /></div>
+                        ) : error ? (
+                            <p className="text-sm text-red-600 text-center py-8">{error}</p>
+                        ) : children.length === 0 ? (
+                            <div className="text-center py-12 text-gray-400">
+                                <Baby className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                                <p className="font-semibold">Belum ada data anak</p>
+                                <p className="text-sm mt-1">Klik tombol "Tambah Anak & Pengukuran" untuk memulai</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {children.map((child) => {
+                                    const isExpanded = expandedChild === child.penduduk_id;
+                                    const isStunting = child.latest_status_tbu === "Pendek" || child.latest_status_tbu === "Sangat Pendek";
+                                    return (
+                                        <div key={child.penduduk_id} className={`bg-white rounded-xl border transition-all ${isStunting ? "border-red-200 shadow-red-100/50" : "border-gray-200"} shadow-sm hover:shadow-md`}>
+                                            {/* Card Header */}
+                                            <div className="p-4 cursor-pointer" onClick={() => toggleExpand(child.penduduk_id)}>
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="flex items-start gap-3 min-w-0">
+                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0 ${child.jenis_kelamin === "P" ? "bg-gradient-to-br from-pink-400 to-rose-500" : "bg-gradient-to-br from-blue-400 to-indigo-500"}`}>
+                                                            {child.nama?.charAt(0)?.toUpperCase() || "?"}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <h3 className="font-bold text-gray-900 text-sm">{child.nama}</h3>
+                                                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">{child.jenis_kelamin === "P" ? "Perempuan" : "Laki-laki"}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 flex-wrap">
+                                                                <span className="font-mono">NIK: {child.nik ? "••••" + child.nik.slice(-4) : "—"}</span>
+                                                                {child.tanggal_lahir && <span>Lahir: {child.tanggal_lahir}</span>}
+                                                                <span>{kelMap.get(child.kelurahan_id) || "—"}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 shrink-0">
+                                                        <div className="text-right">
+                                                            <div className="flex items-center gap-2 justify-end">
+                                                                {child.latest_status_tbu && <StatusBadge status={child.latest_status_tbu} type="tbu" />}
+                                                            </div>
+                                                            <p className="text-[10px] text-gray-400 mt-1">{child.total_pemeriksaan} pemeriksaan</p>
+                                                        </div>
+                                                        {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                                                    </div>
+                                                </div>
+
+                                                {/* Quick summary bar */}
+                                                {child.latest_tanggal && (
+                                                    <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                                                        <div><span className="text-gray-400">Terakhir:</span> <span className="font-medium text-gray-700">{child.latest_tanggal}</span></div>
+                                                        <div><span className="text-gray-400">BB:</span> <span className="font-medium text-gray-700">{child.latest_berat_badan ?? "—"} kg</span></div>
+                                                        <div><span className="text-gray-400">TB:</span> <span className="font-medium text-gray-700">{child.latest_tinggi_badan ?? "—"} cm</span></div>
+                                                        <div><span className="text-gray-400">BB/U:</span> {child.latest_status_bbu ? <StatusBadge status={child.latest_status_bbu} type="bbu" /> : "—"}</div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Expanded: Measurements */}
+                                            {isExpanded && (
+                                                <div className="border-t border-gray-100 bg-slate-50/50 p-4">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5"><Ruler className="w-3.5 h-3.5" /> Riwayat Pemeriksaan</h4>
+                                                        <button onClick={(e) => { e.stopPropagation(); handleAddForChild(child); }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200">
+                                                            <Plus className="w-3 h-3" /> Tambah Pemeriksaan
+                                                        </button>
+                                                    </div>
+                                                    {isLoadingMeas ? (
+                                                        <div className="flex justify-center py-6"><div className="w-6 h-6 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin" /></div>
+                                                    ) : measurements.length === 0 ? (
+                                                        <p className="text-sm text-gray-400 text-center py-4">Belum ada riwayat pemeriksaan</p>
+                                                    ) : (
+                                                        <div className="overflow-x-auto">
+                                                            <table className="w-full text-sm">
+                                                                <thead><tr className="text-left text-[10px] uppercase tracking-wider text-gray-400 border-b border-gray-200">
+                                                                    <th className="py-2 pr-3">Tgl Pengukuran</th><th className="py-2 pr-3">BB (kg)</th><th className="py-2 pr-3">TB (cm)</th><th className="py-2 pr-3">TB/U</th><th className="py-2 pr-3">BB/U</th><th className="py-2 pr-3">Ortu</th><th className="py-2 text-right">Aksi</th>
+                                                                </tr></thead>
+                                                                <tbody>
+                                                                    {measurements.map((m) => (
+                                                                        <tr key={m.id} className="border-b border-gray-100 last:border-0 hover:bg-white transition-colors">
+                                                                            <td className="py-2.5 pr-3 font-medium text-gray-800">{m.tanggal_pengukuran}</td>
+                                                                            <td className="py-2.5 pr-3 font-mono">{m.berat_badan ?? "—"}</td>
+                                                                            <td className="py-2.5 pr-3 font-mono">{m.tinggi_badan ?? "—"}</td>
+                                                                            <td className="py-2.5 pr-3"><StatusBadge status={m.status_tbu} type="tbu" /></td>
+                                                                            <td className="py-2.5 pr-3"><StatusBadge status={m.status_bbu} type="bbu" /></td>
+                                                                            <td className="py-2.5 pr-3 text-gray-500 text-xs">{m.nama_ortu || "—"}</td>
+                                                                            <td className="py-2.5 text-right">
+                                                                                <div className="flex items-center gap-1 justify-end">
+                                                                                    <button onClick={(e) => { e.stopPropagation(); handleEditMeas(m, child); }} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><Edit3 className="w-3.5 h-3.5" /></button>
+                                                                                    <button onClick={(e) => { e.stopPropagation(); setDeleteRow(m); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 ) : (
                     <div className="space-y-4">
                         <div className="p-4 bg-teal-50 border border-teal-100 rounded-xl flex items-start gap-3">
                             <ListFilter className="w-5 h-5 text-teal-600 mt-0.5 shrink-0" />
                             <div>
                                 <h4 className="font-semibold text-teal-800 text-sm">Laporan Agregat Terkalkulasi Otomatis</h4>
-                                <p className="text-teal-700 text-xs mt-0.5">Seluruh angka pada tab ini dihitung secara real-time dari data input BNBA per bulan pengukurannya. Anda tidak perlu merekap data stunting dan gizi buruk secara manual.</p>
+                                <p className="text-teal-700 text-xs mt-0.5">Seluruh angka dihitung real-time dari data input BNBA per bulan pengukuran.</p>
                             </div>
                         </div>
-                        <DataTable
-                            columns={columns} data={enrichedAgregat} isLoading={isLoadingAgregat}
-                            searchPlaceholder="Cari rekap stunting (opsional)..."
-                        />
+                        <DataTable columns={agregatColumns} data={enrichedAgregat} isLoading={isLoadingAgregat} searchPlaceholder="Cari rekap stunting..." />
                     </div>
                 )}
             </div>
 
-            <StuntingBNBAFormModal
-                open={modalOpen}
-                onClose={() => { setModalOpen(false); setEditRow(null); }}
-                onSubmit={handleSubmit}
-                editRow={editRow}
-                isSubmitting={isSubmitting}
-                kelurahanOptions={kelurahanOptions}
-                posyandus={posyandu}
-                isKelurahanAdmin={isKelurahanAdmin}
-                filterKelurahanId={filterKelurahanId}
-            />
-            {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+            {/* Form Modal */}
+            {modalOpen && (
+                <StuntingFormModal
+                    onClose={() => { setModalOpen(false); setEditMeasurement(null); setModalChild(null); }}
+                    onSubmit={handleSubmit}
+                    editMeasurement={editMeasurement}
+                    child={modalChild}
+                    kelurahanOptions={kelurahanOptions}
+                    posyandus={posyandu}
+                    isKelurahanAdmin={isKelurahanAdmin}
+                    filterKelurahanId={filterKelurahanId}
+                    onSearchNIK={searchNIK}
+                />
+            )}
 
             <DeleteConfirm
                 open={!!deleteRow}
                 onClose={() => setDeleteRow(null)}
                 onConfirm={handleDelete}
-                title="Hapus Data BNBA"
-                message={`Apakah Anda yakin ingin menghapus data anak "${deleteRow?.nama_anak}"? Rekapitulasi agregat bulanan akan diperbarui otomatis.`}
-                isDeleting={isSubmitting}
+                title="Hapus Catatan Pemeriksaan"
+                message={`Apakah Anda yakin ingin menghapus catatan pemeriksaan tanggal "${deleteRow?.tanggal_pengukuran}"?`}
+                isDeleting={isDeleting}
             />
         </div>
-    );
-}
-
-/* ═══════════════════════════════════════════════════════
-   StuntingBNBAFormModal — Modal untuk Tambah Data E-PPGBM BNBA
-   ═══════════════════════════════════════════════════════ */
-
-function StuntingBNBAFormModal({
-    open, onClose, onSubmit, editRow, isSubmitting, kelurahanOptions, posyandus, isKelurahanAdmin, filterKelurahanId,
-}: {
-    open: boolean;
-    onClose: () => void;
-    onSubmit: (data: Record<string, unknown>) => Promise<void>;
-    editRow: StuntingBNBARow | null;
-    isSubmitting: boolean;
-    kelurahanOptions: { label: string; value: string }[];
-    posyandus: { id: string; nama: string; kelurahan_id?: string }[];
-    isKelurahanAdmin?: boolean;
-    filterKelurahanId?: string | null;
-}) {
-    const isEdit = !!editRow;
-
-    const statusTbuOptions = ["Normal", "Pendek", "Sangat Pendek", "Tinggi"];
-    const statusBbuOptions = ["Normal", "Risiko Lebih", "Gizi Lebih", "Obesitas", "Gizi Kurang", "Gizi Buruk"];
-    
-    const [form, setForm] = useState<Record<string, unknown>>({
-        kelurahan_id: "", posyandu_id: "", nik_anak: "", nama_anak: "", jenis_kelamin: "L",
-        tanggal_lahir: "", nama_ortu: "", alamat: "", rt_rw: "", 
-        tanggal_pengukuran: new Date().toISOString().split('T')[0],
-        berat_badan: "", tinggi_badan: "", status_tbu: "Normal", status_bbu: "Normal",
-        intervensi_diterima: [] as string[]
-    });
-
-    useEffect(() => {
-        if (!open) return;
-        if (editRow) {
-            setForm({
-                kelurahan_id: editRow.kelurahan_id ?? "",
-                posyandu_id: editRow.posyandu_id ?? "",
-                nik_anak: editRow.nik_anak ?? "",
-                nama_anak: editRow.nama_anak ?? "",
-                jenis_kelamin: editRow.jenis_kelamin ?? "L",
-                tanggal_lahir: editRow.tanggal_lahir ?? "",
-                nama_ortu: editRow.nama_ortu ?? "",
-                alamat: editRow.alamat ?? "",
-                rt_rw: editRow.rt_rw ?? "",
-                tanggal_pengukuran: editRow.tanggal_pengukuran ?? new Date().toISOString().split('T')[0],
-                berat_badan: editRow.berat_badan ?? "",
-                tinggi_badan: editRow.tinggi_badan ?? "",
-                status_tbu: editRow.status_tbu ?? "Normal",
-                status_bbu: editRow.status_bbu ?? "Normal",
-                intervensi_diterima: Array.isArray(editRow.intervensi_diterima) ? editRow.intervensi_diterima : [],
-            });
-        } else {
-            setForm({
-                kelurahan_id: (isKelurahanAdmin && filterKelurahanId) ? filterKelurahanId : "",
-                posyandu_id: "", nik_anak: "", nama_anak: "", jenis_kelamin: "L",
-                tanggal_lahir: "", nama_ortu: "", alamat: "", rt_rw: "",
-                tanggal_pengukuran: new Date().toISOString().split('T')[0],
-                berat_badan: "", tinggi_badan: "", status_tbu: "Normal", status_bbu: "Normal", intervensi_diterima: []
-            });
-        }
-    }, [open, editRow, isKelurahanAdmin, filterKelurahanId]);
-
-    function set(field: string, value: string | number | string[]) {
-        setForm((prev) => ({ ...prev, [field]: value }));
-    }
-
-    function toggleIntervensi(val: string) {
-        const arr = (form.intervensi_diterima as string[]) || [];
-        if (arr.includes(val)) {
-            setForm(p => ({ ...p, intervensi_diterima: arr.filter(x => x !== val) }));
-        } else {
-            setForm(p => ({ ...p, intervensi_diterima: [...arr, val] }));
-        }
-    }
-
-    function handleFormSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        
-        if (String(form.nik_anak).length !== 16) {
-            alert("NIK Anak harus 16 digit angka.");
-            return;
-        }
-
-        const payload = { ...form };
-        payload.berat_badan = Number(payload.berat_badan) || null;
-        payload.tinggi_badan = Number(payload.tinggi_badan) || null;
-        if (!payload.posyandu_id) payload.posyandu_id = null;
-        
-        onSubmit(payload);
-    }
-
-    if (!open) return null;
-
-    const inputClass = "w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm";
-    
-    const availablePosyandus = form.kelurahan_id 
-        ? posyandus.filter(p => String(p.kelurahan_id) === String(form.kelurahan_id)) 
-        : posyandus;
-
-    return createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-            <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md transition-opacity" onClick={onClose} />
-
-            <div
-                className="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden"
-                style={{ animation: "modalSlideIn 0.3s ease-out" }}
-            >
-                <div className="h-1.5 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 shrink-0" />
-
-                <div className="flex items-center justify-between px-6 py-5 md:px-8 border-b border-gray-100 shrink-0 bg-white">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-2xl shadow-sm bg-gradient-to-br from-blue-50 to-indigo-100 text-blue-600">
-                            <Baby className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-900">
-                                {isEdit ? "Edit Riwayat Anak" : "Pendaftaran Pengukuran Baru"}
-                            </h2>
-                            <p className="text-sm text-gray-500 mt-0.5">
-                                Pendataan individu By Name By Address sesuai form standar Posyandu / E-PPGBM.
-                            </p>
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" title="Tutup">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
-                <form onSubmit={handleFormSubmit} className="flex flex-col flex-1 overflow-hidden">
-                    <div className="p-6 md:p-8 overflow-y-auto bg-slate-50/30">
-                        <div className="grid grid-cols-1 lg:grid-cols-6 gap-8">
-                            
-                            {/* Kiri : Identitas & Demografi */}
-                            <div className="lg:col-span-3 space-y-5">
-                                <div className="flex items-center gap-2 pb-2 border-b border-blue-100">
-                                    <MapPin className="w-4 h-4 text-blue-500" />
-                                    <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Identitas Anak & Lokasi</span>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                            Kelurahan <span className="text-red-500">*</span>
-                                        </label>
-                                        <select
-                                            value={String(form.kelurahan_id)}
-                                            onChange={(e) => set("kelurahan_id", e.target.value)}
-                                            required
-                                            className={inputClass}
-                                            disabled={kelurahanOptions.length === 1}
-                                        >
-                                            <option value="">— Pilih Kelurahan —</option>
-                                            {kelurahanOptions.map((opt) => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Posyandu</label>
-                                        <select
-                                            value={String(form.posyandu_id) || ""}
-                                            onChange={(e) => set("posyandu_id", e.target.value)}
-                                            className={inputClass}
-                                        >
-                                            <option value="">— Tidak di Posyandu —</option>
-                                            {availablePosyandus.map((p) => (
-                                                <option key={p.id} value={p.id}>{p.nama}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-5 gap-3">
-                                    <div className="col-span-3">
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                            NIK Anak <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={String(form.nik_anak)}
-                                            onChange={(e) => set("nik_anak", e.target.value.replace(/[^0-9]/g, ''))}
-                                            required minLength={16} maxLength={16}
-                                            className={inputClass + " font-mono tracking-wider"}
-                                            placeholder="16 digit angka"
-                                        />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Jenis Kelamin</label>
-                                        <select
-                                            value={String(form.jenis_kelamin)}
-                                            onChange={(e) => set("jenis_kelamin", e.target.value)}
-                                            required className={inputClass}
-                                        >
-                                            <option value="L">Laki-laki</option>
-                                            <option value="P">Perempuan</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                        Nama Lengkap Anak <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text" required
-                                        value={String(form.nama_anak)}
-                                        onChange={(e) => set("nama_anak", e.target.value)}
-                                        className={inputClass}
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                            Tanggal Lahir <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="date" required
-                                            value={String(form.tanggal_lahir)}
-                                            onChange={(e) => set("tanggal_lahir", e.target.value)}
-                                            className={inputClass}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                            Nama Orang Tua <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text" required
-                                            value={String(form.nama_ortu)}
-                                            onChange={(e) => set("nama_ortu", e.target.value)}
-                                            className={inputClass}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-3 gap-3">
-                                    <div className="col-span-2">
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Alamat / Jalan</label>
-                                        <input
-                                            type="text"
-                                            value={String(form.alamat)}
-                                            onChange={(e) => set("alamat", e.target.value)}
-                                            className={inputClass}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">RT/RW</label>
-                                        <input
-                                            type="text" placeholder="001/002"
-                                            value={String(form.rt_rw)}
-                                            onChange={(e) => set("rt_rw", e.target.value)}
-                                            className={inputClass}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Kanan : Pengukuran Antropometri */}
-                            <div className="lg:col-span-3 space-y-5 border-t lg:border-t-0 lg:border-l border-gray-100 lg:pl-8 mt-6 lg:mt-0 pt-6 lg:pt-0">
-                                <div className="flex items-center gap-2 pb-2 border-b border-orange-100">
-                                    <Activity className="w-4 h-4 text-orange-500" />
-                                    <span className="text-xs font-bold text-orange-600 uppercase tracking-wider">Hasil Pengukuran</span>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                                        Tanggal Pengukuran <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="date" required
-                                        value={String(form.tanggal_pengukuran)}
-                                        onChange={(e) => set("tanggal_pengukuran", e.target.value)}
-                                        max={new Date().toISOString().split('T')[0]}
-                                        className={inputClass}
-                                    />
-                                    <p className="text-[10px] text-gray-400 mt-1">Laporan agregat bulanan akan dihitung pada bulan tahun yang dipilih di sini.</p>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Berat Badan (kg) <span className="text-red-500">*</span></label>
-                                        <input
-                                            type="number" step="0.01" min={0} required
-                                            value={String(form.berat_badan)}
-                                            onChange={(e) => set("berat_badan", e.target.value)}
-                                            className={inputClass + " font-mono text-lg"}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tinggi Badan (cm) <span className="text-red-500">*</span></label>
-                                        <input
-                                            type="number" step="0.01" min={0} required
-                                            value={String(form.tinggi_badan)}
-                                            onChange={(e) => set("tinggi_badan", e.target.value)}
-                                            className={inputClass + " font-mono text-lg"}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Status Gizi (BB/U)</label>
-                                        <select
-                                            required value={String(form.status_bbu)}
-                                            onChange={(e) => set("status_bbu", e.target.value)}
-                                            className={`${inputClass} font-semibold ${
-                                                form.status_bbu === 'Gizi Buruk' ? 'text-red-600 bg-red-50 border-red-200' :
-                                                form.status_bbu === 'Gizi Kurang' ? 'text-amber-600 bg-amber-50 border-amber-200' :
-                                                form.status_bbu !== 'Normal' ? 'text-orange-600 bg-orange-50 border-orange-200' : ''
-                                            }`}
-                                        >
-                                            {statusBbuOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Status Stunting (TB/U)</label>
-                                        <select
-                                            required value={String(form.status_tbu)}
-                                            onChange={(e) => set("status_tbu", e.target.value)}
-                                            className={`${inputClass} font-semibold ${
-                                                form.status_tbu === 'Sangat Pendek' ? 'text-red-600 bg-red-50 border-red-200' :
-                                                form.status_tbu === 'Pendek' ? 'text-amber-600 bg-amber-50 border-amber-200' : ''
-                                            }`}
-                                        >
-                                            {statusTbuOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="pt-2">
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Intervensi & Bantuan Diterima</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {['PMT Pemulihan', 'Susu Formula', 'Vitamin A', 'Obat Cacing', 'Edukasi Gizi'].map((v) => {
-                                            const active = (form.intervensi_diterima as string[]).includes(v);
-                                            return (
-                                                <button
-                                                    type="button" key={v}
-                                                    onClick={() => toggleIntervensi(v)}
-                                                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${
-                                                        active ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
-                                                    }`}
-                                                >
-                                                    {active ? '✓ ' : ''}{v}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center justify-between px-6 py-4 md:px-8 border-t border-gray-100 bg-white shrink-0">
-                        <p className="text-xs text-gray-400">
-                            <span className="text-red-400">*</span> Wajib diisi (Sesuai E-PPGBM)
-                        </p>
-                        <div className="flex flex-col-reverse sm:flex-row items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
-                            <button
-                                type="button" onClick={onClose}
-                                className="w-full sm:w-auto px-5 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors"
-                            >
-                                Batal
-                            </button>
-                            <button
-                                type="submit" disabled={isSubmitting}
-                                className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-lg shadow-blue-600/25 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                {isEdit ? "Simpan Rekam Medis" : "Simpan Data Anak"}
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>,
-        document.body
     );
 }

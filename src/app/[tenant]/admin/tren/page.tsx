@@ -20,7 +20,7 @@ const INDICATORS = [
     { key: "prevalensi", label: "Prevalensi Stunting", table: "health_stunting", col: "prevalensi", yearCol: "tahun", unit: "%", calc: { numerator: "balita_stunting", denominator: "balita_total" } },
     { key: "sanitasi", label: "Sanitasi Layak", table: "infra_sanitation", col: "akses_sanitasi_persen", yearCol: "tahun", unit: "%" },
     { key: "air_bersih", label: "Air Bersih", table: "infra_sanitation", col: "akses_air_bersih_persen", yearCol: "tahun", unit: "%" },
-    { key: "rtlh", label: "Rumah Tidak Layak", table: "social_rtlh", col: "jumlah_rtlh", yearCol: "tahun", unit: "unit" },
+    { key: "rtlh", label: "Penerima RTLH", table: "social_rtlh_recipients", col: "jumlah_rtlh", yearCol: "tahun", unit: "warga" },
     { key: "bantuan", label: "Penerima Bantuan", table: "social_assistance", col: "jumlah_penerima", yearCol: "tahun", unit: "KPM" },
 ] as const;
 

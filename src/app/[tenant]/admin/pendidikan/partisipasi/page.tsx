@@ -142,9 +142,13 @@ export default function PartisipasiPage() {
         kelurahan_nama: kelurahans.find((k) => k.id === row.kelurahan_id)?.nama || "—",
     }));
 
-    const avgPartisipasi = data.length ? (data.reduce((s, r) => s + (r.angka_partisipasi || 0), 0) / data.length).toFixed(1) : "0";
-    const totalPutus = data.reduce((s, r) => s + (r.angka_putus_sekolah || 0), 0);
-    const avgMelekHuruf = data.length ? (data.reduce((s, r) => s + (r.angka_melek_huruf || 0), 0) / data.length).toFixed(1) : "0";
+    const avgPartisipasi = data.length
+        ? (data.reduce((s, r) => s + (Number(r.angka_partisipasi) || 0), 0) / data.length).toFixed(1)
+        : "0";
+    const totalPutus = data.reduce((s, r) => s + (Number(r.angka_putus_sekolah) || 0), 0);
+    const avgMelekHuruf = data.length
+        ? (data.reduce((s, r) => s + (Number(r.angka_melek_huruf) || 0), 0) / data.length).toFixed(1)
+        : "0";
 
     async function handleSubmit(formData: Record<string, unknown>) {
         setIsSubmitting(true);
@@ -206,10 +210,10 @@ export default function PartisipasiPage() {
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Data Entries" value={data.length} icon={BarChart3} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Rata-rata APK" value={`${avgPartisipasi}%`} icon={GraduationCap} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="Total Putus Sekolah" value={totalPutus.toLocaleString("id-ID")} icon={TrendingDown} gradient="stat-gradient-soft-rose" />
-                <StatCard label="Rata-rata Melek Huruf" value={`${avgMelekHuruf}%`} icon={TrendingUp} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Data Entries" value={data.length} icon={BarChart3} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Rata-rata APK" value={`${avgPartisipasi}%`} icon={GraduationCap} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Total Putus Sekolah" value={totalPutus.toLocaleString("id-ID")} icon={TrendingDown} gradient="stat-gradient-soft-rose" />
+                <StatCard size="sm" label="Rata-rata Melek Huruf" value={`${avgMelekHuruf}%`} icon={TrendingUp} gradient="stat-gradient-soft-amber" />
             </div>
 
             <DataTable

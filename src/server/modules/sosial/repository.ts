@@ -25,15 +25,7 @@ export const sosialResources: Record<SosialResource, ResourceConfig> = {
         ],
         orderBy: "created_at DESC, tahun DESC, bulan DESC",
     },
-    disabilitas: {
-        table: "social_disability",
-        columns: [
-            "id", "tenant_id", "kelurahan_id", "tahun", "jenis_disabilitas", "jumlah",
-            "mendapat_bantuan", "created_at", "laki_laki", "perempuan", "usia_anak",
-            "usia_dewasa", "usia_lansia", "penerima_bantuan",
-        ],
-        orderBy: "created_at DESC, tahun DESC, jenis_disabilitas ASC",
-    },
+    // disabilitas: now handled by dedicated module at src/server/modules/disabilitas
     keagamaan: {
         table: "social_religious",
         columns: [
@@ -43,15 +35,7 @@ export const sosialResources: Record<SosialResource, ResourceConfig> = {
         ],
         orderBy: "created_at DESC, nama ASC",
     },
-    perumahan: {
-        table: "social_rtlh",
-        columns: [
-            "id", "tenant_id", "kelurahan_id", "tahun", "rtlh_total", "rtlh_diperbaiki",
-            "anggaran", "created_at", "jumlah_rtlh", "sudah_direhabilitasi",
-            "belum_direhabilitasi", "anggaran_rehabilitasi", "sumber_dana",
-        ],
-        orderBy: "created_at DESC, tahun DESC",
-    },
+    // perumahan: now handled by dedicated module at src/server/modules/perumahan
 };
 
 function columnList(resource: SosialResource) {

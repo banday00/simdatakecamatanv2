@@ -263,10 +263,10 @@ export default function SaranaPage() {
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Sekolah" value={total} icon={School} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Total Siswa" value={totalSiswa} icon={GraduationCap} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="Total Guru" value={totalGuru} icon={BookOpen} gradient="stat-gradient-soft-indigo" />
-                <StatCard label="Sekolah Negeri" value={negeri} icon={Building} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Total Sekolah" value={total} icon={School} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Total Siswa" value={totalSiswa} icon={GraduationCap} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Total Guru" value={totalGuru} icon={BookOpen} gradient="stat-gradient-soft-indigo" />
+                <StatCard size="sm" label="Sekolah Negeri" value={negeri} icon={Building} gradient="stat-gradient-soft-amber" />
             </div>
 
             <DataTable

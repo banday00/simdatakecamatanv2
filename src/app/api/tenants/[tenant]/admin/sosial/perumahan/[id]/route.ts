@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { handleApiError, ok } from "@/server/http/response";
-import { deleteAdminSosialResource, updateAdminSosialResource } from "@/server/modules/sosial/service";
+import { updateAdminRtlh, deleteAdminRtlh } from "@/server/modules/perumahan/service";
 import { uuidSchema } from "@/server/validation/common";
 
 type RouteContext = {
@@ -10,7 +10,7 @@ type RouteContext = {
 export async function PATCH(req: NextRequest, context: RouteContext) {
     try {
         const { tenant, id } = await context.params;
-        return ok(await updateAdminSosialResource(tenant, "perumahan", uuidSchema.parse(id), req));
+        return ok(await updateAdminRtlh(tenant, uuidSchema.parse(id), req));
     } catch (error) {
         return handleApiError(error);
     }
@@ -19,7 +19,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 export async function DELETE(req: NextRequest, context: RouteContext) {
     try {
         const { tenant, id } = await context.params;
-        return ok(await deleteAdminSosialResource(tenant, "perumahan", uuidSchema.parse(id), req));
+        return ok(await deleteAdminRtlh(tenant, uuidSchema.parse(id), req));
     } catch (error) {
         return handleApiError(error);
     }

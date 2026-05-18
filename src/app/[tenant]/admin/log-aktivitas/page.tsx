@@ -136,10 +136,10 @@ export default function LogAktivitasPage() {
 
             {/* Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Aktivitas" value={stats.total} icon={Activity} gradient="stat-gradient-blue" />
-                <StatCard label="Login" value={stats.login} icon={LogIn} gradient="stat-gradient-emerald" />
-                <StatCard label="Operasi Data" value={stats.crud} icon={Database} gradient="stat-gradient-amber" />
-                <StatCard label="Pengguna Aktif" value={stats.uniqueUsers} icon={Users} gradient="stat-gradient-rose" />
+                <StatCard size="sm" label="Total Aktivitas" value={stats.total} icon={Activity} gradient="stat-gradient-blue" />
+                <StatCard size="sm" label="Login" value={stats.login} icon={LogIn} gradient="stat-gradient-emerald" />
+                <StatCard size="sm" label="Operasi Data" value={stats.crud} icon={Database} gradient="stat-gradient-amber" />
+                <StatCard size="sm" label="Pengguna Aktif" value={stats.uniqueUsers} icon={Users} gradient="stat-gradient-rose" />
             </div>
 
             {/* Filter Bar */}

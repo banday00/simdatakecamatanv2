@@ -150,8 +150,31 @@ export async function getPublicSosialData(tenantSlug: string) {
     const tenant = await getTenantBySlug(tenantSlug);
     const [assistance, disability, housing, religious] = await Promise.all([
         rows(`SELECT * FROM social_assistance WHERE tenant_id = $1 ORDER BY created_at DESC, tahun DESC`, [tenant.id]),
-        rows(`SELECT * FROM social_disability WHERE tenant_id = $1 ORDER BY created_at DESC, tahun DESC`, [tenant.id]),
-        rows(`SELECT * FROM social_rtlh WHERE tenant_id = $1 ORDER BY created_at DESC, tahun DESC`, [tenant.id]),
+        rows(`SELECT
+            k.kelurahan_id,
+            md.nama_disabilitas AS jenis_disabilitas,
+            COUNT(*)::int AS jumlah,
+            COUNT(*) FILTER (WHERE lower(p.jenis_kelamin) IN ('l','laki-laki'))::int AS laki_laki,
+            COUNT(*) FILTER (WHERE lower(p.jenis_kelamin) IN ('p','perempuan'))::int AS perempuan,
+            COUNT(DISTINCT pb.penduduk_id)::int AS penerima_bantuan
+        FROM penduduk_disabilitas pd
+        JOIN penduduk p ON p.id = pd.penduduk_id
+        JOIN keluarga k ON k.id = p.keluarga_id
+        JOIN master_disabilitas md ON md.id = pd.disabilitas_id
+        LEFT JOIN penduduk_bantuan pb ON pb.penduduk_id = p.id
+        WHERE k.tenant_id = $1
+        GROUP BY k.kelurahan_id, md.nama_disabilitas
+        ORDER BY md.nama_disabilitas, k.kelurahan_id`, [tenant.id]),
+        rows(
+            `SELECT k.kelurahan_id, r.tahun, r.kategori, COUNT(*)::int AS jumlah_penerima
+             FROM social_rtlh_recipients r
+             JOIN penduduk p ON p.id = r.penduduk_id
+             JOIN keluarga k ON k.id = p.keluarga_id
+             WHERE k.tenant_id = $1
+             GROUP BY k.kelurahan_id, r.tahun, r.kategori
+             ORDER BY r.tahun DESC, r.kategori ASC, k.kelurahan_id ASC`,
+            [tenant.id]
+        ),
         rows(`SELECT * FROM social_religious WHERE tenant_id = $1 ORDER BY created_at DESC, nama ASC`, [tenant.id]),
     ]);
 

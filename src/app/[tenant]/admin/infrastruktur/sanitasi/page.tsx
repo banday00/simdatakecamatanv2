@@ -194,10 +194,10 @@ export default function SanitasiPage() {
                 breadcrumbs={[{ label: "Dashboard", href: "/admin" }, { label: "Infrastruktur", href: "/admin/infrastruktur" }, { label: "Sanitasi" }]} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Cakupan Air Bersih" value={`${avgAir}%`} icon={Droplets} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Sanitasi Layak" value={`${avgSanitasi}%`} icon={BarChart3} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="RT Jamban Sehat" value={totalJambanSehat} icon={Home} gradient="stat-gradient-soft-amber" />
-                <StatCard label="Kelurahan ODF" value={odfCount} icon={ShieldCheck} gradient="stat-gradient-soft-rose" />
+                <StatCard size="sm" label="Cakupan Air Bersih" value={`${avgAir}%`} icon={Droplets} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Sanitasi Layak" value={`${avgSanitasi}%`} icon={BarChart3} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="RT Jamban Sehat" value={totalJambanSehat} icon={Home} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Kelurahan ODF" value={odfCount} icon={ShieldCheck} gradient="stat-gradient-soft-rose" />
             </div>
 
             <DataTable columns={columns} data={enrichedData} isLoading={isLoading}

@@ -86,41 +86,18 @@ export const posyanduPayloadSchema = z.object({
     jumlah_kader: value.anggota_kader.length,
 }));
 
-const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal tidak valid.");
-
-export const stuntingBnbaPayloadSchema = z.object({
-    kelurahan_id: uuidSchema,
-    posyandu_id: nullableUuid,
-    nik_anak: z.string().regex(/^\d{16}$/, "NIK anak harus 16 digit angka."),
-    nama_anak: z.string().trim().min(1, "Nama anak wajib diisi.").max(160),
-    jenis_kelamin: z.enum(["L", "P"]),
-    tanggal_lahir: dateOnly,
-    nama_ortu: z.string().trim().min(1, "Nama orang tua wajib diisi.").max(160),
-    alamat: nullableText(1000),
-    rt_rw: nullableText(40),
-    tanggal_pengukuran: dateOnly,
-    berat_badan: nullableNumber(0, 300),
-    tinggi_badan: nullableNumber(0, 300),
-    status_tbu: z.enum(["Normal", "Pendek", "Sangat Pendek", "Tinggi"]),
-    status_bbu: z.enum(["Normal", "Risiko Lebih", "Gizi Lebih", "Obesitas", "Gizi Kurang", "Gizi Buruk"]),
-    intervensi_diterima: stringArray,
-});
-
 export const healthResourceSchemas = {
     fasilitas: fasilitasPayloadSchema,
     maternal: maternalPayloadSchema,
     posyandu: posyanduPayloadSchema,
-    stuntingBnba: stuntingBnbaPayloadSchema,
 } as const;
 
 export type FasilitasPayload = z.infer<typeof fasilitasPayloadSchema>;
 export type MaternalPayload = z.infer<typeof maternalPayloadSchema>;
 export type PosyanduPayload = z.infer<typeof posyanduPayloadSchema>;
-export type StuntingBnbaPayload = z.infer<typeof stuntingBnbaPayloadSchema>;
 export type HealthResource = keyof typeof healthResourceSchemas;
 export type HealthPayloadByResource = {
     fasilitas: FasilitasPayload;
     maternal: MaternalPayload;
     posyandu: PosyanduPayload;
-    stuntingBnba: StuntingBnbaPayload;
 };

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { created, handleApiError, ok } from "@/server/http/response";
-import { createAdminSosialResource, listAdminSosialResource } from "@/server/modules/sosial/service";
+import { listAdminRtlh, createAdminRtlh } from "@/server/modules/perumahan/service";
 
 type RouteContext = {
     params: Promise<{ tenant: string }>;
@@ -9,7 +9,7 @@ type RouteContext = {
 export async function GET(_req: NextRequest, context: RouteContext) {
     try {
         const { tenant } = await context.params;
-        return ok(await listAdminSosialResource(tenant, "perumahan"));
+        return ok(await listAdminRtlh(tenant));
     } catch (error) {
         return handleApiError(error);
     }
@@ -18,7 +18,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 export async function POST(req: NextRequest, context: RouteContext) {
     try {
         const { tenant } = await context.params;
-        return created(await createAdminSosialResource(tenant, "perumahan", req));
+        return created(await createAdminRtlh(tenant, req));
     } catch (error) {
         return handleApiError(error);
     }

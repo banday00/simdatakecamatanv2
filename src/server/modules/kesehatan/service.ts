@@ -16,7 +16,6 @@ import {
     listHealthRows,
     listJenisFasilitas,
     listStuntingAgregat,
-    posyanduBelongsToTenant,
     updateHealthRow,
 } from "./repository";
 import { healthResourceSchemas, type HealthResource } from "./schemas";
@@ -25,14 +24,12 @@ const resourceLabels: Record<HealthResource, string> = {
     fasilitas: "kesehatan/fasilitas",
     maternal: "kesehatan/maternal",
     posyandu: "kesehatan/posyandu",
-    stuntingBnba: "kesehatan/stunting-bnba",
 };
 
 const resourceNotFoundMessages: Record<HealthResource, string> = {
     fasilitas: "Fasilitas kesehatan tidak ditemukan.",
     maternal: "Data KIA tidak ditemukan.",
     posyandu: "Posyandu tidak ditemukan.",
-    stuntingBnba: "Data stunting BNBA tidak ditemukan.",
 };
 
 function kelurahanFilterFor(profile: Awaited<ReturnType<typeof requireAuth>>) {
@@ -63,17 +60,6 @@ async function validateReferences(resource: HealthResource, tenantId: string, pa
         const exists = await jenisFasilitasExists(Number(payload.jenis_id));
         if (!exists) {
             throw new AppError(400, "Jenis fasilitas tidak valid.", "INVALID_JENIS_FASILITAS");
-        }
-    }
-
-    if (resource === "stuntingBnba" && payload.posyandu_id) {
-        const exists = await posyanduBelongsToTenant(
-            String(payload.posyandu_id),
-            tenantId,
-            String(payload.kelurahan_id)
-        );
-        if (!exists) {
-            throw new AppError(400, "Posyandu tidak valid untuk kelurahan ini.", "INVALID_POSYANDU");
         }
     }
 }

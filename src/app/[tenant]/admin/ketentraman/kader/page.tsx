@@ -65,16 +65,17 @@ export default function KaderPage() {
         catch (err) { alert(err instanceof Error ? err.message : "Gagal menghapus entri kader."); } finally { setIsSubmitting(false); }
     }
 
+
     return (
         <div className="animate-fade-in space-y-6">
             <PageHeader title="Inventarisasi Kader Keamanan" description="Pangkalan data linmas, satelit satgas, FKDM, serta evaluasi rasio giat siskamling lingkungan."
                 breadcrumbs={[{ label: "Dashboard", href: "/admin" }, { label: "Ketentraman & Ketertiban", href: "/admin/ketentraman" }, { label: "Kader Terdaftar" }]} />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Personel Linmas" value={totalLinmas.toLocaleString("id-ID")} icon={Shield} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Satuan Tugas (Satgas)" value={totalSatgas.toLocaleString("id-ID")} icon={Users} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="Jaringan Pos Kamling" value={totalPos.toLocaleString("id-ID")} icon={Home} gradient="stat-gradient-soft-amber" />
-                <StatCard label="Frekuensi Siskamling" value={totalSiskamling.toLocaleString("id-ID")} icon={Award} gradient="stat-gradient-soft-rose" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatCard size="sm" label="Total Personel Linmas" value={totalLinmas.toLocaleString("id-ID")} icon={Shield} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Satuan Tugas (Satgas)" value={totalSatgas.toLocaleString("id-ID")} icon={Users} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Jaringan Pos Kamling" value={totalPos.toLocaleString("id-ID")} icon={Home} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Frekuensi Siskamling" value={totalSiskamling.toLocaleString("id-ID")} icon={Award} gradient="stat-gradient-soft-rose" />
             </div>
 
             <DataTable columns={columns} data={enrichedData} isLoading={isLoading}

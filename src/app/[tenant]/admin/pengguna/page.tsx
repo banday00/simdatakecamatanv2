@@ -11,6 +11,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import {
     Users, UserCheck, Shield, ShieldCheck, Plus, Edit, Trash2,
     Loader2, X, Save, Mail, Briefcase, MapPin, KeyRound,
+    AlertTriangle, CheckCircle2, Info,
 } from "lucide-react";
 
 /* ─── Types ──────────────────────────────────────────────────── */
@@ -27,6 +28,12 @@ type UserRow = Record<string, unknown> & {
     is_active: boolean;
     last_login: string | null;
     created_at?: string;
+};
+
+type NoticeState = {
+    title: string;
+    message: string;
+    tone?: "error" | "success" | "warning" | "info";
 };
 
 /* ─── Columns ────────────────────────────────────────────────── */
@@ -80,8 +87,10 @@ export default function PenggunaAdminPage() {
     const [editRow, setEditRow] = useState<UserRow | null>(null);
     const [deleteRow, setDeleteRow] = useState<UserRow | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [notice, setNotice] = useState<NoticeState | null>(null);
 
     const isAuthorized = profile?.role === "super_admin";
+    const showNotice = useCallback((nextNotice: NoticeState) => setNotice(nextNotice), []);
 
     const fetchUsers = useCallback(async () => {
         if (!tenant?.slug || !isAuthorized) return;
@@ -179,7 +188,11 @@ export default function PenggunaAdminPage() {
             await fetchUsers();
         } catch (err: any) {
             console.error("[handleSubmit] error:", err);
-            alert("Gagal menyimpan data:\n" + (err.message || JSON.stringify(err)));
+            showNotice({
+                tone: "error",
+                title: "Gagal menyimpan data",
+                message: err.message || JSON.stringify(err),
+            });
         } finally { setIsSubmitting(false); }
     }
 
@@ -187,7 +200,11 @@ export default function PenggunaAdminPage() {
         if (!deleteRow || !tenant?.slug) return;
         if (deleteRow.id === profile?.id) {
             setDeleteRow(null);
-            alert("Tidak bisa menghapus akun sendiri.");
+            showNotice({
+                tone: "warning",
+                title: "Aksi tidak diizinkan",
+                message: "Super admin tidak bisa menghapus akun sendiri.",
+            });
             return;
         }
         setIsSubmitting(true);
@@ -200,7 +217,11 @@ export default function PenggunaAdminPage() {
             setDeleteRow(null);
             await fetchUsers();
         } catch (err: any) {
-            alert(err.message || "Gagal menghapus");
+            showNotice({
+                tone: "error",
+                title: "Gagal menghapus pengguna",
+                message: err.message || "Gagal menghapus pengguna.",
+            });
         } finally { setIsSubmitting(false); }
     }
 
@@ -226,7 +247,11 @@ export default function PenggunaAdminPage() {
                 onEdit={(row) => { setEditRow(row); setModalOpen(true); }}
                 onDelete={(row) => {
                     if (row.id === profile?.id) {
-                        alert("Tidak bisa menghapus akun sendiri.");
+                        showNotice({
+                            tone: "warning",
+                            title: "Aksi tidak diizinkan",
+                            message: "Super admin tidak bisa menghapus akun sendiri.",
+                        });
                         return;
                     }
                     setDeleteRow(row);
@@ -242,6 +267,7 @@ export default function PenggunaAdminPage() {
                 editRow={editRow}
                 isSubmitting={isSubmitting}
                 kelurahans={kelurahans}
+                onNotice={showNotice}
             />
 
             {/* Delete Confirm */}
@@ -253,20 +279,102 @@ export default function PenggunaAdminPage() {
                 message={`Hapus pengguna "${deleteRow?.nama_lengkap}"? Akun dan semua data profil akan dihapus permanen.`}
                 isDeleting={isSubmitting}
             />
+
+            <NoticeModal
+                open={!!notice}
+                title={notice?.title || ""}
+                message={notice?.message || ""}
+                tone={notice?.tone}
+                onClose={() => setNotice(null)}
+            />
         </div>
+    );
+}
+
+function NoticeModal({ open, title, message, tone = "info", onClose }: NoticeState & {
+    open: boolean;
+    onClose: () => void;
+}) {
+    if (!open) return null;
+
+    const toneMap = {
+        error: {
+            icon: AlertTriangle,
+            accent: "from-red-500 via-rose-500 to-orange-500",
+            box: "from-red-50 to-rose-100 border-red-200",
+            iconClass: "text-red-500",
+            button: "bg-red-600 hover:bg-red-700 shadow-red-600/25",
+        },
+        warning: {
+            icon: AlertTriangle,
+            accent: "from-amber-500 via-orange-500 to-red-500",
+            box: "from-amber-50 to-orange-100 border-amber-200",
+            iconClass: "text-amber-600",
+            button: "bg-amber-600 hover:bg-amber-700 shadow-amber-600/25",
+        },
+        success: {
+            icon: CheckCircle2,
+            accent: "from-emerald-500 via-teal-500 to-cyan-500",
+            box: "from-emerald-50 to-teal-100 border-emerald-200",
+            iconClass: "text-emerald-600",
+            button: "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/25",
+        },
+        info: {
+            icon: Info,
+            accent: "from-blue-500 via-indigo-500 to-sky-500",
+            box: "from-blue-50 to-indigo-100 border-blue-200",
+            iconClass: "text-blue-600",
+            button: "bg-blue-600 hover:bg-blue-700 shadow-blue-600/25",
+        },
+    }[tone];
+    const Icon = toneMap.icon;
+
+    return createPortal(
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-md" onClick={onClose} />
+            <div
+                className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+                style={{ animation: "modalSlideIn 0.25s ease-out" }}
+            >
+                <div className={`h-1.5 bg-gradient-to-r ${toneMap.accent}`} />
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    aria-label="Tutup"
+                >
+                    <X className="w-4 h-4" />
+                </button>
+
+                <div className="px-7 py-7 text-center">
+                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br border flex items-center justify-center mx-auto mb-5 shadow-sm ${toneMap.box}`}>
+                        <Icon className={`w-8 h-8 ${toneMap.iconClass}`} />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
+                    <p className="text-sm text-gray-500 leading-relaxed mb-7 whitespace-pre-line">{message}</p>
+                    <button
+                        onClick={onClose}
+                        className={`w-full px-4 py-2.5 text-sm font-semibold text-white rounded-xl transition-colors shadow-lg ${toneMap.button}`}
+                    >
+                        OK
+                    </button>
+                </div>
+            </div>
+        </div>,
+        document.body
     );
 }
 
 /* ═══════════════════════════════════════════════════════════════
    PenggunaFormModal — Custom Form (Blue Gradient)
    ═══════════════════════════════════════════════════════════════ */
-function PenggunaFormModal({ open, onClose, onSubmit, editRow, isSubmitting, kelurahans }: {
+function PenggunaFormModal({ open, onClose, onSubmit, editRow, isSubmitting, kelurahans, onNotice }: {
     open: boolean;
     onClose: () => void;
     onSubmit: (data: Record<string, unknown>) => Promise<void>;
     editRow: UserRow | null;
     isSubmitting: boolean;
     kelurahans: { id: string; nama: string }[];
+    onNotice: (notice: NoticeState) => void;
 }) {
     const isEdit = !!editRow;
     const [form, setForm] = useState<Record<string, unknown>>({
@@ -329,11 +437,19 @@ function PenggunaFormModal({ open, onClose, onSubmit, editRow, isSubmitting, kel
 
         if (isPasswordBeingSet) {
             if (passwordStrength.score < 5) {
-                alert("Password terlalu lemah. Gunakan kombinasi huruf besar, angka, dan simbol hingga indikator menunjukkan 'Kuat'.");
+                onNotice({
+                    tone: "warning",
+                    title: "Password belum kuat",
+                    message: "Gunakan kombinasi huruf besar, angka, dan simbol hingga indikator menunjukkan 'Kuat'.",
+                });
                 return;
             }
             if (String(form.password) !== confirmPassword) {
-                alert("Password dan Konfirmasi Password tidak cocok!");
+                onNotice({
+                    tone: "warning",
+                    title: "Konfirmasi password tidak cocok",
+                    message: "Password dan konfirmasi password harus sama.",
+                });
                 return;
             }
         }

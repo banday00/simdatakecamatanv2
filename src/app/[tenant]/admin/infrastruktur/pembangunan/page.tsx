@@ -171,10 +171,10 @@ export default function PembangunanPage() {
                 breadcrumbs={[{ label: "Dashboard", href: "/admin" }, { label: "Infrastruktur", href: "/admin/infrastruktur" }, { label: "Pembangunan" }]} />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Proyek" value={total} icon={Hammer} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Tuntas Dibangun" value={selesai} icon={CheckCircle} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="Tahap Konstruksi" value={proses} icon={Clock} gradient="stat-gradient-soft-amber" />
-                <StatCard label="Total Anggaran" value={`Rp ${(totalAnggaran / 1e9).toFixed(1)} M`} icon={Banknote} gradient="stat-gradient-soft-rose" />
+                <StatCard size="sm" label="Total Proyek" value={total} icon={Hammer} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Tuntas Dibangun" value={selesai} icon={CheckCircle} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Tahap Konstruksi" value={proses} icon={Clock} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Total Anggaran" value={`Rp ${(totalAnggaran / 1e9).toFixed(1)} M`} icon={Banknote} gradient="stat-gradient-soft-rose" />
             </div>
 
             <DataTable columns={columns} data={enrichedData} isLoading={isLoading}

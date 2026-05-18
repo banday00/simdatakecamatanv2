@@ -187,10 +187,10 @@ export default function SektorUsahaPage() {
             <PageHeader title="Sektor Usaha" description="Kelola penggolongan dan distribusi usaha berdasarkan sektor"
                 breadcrumbs={[{ label: "Dashboard", href: "/admin" }, { label: "Ekonomi", href: "/admin/ekonomi" }, { label: "Sektor Usaha" }]} />
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <StatCard label="Total Entri Sektor" value={totalData.toLocaleString("id-ID")} icon={Factory} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Total Unit Usaha" value={totalUnit.toLocaleString("id-ID")} icon={Store} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="Serapan Tenaga Kerja" value={`${totalTK.toLocaleString("id-ID")} org`} icon={Users} gradient="stat-gradient-soft-amber" />
+            <div className="grid grid-cols-3 gap-3">
+                <StatCard size="sm" label="Total Entri Sektor" value={totalData.toLocaleString("id-ID")} icon={Factory} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Total Unit Usaha" value={totalUnit.toLocaleString("id-ID")} icon={Store} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Serapan Tenaga Kerja" value={`${totalTK.toLocaleString("id-ID")} org`} icon={Users} gradient="stat-gradient-soft-amber" />
             </div>
 
             <DataTable columns={columns} data={enrichedData} isLoading={isLoading}

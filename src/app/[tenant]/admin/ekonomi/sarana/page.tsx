@@ -202,10 +202,10 @@ export default function SaranaEkonomiPage() {
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Sarana" value={total} icon={Store} gradient="stat-gradient-soft-blue" />
-                <StatCard label="Pasar" value={pasar} icon={Building2} gradient="stat-gradient-soft-emerald" />
-                <StatCard label="Toko/Warung" value={toko} icon={TrendingUp} gradient="stat-gradient-soft-amber" />
-                <StatCard label="Koperasi" value={koperasi} icon={Briefcase} gradient="stat-gradient-soft-rose" />
+                <StatCard size="sm" label="Total Sarana" value={total} icon={Store} gradient="stat-gradient-soft-blue" />
+                <StatCard size="sm" label="Pasar" value={pasar} icon={Building2} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Toko/Warung" value={toko} icon={TrendingUp} gradient="stat-gradient-soft-amber" />
+                <StatCard size="sm" label="Koperasi" value={koperasi} icon={Briefcase} gradient="stat-gradient-soft-rose" />
             </div>
 
             <DataTable

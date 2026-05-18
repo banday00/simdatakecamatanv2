@@ -186,10 +186,10 @@ export default function FasilitasKesehatanPage() {
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Fasilitas" value={totalFasilitas} icon={Hospital} gradient="stat-gradient-blue" />
-                <StatCard label="Tenaga Medis" value={totalTenagaMedis} icon={Heart} gradient="stat-gradient-emerald" />
-                <StatCard label="Puskesmas" value={puskesmas} icon={Stethoscope} gradient="stat-gradient-amber" />
-                <StatCard label="Rumah Sakit" value={rs} icon={AlertTriangle} gradient="stat-gradient-rose" />
+                <StatCard size="sm" label="Total Fasilitas" value={totalFasilitas} icon={Hospital} gradient="stat-gradient-blue" />
+                <StatCard size="sm" label="Tenaga Medis" value={totalTenagaMedis} icon={Heart} gradient="stat-gradient-emerald" />
+                <StatCard size="sm" label="Puskesmas" value={puskesmas} icon={Stethoscope} gradient="stat-gradient-amber" />
+                <StatCard size="sm" label="Rumah Sakit" value={rs} icon={AlertTriangle} gradient="stat-gradient-rose" />
             </div>
 
             <DataTable

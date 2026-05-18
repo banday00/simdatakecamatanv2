@@ -19,16 +19,14 @@ import { sosialResourceSchemas, type SosialResource } from "./schemas";
 
 const resourceLabels: Record<SosialResource, string> = {
     bantuan: "sosial/bantuan",
-    disabilitas: "sosial/disabilitas",
     keagamaan: "sosial/keagamaan",
-    perumahan: "sosial/perumahan",
+    // perumahan: now handled by dedicated module
 };
 
 const resourceNotFoundMessages: Record<SosialResource, string> = {
     bantuan: "Data bantuan sosial tidak ditemukan.",
-    disabilitas: "Data disabilitas tidak ditemukan.",
     keagamaan: "Data tempat ibadah tidak ditemukan.",
-    perumahan: "Data RTLH tidak ditemukan.",
+    // perumahan: now handled by dedicated module
 };
 
 function kelurahanFilterFor(profile: Awaited<ReturnType<typeof requireAuth>>) {
