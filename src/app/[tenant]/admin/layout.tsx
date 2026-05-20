@@ -259,6 +259,10 @@ function AdminLayoutInner({
 
     useEffect(() => {
         if (!tenant || !profile) return;
+        if (profile.role === "executive_dashboard") {
+            router.replace(toTenantPath("/executive"));
+            return;
+        }
         if (profile.role !== "super_admin" && profile.tenant_id !== tenant.id) {
             router.replace(toTenantPath("/"));
         }
@@ -291,16 +295,16 @@ function AdminLayoutInner({
 
     // Check for password expiration (365 days) or First Login on mount
     useEffect(() => {
-        if (!user || appPathname.includes("/admin/force-rubah-password")) return;
+        if (!user || appPathname.includes("/force-rubah-password")) return;
         if (user.passwordResetRequired) {
-            router.replace(toTenantPath("/admin/force-rubah-password"));
+            router.replace(toTenantPath("/force-rubah-password"));
             return;
         }
         if (user.passwordChangedAt) {
             const lastUpdatedDate = new Date(user.passwordChangedAt);
             const daysSinceUpdate = (Date.now() - lastUpdatedDate.getTime()) / (1000 * 3600 * 24);
             if (daysSinceUpdate > 365) {
-                router.replace(toTenantPath("/admin/force-rubah-password"));
+                router.replace(toTenantPath("/force-rubah-password"));
             }
         }
     }, [appPathname, router, toTenantPath, user]);

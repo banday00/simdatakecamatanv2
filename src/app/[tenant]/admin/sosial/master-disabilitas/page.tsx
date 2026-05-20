@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useTenant } from "@/lib/tenant/context";
+import { useAuth } from "@/lib/auth/context";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { DeleteConfirm } from "@/components/ui/delete-confirm";
 import { PageHeader } from "@/components/ui/page-header";
@@ -34,6 +35,8 @@ const columns: Column<MasterRow>[] = [
 
 export default function MasterDisabilitasPage() {
     const { tenant } = useTenant();
+    const { profile } = useAuth();
+    const isSuperAdmin = profile?.role === "super_admin";
     const [data, setData] = useState<MasterRow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -117,13 +120,15 @@ export default function MasterDisabilitasPage() {
                 >
                     <Pencil className="w-4 h-4" />
                 </button>
-                <button
-                    onClick={() => setDeleteRow(row)}
-                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Hapus"
-                >
-                    <Trash2 className="w-4 h-4" />
-                </button>
+                {isSuperAdmin && (
+                    <button
+                        onClick={() => setDeleteRow(row)}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Hapus"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                )}
             </div>
         ),
     };
@@ -191,7 +196,7 @@ function FormModal({
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md" onClick={onClose} />
             <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden" style={{ animation: "modalSlideIn 0.3s ease-out" }}>
-                <div className="h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shrink-0" />
+                <div className="h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-600 shrink-0" />
 
                 <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 shrink-0">
                     <div className="flex items-center gap-4">

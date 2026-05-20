@@ -63,7 +63,8 @@ function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const redirectParam = searchParams.get("redirect");
-    const fallbackRedirect = toTenantPath("/admin");
+    const isExecutive = profile?.role === "executive_dashboard";
+    const fallbackRedirect = toTenantPath(isExecutive ? "/executive" : "/admin");
     const redirect =
         redirectParam && tenant?.slug && (
             redirectParam === `/${tenant.slug}` ||
@@ -125,8 +126,11 @@ function LoginForm() {
             setIsSubmitting(false);
             generateCaptcha();
         } else if (result.actionRequired === "force_change_password") {
-            router.push(toTenantPath("/admin/force-rubah-password"));
+            router.push(toTenantPath("/force-rubah-password"));
         } else {
+            // Check if logged-in user is executive — override redirect
+            const execRedirect = toTenantPath("/executive");
+            // We pass redirect but the useEffect for profile will also handle it
             router.push(redirect);
         }
     }
@@ -190,10 +194,6 @@ function LoginForm() {
                             </div>
                         </div>
 
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 mb-3">
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Panel Admin</span>
-                        </div>
 
                         <p className="text-slate-500 text-sm font-medium">
                             {tenant?.nama || "Kecamatan — Kota Bogor"}

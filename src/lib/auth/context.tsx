@@ -16,6 +16,7 @@ type AuthContextType = {
     isLoading: boolean;
     signIn: (email: string, password: string) => Promise<{ error: string | null; actionRequired?: string }>;
     signOut: () => Promise<void>;
+    refreshSession: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthContextType>({
     isLoading: true,
     signIn: async () => ({ error: null }),
     signOut: async () => { },
+    refreshSession: async () => { },
 });
 
 async function logAuthActivity(action: "login" | "logout") {
@@ -84,6 +86,10 @@ function AuthContextBridge({ children }: { children: ReactNode }) {
         await nextAuthSignOut({ redirect: false });
     }
 
+    async function refreshSession() {
+        await update();
+    }
+
     return (
         <AuthContext.Provider
             value={{
@@ -93,6 +99,7 @@ function AuthContextBridge({ children }: { children: ReactNode }) {
                 isLoading: status === "loading",
                 signIn,
                 signOut,
+                refreshSession,
             }}
         >
             {children}

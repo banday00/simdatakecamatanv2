@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { NextRequest } from "next/server";
-import { canManageAdminData, requireAuth, requireKelurahanScope } from "@/server/auth/guards";
+import { canManageAdminData, requireAuth, requireKelurahanScope, requireRole } from "@/server/auth/guards";
 import { logServerActivity } from "@/server/activity/log";
 import { getTenantBySlug } from "@/server/db/tenant";
 import { AppError } from "@/server/http/errors";
@@ -234,6 +234,7 @@ export async function deleteAdminMasterDisabilitas(tenantSlug: string, id: strin
     const tenant = await getTenantBySlug(tenantSlug);
     const profile = await requireAuth();
     canManageAdminData(profile, tenant.id);
+    requireRole(profile, ["super_admin"]); // Hanya super_admin yang boleh menghapus master data
     assertAdminMutationRateLimit({ req, profile, tenantId: tenant.id, module: "sosial/master-disabilitas", action: "delete" });
 
     const row = await deleteMasterDisabilitas(id);
@@ -303,6 +304,7 @@ export async function deleteAdminMasterBantuan(tenantSlug: string, id: string, r
     const tenant = await getTenantBySlug(tenantSlug);
     const profile = await requireAuth();
     canManageAdminData(profile, tenant.id);
+    requireRole(profile, ["super_admin"]); // Hanya super_admin yang boleh menghapus master data
     assertAdminMutationRateLimit({ req, profile, tenantId: tenant.id, module: "sosial/master-bantuan", action: "delete" });
 
     const row = await deleteMasterBantuan(id);

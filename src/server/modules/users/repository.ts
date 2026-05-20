@@ -13,7 +13,7 @@ export type AdminUserRow = {
     nip: string | null;
     jabatan: string | null;
     foto: string | null;
-    role: "super_admin" | "admin_kecamatan" | "admin_kelurahan";
+    role: "super_admin" | "admin_kecamatan" | "admin_kelurahan" | "executive_dashboard";
     is_active: boolean;
     last_login: string | null;
     created_at: string;

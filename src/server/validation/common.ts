@@ -8,7 +8,7 @@ export const tenantSlugSchema = z
     .min(1, "Tenant wajib diisi.")
     .regex(/^[a-z0-9-]+$/, "Tenant tidak valid.");
 
-export const userRoleSchema = z.enum(["super_admin", "admin_kecamatan", "admin_kelurahan"]);
+export const userRoleSchema = z.enum(["super_admin", "admin_kecamatan", "admin_kelurahan", "executive_dashboard"]);
 export const newsStatusSchema = z.enum(["draft", "published", "archived"]);
 
 export const paginationSchema = z.object({

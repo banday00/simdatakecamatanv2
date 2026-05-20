@@ -15,6 +15,7 @@ export const userRoleEnum = pgEnum("user_role", [
     "super_admin",
     "admin_kecamatan",
     "admin_kelurahan",
+    "executive_dashboard",
 ]);
 
 export const users = pgTable("users", {

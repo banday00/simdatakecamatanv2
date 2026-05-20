@@ -11,7 +11,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import {
     Users, UserCheck, Shield, ShieldCheck, Plus, Edit, Trash2,
     Loader2, X, Save, Mail, Briefcase, MapPin, KeyRound,
-    AlertTriangle, CheckCircle2, Info,
+    AlertTriangle, CheckCircle2, Info, BarChart3,
 } from "lucide-react";
 
 /* ─── Types ──────────────────────────────────────────────────── */
@@ -24,7 +24,7 @@ type UserRow = Record<string, unknown> & {
     nip: string | null;
     jabatan: string | null;
     foto: string | null;
-    role: "super_admin" | "admin_kecamatan" | "admin_kelurahan";
+    role: "super_admin" | "admin_kecamatan" | "admin_kelurahan" | "executive_dashboard";
     is_active: boolean;
     last_login: string | null;
     created_at?: string;
@@ -47,6 +47,7 @@ const columns: Column<UserRow>[] = [
                 super_admin: { label: "Super Admin", cls: "bg-purple-100 text-purple-700" },
                 admin_kecamatan: { label: "Admin Kecamatan", cls: "bg-blue-100 text-blue-700" },
                 admin_kelurahan: { label: "Admin Kelurahan", cls: "bg-emerald-100 text-emerald-700" },
+                executive_dashboard: { label: "Executive Dashboard", cls: "bg-indigo-100 text-indigo-700" },
             };
             const m = map[r] || { label: r, cls: "bg-gray-100 text-gray-600" };
             return <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${m.cls}`}>{m.label}</span>;
@@ -124,6 +125,7 @@ export default function PenggunaAdminPage() {
     const totalUsers = data.length;
     const adminKec = data.filter(d => d.role === "admin_kecamatan").length;
     const adminKel = data.filter(d => d.role === "admin_kelurahan").length;
+    const executive = data.filter(d => d.role === "executive_dashboard").length;
     const activeUsers = data.filter(d => d.is_active).length;
 
     /* handlers */
@@ -232,10 +234,11 @@ export default function PenggunaAdminPage() {
                 description="Kelola akun admin kecamatan dan kelurahan"
             />
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 <StatCard size="sm" label="Total Pengguna" value={totalUsers} icon={Users} gradient="stat-gradient-soft-blue" />
                 <StatCard size="sm" label="Admin Kecamatan" value={adminKec} icon={ShieldCheck} gradient="stat-gradient-soft-indigo" />
                 <StatCard size="sm" label="Admin Kelurahan" value={adminKel} icon={Shield} gradient="stat-gradient-soft-emerald" />
+                <StatCard size="sm" label="Executive" value={executive} icon={BarChart3} gradient="stat-gradient-soft-purple" />
                 <StatCard size="sm" label="Pengguna Aktif" value={activeUsers} icon={UserCheck} gradient="stat-gradient-soft-amber" />
             </div>
 
@@ -521,10 +524,11 @@ function PenggunaFormModal({ open, onClose, onSubmit, editRow, isSubmitting, kel
                                 {/* Role Radio Cards */}
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-3">Peran Pengguna <span className="text-red-500">*</span></label>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 gap-3">
                                         {[
                                             { value: "admin_kecamatan", label: "Admin Kecamatan", desc: "Akses ke seluruh data kecamatan", icon: ShieldCheck, color: "blue" },
                                             { value: "admin_kelurahan", label: "Admin Kelurahan", desc: "Akses terbatas ke data kelurahan", icon: Shield, color: "emerald" },
+                                            { value: "executive_dashboard", label: "Executive Dashboard", desc: "Dashboard eksekutif untuk pimpinan", icon: BarChart3, color: "indigo" },
                                         ].map(opt => {
                                             const selected = form.role === opt.value;
                                             return (
