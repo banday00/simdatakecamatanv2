@@ -242,73 +242,95 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                     </div>
                 </div>
                 <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {paginatedData.map(row => (
-                        <div key={row.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-white hover:border-indigo-200 hover:shadow-md transition-all relative">
-                            {/* Akreditasi badge */}
-                            {row.akreditasi && row.akreditasi !== 'Belum' && (
-                                <div className="absolute top-4 right-4 text-[10px] font-black w-6 h-6 rounded bg-amber-100 text-amber-700 flex items-center justify-center" title="Akreditasi">
-                                    {row.akreditasi}
-                                </div>
-                            )}
+                    {paginatedData.map(row => {
+                        const jenjang = (row.jenjang || "").toUpperCase();
+                        // Gradient config per jenjang
+                        const gradientMap: Record<string, { from: string; to: string; accent: string; light: string }> = {
+                            "PAUD":    { from: "from-pink-600",   to: "to-rose-500",    accent: "text-pink-600",   light: "bg-pink-50" },
+                            "TK":      { from: "from-pink-500",   to: "to-fuchsia-500", accent: "text-pink-500",   light: "bg-pink-50" },
+                            "SD":      { from: "from-blue-600",   to: "to-indigo-600",  accent: "text-blue-600",   light: "bg-blue-50" },
+                            "SD/MI":   { from: "from-blue-600",   to: "to-indigo-600",  accent: "text-blue-600",   light: "bg-blue-50" },
+                            "SPK SD":  { from: "from-blue-600",   to: "to-indigo-600",  accent: "text-blue-600",   light: "bg-blue-50" },
+                            "SMP":     { from: "from-indigo-600", to: "to-violet-600",  accent: "text-indigo-600", light: "bg-indigo-50" },
+                            "SMP/MTS": { from: "from-indigo-600", to: "to-violet-600",  accent: "text-indigo-600", light: "bg-indigo-50" },
+                            "SPK SMP": { from: "from-indigo-600", to: "to-violet-600",  accent: "text-indigo-600", light: "bg-indigo-50" },
+                            "SMA":     { from: "from-violet-600", to: "to-purple-600",  accent: "text-violet-600", light: "bg-violet-50" },
+                            "SMA/MA":  { from: "from-violet-600", to: "to-purple-600",  accent: "text-violet-600", light: "bg-violet-50" },
+                            "SMK":     { from: "from-purple-600", to: "to-fuchsia-600", accent: "text-purple-600", light: "bg-purple-50" },
+                            "SMA/SMK": { from: "from-violet-600", to: "to-purple-600",  accent: "text-violet-600", light: "bg-violet-50" },
+                            "SPK SMA": { from: "from-violet-600", to: "to-purple-600",  accent: "text-violet-600", light: "bg-violet-50" },
+                            "SLB":     { from: "from-amber-600",  to: "to-orange-500",  accent: "text-amber-600",  light: "bg-amber-50" },
+                        };
+                        const g = gradientMap[jenjang] ?? { from: "from-slate-600", to: "to-slate-500", accent: "text-slate-600", light: "bg-slate-50" };
 
-                            <h4 className="font-bold text-slate-800 text-sm mb-1 line-clamp-1 pr-8">{row.nama}</h4>
-
-                            {/* Periode */}
-                            {(row.tahun_ajaran || row.semester) && (
-                                <p className="text-[10px] text-slate-400 mb-2 font-mono">
-                                    T.A. {row.tahun_ajaran}/{Number(row.tahun_ajaran) + 1} — Semester {Number(row.semester) > 10 ? (Number(row.semester) % 10) : row.semester}
-                                </p>
-                            )}
-
-                            <div className="flex items-center gap-2 mb-3">
-                                <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-white border uppercase tracking-wider text-slate-600">
-                                    {row.jenjang}
-                                </span>
-                                <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${row.status?.toLowerCase() === 'negeri' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
-                                    {row.status}
-                                </span>
-                                {row.partisipasi_bos === 'ya' && (
-                                    <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border bg-blue-50 text-blue-600 border-blue-100">BOS</span>
-                                )}
-                            </div>
-
-                            {/* Stats utama */}
-                            <div className="grid grid-cols-4 gap-2 pt-3 border-t border-slate-200">
-                                <div className="text-center">
-                                    <p className="text-sm font-black text-slate-700">{(row.jumlah_siswa || 0).toLocaleString('id-ID')}</p>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase">Siswa</p>
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-sm font-black text-slate-700">{row.jumlah_guru || 0}</p>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase">Guru</p>
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-sm font-black text-slate-700">{row.jumlah_rombel || 0}</p>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase">Rombel</p>
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-sm font-black text-slate-700">{row.jumlah_ruang_kelas || 0}</p>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase">Kelas</p>
-                                </div>
-                            </div>
-
-                            {/* Gender breakdown (jika ada data) */}
-                            {(Number(row.jumlah_siswa_laki) > 0 || Number(row.jumlah_siswa_perempuan) > 0) && (
-                                <div className="flex items-center gap-3 pt-2 mt-2 border-t border-slate-100 text-[10px] text-slate-500">
-                                    <span className="text-blue-500 font-bold">♂ {row.jumlah_siswa_laki || 0}</span>
-                                    <span className="text-pink-500 font-bold">♀ {row.jumlah_siswa_perempuan || 0}</span>
-                                    {Number(row.jumlah_siswa_dalam_kota) > 0 && (
-                                        <span className="ml-auto text-slate-400">Dlm: {row.jumlah_siswa_dalam_kota} | Luar: {row.jumlah_siswa_luar_kota || 0}</span>
+                        return (
+                            <div key={row.id} className="bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-lg hover:border-indigo-200 transition-all overflow-hidden group">
+                                {/* Gradient Header */}
+                                <div className={`bg-gradient-to-r ${g.from} ${g.to} px-4 py-3 flex items-center justify-between`}>
+                                    <div className="min-w-0">
+                                        <h4 className="font-bold text-white text-sm line-clamp-1">{row.nama}</h4>
+                                        {(row.tahun_ajaran || row.semester) && (
+                                            <p className="text-[10px] text-white/70 font-mono mt-0.5">
+                                                T.A. {row.tahun_ajaran}/{Number(row.tahun_ajaran) + 1} — Smt {Number(row.semester) > 10 ? (Number(row.semester) % 10) : row.semester}
+                                            </p>
+                                        )}
+                                    </div>
+                                    {row.akreditasi && row.akreditasi !== 'Belum' && (
+                                        <span className="shrink-0 ml-2 w-7 h-7 rounded-lg bg-white/20 backdrop-blur-sm text-white text-[11px] font-black flex items-center justify-center border border-white/30" title="Akreditasi">
+                                            {row.akreditasi}
+                                        </span>
                                     )}
                                 </div>
-                            )}
 
-                            <div className="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
-                                <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {kelMap.get(row.kelurahan_id) || "-"}</span>
-                                <span>NPSN: <strong>{row.npsn || "-"}</strong></span>
+                                <div className="p-4">
+                                    {/* Badges */}
+                                    <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                                        <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${g.light} ${g.accent} border-current/20`}>
+                                            {row.jenjang}
+                                        </span>
+                                        <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${row.status?.toLowerCase() === 'negeri' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-orange-50 text-orange-600 border-orange-200'}`}>
+                                            {row.status}
+                                        </span>
+                                        {row.partisipasi_bos === 'ya' && (
+                                            <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border bg-sky-50 text-sky-600 border-sky-200">BOS</span>
+                                        )}
+                                    </div>
+
+                                    {/* Stats Grid */}
+                                    <div className="grid grid-cols-4 gap-1 bg-slate-50 rounded-lg p-2.5">
+                                        {[
+                                            { val: (row.jumlah_siswa || 0).toLocaleString('id-ID'), lbl: "Siswa" },
+                                            { val: row.jumlah_guru || 0, lbl: "Guru" },
+                                            { val: row.jumlah_rombel || 0, lbl: "Rombel" },
+                                            { val: row.jumlah_ruang_kelas || 0, lbl: "Kelas" },
+                                        ].map((s, i) => (
+                                            <div key={i} className="text-center">
+                                                <p className={`text-sm font-black ${g.accent}`}>{s.val}</p>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase">{s.lbl}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Gender breakdown */}
+                                    {(Number(row.jumlah_siswa_laki) > 0 || Number(row.jumlah_siswa_perempuan) > 0) && (
+                                        <div className="flex items-center gap-3 pt-2.5 mt-2.5 border-t border-slate-100 text-[10px]">
+                                            <span className="text-blue-500 font-bold">♂ {row.jumlah_siswa_laki || 0}</span>
+                                            <span className="text-pink-500 font-bold">♀ {row.jumlah_siswa_perempuan || 0}</span>
+                                            {Number(row.jumlah_siswa_dalam_kota) > 0 && (
+                                                <span className="ml-auto text-slate-400">Dlm: {row.jumlah_siswa_dalam_kota} | Luar: {row.jumlah_siswa_luar_kota || 0}</span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Footer */}
+                                    <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
+                                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {kelMap.get(row.kelurahan_id) || "-"}</span>
+                                        <span className="font-mono">NPSN: <strong className="text-slate-700">{row.npsn || "-"}</strong></span>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
                 {totalPages > 1 && (
                     <div className="p-5 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">
@@ -507,126 +529,134 @@ function PartisipasiSection({ participation, facilities, kelurahans, selectedKel
                 </div>
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800">Partisipasi & Literasi</h2>
-                    <p className="text-slate-500 text-sm">Angka partisipasi sekolah, tingkat melek huruf, dan putus sekolah (Tahun {latestYear})</p>
+                    <p className="text-slate-500 text-sm">Angka Partisipasi Kasar (APK), Angka Melek Huruf (AMH), dan Angka Putus Sekolah — Tahun {latestYear}</p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 {[
-                    { label: "Partisipasi SD", value: `${latestAgg.SD || 0}%`, icon: "📖", bg: "bg-red-50", color: "text-red-700" },
-                    { label: "Partisipasi SMP", value: `${latestAgg.SMP || 0}%`, icon: "📘", bg: "bg-blue-50", color: "text-blue-700" },
-                    { label: "Partisipasi SMA", value: `${latestAgg.SMA || 0}%`, icon: "🎓", bg: "bg-purple-50", color: "text-purple-700" },
-                    { label: "Melek Huruf", value: `${latestAgg.melek_huruf || 0}%`, icon: "📝", bg: "bg-emerald-50", color: "text-emerald-700" },
-                    { label: "Putus Sekolah", value: latestAgg.putus_sekolah, icon: "⚠️", bg: "bg-amber-50", color: "text-amber-700" },
+                    { label: "APK SD",       value: `${latestAgg.SD || 0}%`,  sub: "Usia 7–12 thn",  accent: "text-blue-600" },
+                    { label: "APK SMP",      value: `${latestAgg.SMP || 0}%`, sub: "Usia 13–15 thn", accent: "text-indigo-600" },
+                    { label: "APK SMA",      value: `${latestAgg.SMA || 0}%`, sub: "Usia 16–18 thn", accent: "text-violet-600" },
+                    { label: "Melek Huruf",  value: `${latestAgg.melek_huruf || 0}%`, sub: "AMH rata-rata",  accent: "text-emerald-600" },
+                    { label: "Putus Sekolah", value: latestAgg.putus_sekolah, sub: "Total kasus",     accent: "text-amber-600" },
                 ].map((stat, i) => (
-                    <div key={i} className={`p-5 rounded-2xl border border-slate-100 shadow-sm ${stat.bg} flex flex-col items-center justify-center text-center group`}>
-                        <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">{stat.icon}</div>
-                        <span className={`text-2xl font-black ${stat.color} block mb-1`}>{stat.value}</span>
-                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">{stat.label}</span>
+                    <div key={i} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all">
+                        <span className={`text-2xl font-black ${stat.accent} block mb-0.5`}>{stat.value}</span>
+                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">{stat.label}</span>
+                        <span className="text-[10px] text-slate-400">{stat.sub}</span>
                     </div>
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-                    <h3 className="text-base font-bold text-slate-800 mb-4">📊 Tren Partisipasi Sekolah ({trendData[0]?.tahun || latestYear} - {latestYear})</h3>
-                    <p className="text-xs text-slate-500 mb-4">Rata-rata Angka Partisipasi Kasar per jenjang</p>
-                    <div className="h-64">
+            {/* Charts — 2×2 grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Tren APK */}
+                <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
+                    <h3 className="text-sm font-bold text-slate-800 mb-1">Tren Partisipasi Sekolah</h3>
+                    <p className="text-[10px] text-slate-400 mb-4">Rata-rata APK per jenjang ({trendData[0]?.tahun || latestYear}–{latestYear})</p>
+                    <div className="h-56">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <LineChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                <XAxis dataKey="tahun" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
-                                <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} />
-                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                                <Line type="monotone" dataKey="SD" name="SD (%)" stroke={JENJANG_COLORS["SD"]} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                                <Line type="monotone" dataKey="SMP" name="SMP (%)" stroke={JENJANG_COLORS["SMP"]} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                                <Line type="monotone" dataKey="SMA" name="SMA (%)" stroke={JENJANG_COLORS["SMA"]} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                                <XAxis dataKey="tahun" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} dy={8} />
+                                <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12 }} />
+                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '8px' }} />
+                                <Line type="monotone" dataKey="SD" name="SD (%)" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                                <Line type="monotone" dataKey="SMP" name="SMP (%)" stroke="#4f46e5" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                                <Line type="monotone" dataKey="SMA" name="SMA (%)" stroke="#7c3aed" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-                    <h3 className="text-base font-bold text-slate-800 mb-4">📝 Tingkat Melek Huruf ({trendData[0]?.tahun || latestYear} - {latestYear})</h3>
-                    <p className="text-xs text-slate-500 mb-4">Rata-rata persentase melek huruf per tahun</p>
+                {/* Tren AMH */}
+                <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
+                    <h3 className="text-sm font-bold text-slate-800 mb-1">Angka Melek Huruf (AMH)</h3>
+                    <p className="text-[10px] text-slate-400 mb-4">Rata-rata AMH per tahun ({trendData[0]?.tahun || latestYear}–{latestYear})</p>
                     <div className="h-56">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <AreaChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorMelek" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
                                         <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                <XAxis dataKey="tahun" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
-                                <YAxis domain={[80, 100]} tick={{ fontSize: 11, fill: "#10b981" }} axisLine={false} tickLine={false} />
-                                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} formatter={(value: number) => [`${value}%`, 'Melek Huruf']} />
-                                <Area type="monotone" dataKey="melek_huruf" name="Melek Huruf (%)" stroke="#10b981" strokeWidth={2.5} fill="url(#colorMelek)" dot={{ r: 4, fill: '#10b981' }} activeDot={{ r: 6 }} />
+                                <XAxis dataKey="tahun" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} dy={8} />
+                                <YAxis domain={[80, 100]} tick={{ fontSize: 10, fill: "#10b981" }} axisLine={false} tickLine={false} />
+                                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12 }} formatter={(value: number) => [`${value}%`, 'AMH']} />
+                                <Area type="monotone" dataKey="melek_huruf" name="AMH (%)" stroke="#10b981" strokeWidth={2.5} fill="url(#colorMelek)" dot={{ r: 3, fill: '#10b981' }} activeDot={{ r: 5 }} />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-                    <h3 className="text-base font-bold text-slate-800 mb-4">⚠️ Total Putus Sekolah ({trendData[0]?.tahun || latestYear} - {latestYear})</h3>
-                    <p className="text-xs text-slate-500 mb-4">Jumlah total siswa putus sekolah per tahun</p>
+                {/* Total Putus Sekolah */}
+                <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
+                    <h3 className="text-sm font-bold text-slate-800 mb-1">Total Putus Sekolah</h3>
+                    <p className="text-[10px] text-slate-400 mb-4">Jumlah siswa putus sekolah per tahun</p>
                     <div className="h-56">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <BarChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorPutus" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.9} />
-                                        <stop offset="100%" stopColor="#fbbf24" stopOpacity={0.6} />
+                                        <stop offset="100%" stopColor="#fbbf24" stopOpacity={0.5} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                <XAxis dataKey="tahun" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
-                                <YAxis tick={{ fontSize: 11, fill: "#f59e0b" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} formatter={(value: number) => [`${value} jiwa`, 'Putus Sekolah']} />
-                                <Bar dataKey="putus_sekolah" name="Total Putus Sekolah" fill="url(#colorPutus)" radius={[8, 8, 0, 0]} maxBarSize={60} />
+                                <XAxis dataKey="tahun" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} dy={8} />
+                                <YAxis tick={{ fontSize: 10, fill: "#f59e0b" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12 }} formatter={(value: number) => [`${value} jiwa`, 'APS']} />
+                                <Bar dataKey="putus_sekolah" name="Total APS" fill="url(#colorPutus)" radius={[6, 6, 0, 0]} maxBarSize={45} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-                    <h3 className="text-base font-bold text-slate-800 mb-4">📋 Putus Sekolah per Jenjang ({trendData[0]?.tahun || latestYear} - {latestYear})</h3>
-                    <p className="text-xs text-slate-500 mb-4">Perbandingan siswa putus sekolah berdasarkan jenjang pendidikan</p>
+                {/* Putus Sekolah per Jenjang */}
+                <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
+                    <h3 className="text-sm font-bold text-slate-800 mb-1">APS per Jenjang</h3>
+                    <p className="text-[10px] text-slate-400 mb-4">Perbandingan putus sekolah berdasarkan jenjang</p>
                     <div className="h-56">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <BarChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                <XAxis dataKey="tahun" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
-                                <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} formatter={(value: number, name: string) => [`${value} jiwa`, name]} />
-                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '5px' }} />
-                                <Bar dataKey="putus_SD" name="SD" stackId="putus" fill={JENJANG_COLORS["SD"]} radius={[0, 0, 0, 0]} maxBarSize={50} />
-                                <Bar dataKey="putus_SMP" name="SMP" stackId="putus" fill={JENJANG_COLORS["SMP"]} radius={[0, 0, 0, 0]} maxBarSize={50} />
-                                <Bar dataKey="putus_SMA" name="SMA" stackId="putus" fill={JENJANG_COLORS["SMA"]} radius={[4, 4, 0, 0]} maxBarSize={50} />
+                                <XAxis dataKey="tahun" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} dy={8} />
+                                <YAxis tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12 }} formatter={(value: number, name: string) => [`${value} jiwa`, name]} />
+                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
+                                <Bar dataKey="putus_SD" name="SD" stackId="putus" fill="#3b82f6" maxBarSize={40} />
+                                <Bar dataKey="putus_SMP" name="SMP" stackId="putus" fill="#4f46e5" maxBarSize={40} />
+                                <Bar dataKey="putus_SMA" name="SMA" stackId="putus" fill="#7c3aed" radius={[4, 4, 0, 0]} maxBarSize={40} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
             </div>
 
+            {/* Kelurahan Comparison */}
             {!selectedKelurahan && (
-                <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm mt-6">
-                    <h3 className="text-base font-bold text-slate-800 mb-6">Angka Partisipasi & Putus Sekolah per Kelurahan ({latestYear})</h3>
+                <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm">
+                    <h3 className="text-sm font-bold text-slate-800 mb-1">Perbandingan per Kelurahan ({latestYear})</h3>
+                    <p className="text-[10px] text-slate-400 mb-4">APK per jenjang & jumlah putus sekolah</p>
                     <div className="h-72">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={kelComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <BarChart data={kelComparisonData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                <XAxis dataKey="nama" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
-                                <YAxis yAxisId="left" domain={[0, 100]} tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#f59e0b" }} axisLine={false} tickLine={false} />
-                                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} />
-                                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '5px' }} />
-                                <Bar yAxisId="left" dataKey="SD" name="APK SD (%)" fill={JENJANG_COLORS["SD"]} radius={[4, 4, 0, 0]} maxBarSize={20} />
-                                <Bar yAxisId="left" dataKey="SMP" name="APK SMP (%)" fill={JENJANG_COLORS["SMP"]} radius={[4, 4, 0, 0]} maxBarSize={20} />
-                                <Bar yAxisId="left" dataKey="SMA" name="APK SMA (%)" fill={JENJANG_COLORS["SMA"]} radius={[4, 4, 0, 0]} maxBarSize={20} />
-                                <Area yAxisId="right" dataKey="putus_sekolah" name="Putus Sekolah (Jiwa)" stroke="#f59e0b" fill="#fef3c7" />
+                                <XAxis dataKey="nama" tick={{ fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} dy={8} />
+                                <YAxis yAxisId="left" domain={[0, 100]} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "#f59e0b" }} axisLine={false} tickLine={false} />
+                                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12 }} cursor={{ fill: "#f8fafc" }} />
+                                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
+                                <Bar yAxisId="left" dataKey="SD" name="APK SD (%)" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={16} />
+                                <Bar yAxisId="left" dataKey="SMP" name="APK SMP (%)" fill="#4f46e5" radius={[3, 3, 0, 0]} maxBarSize={16} />
+                                <Bar yAxisId="left" dataKey="SMA" name="APK SMA (%)" fill="#7c3aed" radius={[3, 3, 0, 0]} maxBarSize={16} />
+                                <Area yAxisId="right" dataKey="putus_sekolah" name="APS (Jiwa)" stroke="#f59e0b" fill="#fef3c7" />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -756,16 +786,7 @@ const BENCHMARKS = {
     rasio: { baik: 20, perhatian: 28, label: "Rasio Guru:Murid", reverse: true },
 };
 
-function getStatusBadge(value: number, benchmark: { baik: number; perhatian: number; reverse?: boolean }) {
-    if (benchmark.reverse) {
-        if (value <= benchmark.baik) return { text: "Baik", bg: "bg-emerald-100 text-emerald-700" };
-        if (value <= benchmark.perhatian) return { text: "Perhatian", bg: "bg-amber-100 text-amber-700" };
-        return { text: "Kritis", bg: "bg-red-100 text-red-700" };
-    }
-    if (value >= benchmark.baik) return { text: "Baik", bg: "bg-emerald-100 text-emerald-700" };
-    if (value >= benchmark.perhatian) return { text: "Perhatian", bg: "bg-amber-100 text-amber-700" };
-    return { text: "Kritis", bg: "bg-red-100 text-red-700" };
-}
+// Function removed
 
 function AnalisisSection({ facilities, participation, kelurahans, selectedKelurahan }: { facilities: any[]; participation: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
     const kelMap = new Map<string, string>();
@@ -896,19 +917,19 @@ function AnalisisSection({ facilities, participation, kelurahans, selectedKelura
                 </div>
             </div>
 
-            {/* Summary Cards — APK/AMH dari Partisipasi */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {/* KPI Cards with status badges */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {[
-                    { label: "APK SD", value: `${cityAvg.apk_sd}%`, benchmark: BENCHMARKS.apk_sd, raw: cityAvg.apk_sd, subtitle: "Agregat" },
-                    { label: "APK SMP", value: `${cityAvg.apk_smp}%`, benchmark: BENCHMARKS.apk_smp, raw: cityAvg.apk_smp, subtitle: "Agregat" },
-                    { label: "APK SMA", value: `${cityAvg.apk_sma}%`, benchmark: BENCHMARKS.apk_sma, raw: cityAvg.apk_sma, subtitle: "Agregat" },
-                    { label: "AMH", value: `${cityAvg.amh}%`, benchmark: BENCHMARKS.amh, raw: cityAvg.amh, subtitle: "Rata-rata" },
-                    { label: "Putus Sekolah", value: `${cityAvg.aps}`, benchmark: BENCHMARKS.aps, raw: cityAvg.aps, subtitle: "Rata-rata" },
-                    { label: "Rasio G:M", value: `1:${cityAvg.rasio}`, benchmark: BENCHMARKS.rasio, raw: cityAvg.rasio, subtitle: "Agregat" },
+                    { label: "APK SD", value: `${cityAvg.apk_sd}%`, benchmark: BENCHMARKS.apk_sd, raw: cityAvg.apk_sd, sub: "Agregat" },
+                    { label: "APK SMP", value: `${cityAvg.apk_smp}%`, benchmark: BENCHMARKS.apk_smp, raw: cityAvg.apk_smp, sub: "Agregat" },
+                    { label: "APK SMA", value: `${cityAvg.apk_sma}%`, benchmark: BENCHMARKS.apk_sma, raw: cityAvg.apk_sma, sub: "Agregat" },
+                    { label: "AMH", value: `${cityAvg.amh}%`, benchmark: BENCHMARKS.amh, raw: cityAvg.amh, sub: "Rata-rata" },
+                    { label: "Putus Sekolah", value: `${cityAvg.aps}`, benchmark: BENCHMARKS.aps, raw: cityAvg.aps, sub: "Rata-rata" },
+                    { label: "Rasio G:M", value: `1:${cityAvg.rasio}`, benchmark: BENCHMARKS.rasio, raw: cityAvg.rasio, sub: "Agregat" },
                 ].map((stat, i) => (
-                    <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
+                    <div key={i} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all">
                         <span className="text-2xl font-black text-slate-800 block mb-1">{stat.value}</span>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{stat.label} ({stat.subtitle})</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{stat.label}</span>
                     </div>
                 ))}
             </div>
@@ -920,40 +941,31 @@ function AnalisisSection({ facilities, participation, kelurahans, selectedKelura
                 const totalGuru = kelMetrics.reduce((s: number, m: any) => s + m.jml_guru, 0);
                 const totalKelas = kelMetrics.reduce((s: number, m: any) => s + m.jml_ruang_kelas, 0);
                 const totalBos = kelMetrics.reduce((s: number, m: any) => s + m.bos_count, 0);
-                const rasioKelas = totalKelas > 0 ? (totalSiswa / totalKelas).toFixed(1) : "0";
                 return (
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center">
-                            <span className="text-xl font-black text-indigo-600 block mb-1">{totalSekolah}</span>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Sekolah</span>
-                        </div>
-                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center">
-                            <span className="text-xl font-black text-emerald-600 block mb-1">{totalSiswa.toLocaleString('id-ID')}</span>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Siswa</span>
-                        </div>
-                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center">
-                            <span className="text-xl font-black text-blue-600 block mb-1">{totalGuru.toLocaleString('id-ID')}</span>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Guru</span>
-                        </div>
-                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center">
-                            <span className="text-xl font-black text-violet-600 block mb-1">{totalKelas}</span>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ruang Kelas</span>
-                        </div>
-                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center">
-                            <span className="text-xl font-black text-amber-600 block mb-1">{totalBos}</span>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sekolah BOS</span>
-                        </div>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        {[
+                            { label: "Total Sekolah", value: totalSekolah, accent: "text-indigo-600" },
+                            { label: "Total Siswa", value: totalSiswa.toLocaleString('id-ID'), accent: "text-blue-600" },
+                            { label: "Total Guru", value: totalGuru.toLocaleString('id-ID'), accent: "text-violet-600" },
+                            { label: "Ruang Kelas", value: totalKelas, accent: "text-emerald-600" },
+                            { label: "Sekolah BOS", value: totalBos, accent: "text-amber-600" },
+                        ].map((s, i) => (
+                            <div key={i} className="bg-slate-50 p-4 rounded-xl border border-slate-200 hover:bg-white transition-all">
+                                <span className={`text-xl font-black ${s.accent} block mb-0.5`}>{s.value}</span>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{s.label}</span>
+                            </div>
+                        ))}
                     </div>
                 );
             })()}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Radar Chart */}
-                <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col items-center">
-                    <h3 className="text-base font-bold text-slate-800 self-start mb-1">
+                <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm flex flex-col items-center">
+                    <h3 className="text-sm font-bold text-slate-800 self-start mb-1">
                         Profil Indikator {activeKelurahanMetric ? activeKelurahanMetric.nama : (kelMetrics[0] as any)?.nama || ""}
                     </h3>
-                    <p className="text-xs text-slate-500 self-start mb-4">Dibandingkan rata-rata kecamatan (indikator BPS & Kemendikbud)</p>
+                    <p className="text-[10px] text-slate-400 self-start mb-4">Dibandingkan rata-rata kecamatan (standar BPS & Kemendikbud)</p>
                     <div className="w-full h-72">
                         <ResponsiveContainer width="100%" height="100%">
                             <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
@@ -970,15 +982,15 @@ function AnalisisSection({ facilities, participation, kelurahans, selectedKelura
                 </div>
 
                 {/* Indicator Table per Kelurahan */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
-                    <div className="p-5 border-b border-slate-100">
+                <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+                    <div className="p-4 border-b border-slate-100">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-base font-bold text-slate-800 flex items-center gap-2"><Award className="w-5 h-5 text-indigo-500" /> Indikator per Kelurahan</h3>
+                            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2"><Award className="w-4 h-4 text-indigo-500" /> Indikator per Kelurahan</h3>
                             {perhatianCount > 0 && (
-                                <span className="text-[10px] font-bold px-2 py-1 bg-amber-50 text-amber-600 rounded-lg">{perhatianCount} perlu perhatian</span>
+                                <span className="text-[9px] font-bold px-2 py-0.5 bg-amber-50 text-amber-600 rounded-md border border-amber-200">{perhatianCount} perlu perhatian</span>
                             )}
                         </div>
-                        <p className="text-[10px] text-slate-400 mt-1">Diurutkan berdasarkan rata-rata APK tertinggi</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Diurutkan berdasarkan rata-rata APK tertinggi</p>
                     </div>
                     <div className="flex-1 overflow-y-auto max-h-[380px] p-0 custom-scrollbar">
                         <table className="w-full text-sm text-left">
@@ -1038,15 +1050,14 @@ function AnalisisSection({ facilities, participation, kelurahans, selectedKelura
             </div>
 
             {/* Methodology Note */}
-            <div className="bg-indigo-50/50 rounded-2xl p-5 border border-indigo-100">
-                <h4 className="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-2">📖 Keterangan Indikator</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 text-xs text-slate-600">
-                    <p>• <strong>APK</strong> — Angka Partisipasi Kasar per jenjang (Sumber: Kemendikbud, BPS)</p>
-                    <p>• <strong>AMH</strong> — Angka Melek Huruf penduduk ≥15 tahun (Sumber: BPS/Susenas)</p>
-                    <p>• <strong>APS</strong> — Angka Putus Sekolah, total semua jenjang (Kemendikbud)</p>
-                    <p>• <strong>G:M</strong> — Rasio Guru-Murid, standar SPM 1:20 s.d 1:28 (Permendikbud)</p>
+            <div className="bg-indigo-50/50 rounded-xl p-4 border border-indigo-100">
+                <h4 className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-2">Keterangan Indikator</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 text-[11px] text-slate-600">
+                    <p>• <strong>APK</strong> — Angka Partisipasi Kasar per jenjang (Kemendikbud, BPS)</p>
+                    <p>• <strong>AMH</strong> — Angka Melek Huruf penduduk ≥15 thn (BPS/Susenas)</p>
+                    <p>• <strong>APS</strong> — Angka Putus Sekolah, semua jenjang (Kemendikbud)</p>
+                    <p>• <strong>G:M</strong> — Rasio Guru-Murid, standar SPM 1:20–1:28 (Permendikbud)</p>
                 </div>
-
             </div>
         </section>
     );
@@ -1149,16 +1160,11 @@ export default function PendidikanPage() {
                 <div className="grid grid-cols-3 md:flex md:items-center gap-2 md:gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-10">
                     {sections.map((sec) => {
                         const isActive = activeSection === sec.key;
-                        const colorMap: Record<string, string> = {
-                            indigo: "bg-indigo-50 text-indigo-700 border-indigo-200",
-                            blue: "bg-blue-50 text-blue-700 border-blue-200",
-                            emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
-                        };
                         return (
                             <button
                                 key={sec.key}
                                 onClick={() => setActiveSection(sec.key)}
-                                className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-2 md:px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all text-center border ${isActive ? colorMap[sec.color] + " shadow-sm" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                                className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-2 md:px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all text-center border ${isActive ? "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                                     }`}
                             >
                                 <sec.icon className="w-4 h-4 flex-shrink-0" />

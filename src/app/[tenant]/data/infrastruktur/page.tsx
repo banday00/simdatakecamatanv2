@@ -402,23 +402,49 @@ function OlahragaSection({ sports, kelurahans, selectedKelurahan }: { sports: an
                 </div>
             </div>
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden p-6">
-                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><MapPin className="w-5 h-5 text-indigo-600" /> Direktori Sarana Olahraga</h3>
+                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><MapPin className="w-5 h-5 text-indigo-600" /> Sarana Olahraga</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {paginationData.map((f, i) => (
-                        <div key={i} className="group border border-slate-100 rounded-xl p-5 hover:shadow-md hover:border-indigo-100 transition-all bg-slate-50 relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="flex justify-between items-start mb-3">
-                                <h4 className="font-bold text-slate-800 line-clamp-2 pr-2 leading-tight">{f.nama}</h4>
-                                <span className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full ${kondisiColors[f.kondisi] || "bg-slate-200 text-slate-700"}`}>{f.kondisi}</span>
+                    {paginationData.map((f, i) => {
+                        return (
+                            <div key={i} className="bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-lg hover:border-indigo-200 transition-all overflow-hidden group">
+                                {/* Gradient Header */}
+                                <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3 flex items-center justify-between">
+                                    <div className="min-w-0">
+                                        <h4 className="font-bold text-white text-sm line-clamp-1">{f.nama}</h4>
+                                        <p className="text-[10px] text-white/70 font-mono mt-0.5">{f.jenis_nama || "Lainnya"}</p>
+                                    </div>
+                                    {f.kondisi && (
+                                        <span className="shrink-0 ml-2 px-2 py-0.5 rounded-lg bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold border border-white/30">{f.kondisi}</span>
+                                    )}
+                                </div>
+
+                                <div className="p-4">
+                                    {/* Badges */}
+                                    <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                                        <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border bg-indigo-50 text-indigo-600 border-indigo-200">{f.jenis_nama || "Lainnya"}</span>
+                                        {f.status_kepemilikan && (
+                                            <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border bg-emerald-50 text-emerald-600 border-emerald-200">{f.status_kepemilikan}</span>
+                                        )}
+                                    </div>
+
+                                    {/* Stats Grid */}
+                                    {f.luas > 0 && (
+                                        <div className="grid grid-cols-1 gap-1 bg-slate-50 rounded-lg p-2.5 mb-2.5">
+                                            <div className="text-center">
+                                                <p className="text-sm font-black text-indigo-600">{Number(f.luas).toLocaleString('id-ID')} m²</p>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase">Luas Area</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Footer */}
+                                    <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center text-[10px] text-slate-500">
+                                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {kelurahans.find(k => k.id === f.kelurahan_id)?.nama || "—"}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <p className="text-xs text-indigo-600 font-semibold mb-3 tracking-wide uppercase">{f.jenis_nama || "-"}</p>
-                            <div className="space-y-2 mt-auto text-xs text-slate-500">
-                                <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" /> <span className="truncate">{kelurahans.find(k => k.id === f.kelurahan_id)?.nama}</span></div>
-                                {f.status_kepemilikan && <div className="flex items-center gap-2"><span className="inline-flex px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 font-bold text-[10px]">{f.status_kepemilikan}</span></div>}
-                                {f.luas > 0 && <div className="flex items-center gap-2"><Activity className="w-3.5 h-3.5" /> <span className="truncate">{Number(f.luas).toLocaleString('id-ID')} m²</span></div>}
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
                 {totalPages > 1 && (
                     <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">

@@ -93,13 +93,14 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
         return Object.entries(counts).map(([name, value]) => ({ name, value }));
     }, [filteredData]);
 
-    const faskesTypes: Record<string, { icon: string; color: string }> = {
-        "Puskesmas": { icon: "🏥", color: "text-indigo-600 bg-indigo-50 border-indigo-100" },
-        "Rumah Sakit": { icon: "🏨", color: "text-blue-600 bg-blue-50 border-blue-100" },
-        "Klinik": { icon: "⚕️", color: "text-emerald-600 bg-emerald-50 border-emerald-100" },
-        "Apotek": { icon: "💊", color: "text-amber-600 bg-amber-50 border-amber-100" },
-        "Praktek Dokter": { icon: "👨‍⚕️", color: "text-indigo-600 bg-indigo-50 border-indigo-100" },
+    const faskesTypes: Record<string, { icon: string; badge: string; gradient: string }> = {
+        "Puskesmas":      { icon: "🏥", badge: "bg-slate-100 text-slate-700 border-slate-200", gradient: "from-slate-700 to-slate-800" },
+        "Rumah Sakit":    { icon: "🏨", badge: "bg-slate-100 text-slate-700 border-slate-200", gradient: "from-slate-700 to-slate-800" },
+        "Klinik":         { icon: "⚕️", badge: "bg-slate-100 text-slate-700 border-slate-200", gradient: "from-slate-700 to-slate-800" },
+        "Apotek":         { icon: "💊", badge: "bg-slate-100 text-slate-700 border-slate-200", gradient: "from-slate-700 to-slate-800" },
+        "Praktek Dokter": { icon: "👨‍⚕️", badge: "bg-slate-100 text-slate-700 border-slate-200", gradient: "from-slate-700 to-slate-800" },
     };
+    const DEFAULT_FASKES = { icon: "🏥", badge: "bg-slate-100 text-slate-700 border-slate-200", gradient: "from-slate-700 to-slate-800" };
 
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 12;
@@ -197,36 +198,58 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
                         />
                     </div>
                 </div>
-                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {paginatedData.map(row => {
-                        const styleInfo = faskesTypes[row.jenis_nama] || { icon: "🏥", color: "text-indigo-600 bg-indigo-50 border-indigo-100" };
-                        return (
-                            <div key={row.id} className="p-4 bg-white border border-slate-100 rounded-xl hover:shadow-md hover:border-indigo-200 transition-all">
-                                <div className="flex items-start justify-between mb-3">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl border ${styleInfo.color}`}>
-                                        {styleInfo.icon}
-                                    </div>
-                                    <span className="inline-flex px-2 py-1 rounded-md text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-100 uppercase tracking-widest">
-                                        {row.jenis_nama || "Faskes"}
-                                    </span>
-                                </div>
-                                <h4 className="font-bold text-slate-800 text-sm mb-1 line-clamp-1">{row.nama}</h4>
-                                <p className="text-[11px] font-bold text-indigo-500 mb-2 uppercase tracking-wide">{row.jenis_nama}</p>
-                                <p className="text-xs text-slate-500 mb-3 line-clamp-2 min-h-8">{row.alamat || "Tidak ada alamat lengkap"}</p>
-                                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                                    <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1">
-                                        <MapPin className="w-3 h-3" /> {kelMap.get(row.kelurahan_id) || "-"}
-                                    </span>
-                                    {row.jumlah_tenaga_medis > 0 && (
-                                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                                            {row.jumlah_tenaga_medis} Nakes
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        )
-                    })}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="bg-slate-50 border-b border-slate-100 text-left">
+                                <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">#</th>
+                                <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Nama Fasilitas</th>
+                                <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Jenis</th>
+                                <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Kelurahan</th>
+                                <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider hidden md:table-cell">Alamat</th>
+                                <th className="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Nakes</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {paginatedData.map((row, idx) => {
+                                const cfg = faskesTypes[row.jenis_nama] ?? DEFAULT_FASKES;
+                                const rowNum = (currentPage - 1) * ITEMS_PER_PAGE + idx + 1;
+                                return (
+                                    <tr key={row.id} className="hover:bg-slate-50/70 transition-colors group">
+                                        <td className="px-5 py-3.5 text-xs text-slate-400 font-mono tabular-nums">{rowNum}</td>
+                                        <td className="px-5 py-3.5">
+                                            <span className="font-semibold text-slate-800 text-sm leading-tight">{row.nama}</span>
+                                        </td>
+                                        <td className="px-5 py-3.5">
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${cfg.badge}`}>
+                                                {row.jenis_nama || "Faskes"}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-3.5">
+                                            <span className="text-xs text-slate-600 flex items-center gap-1">
+                                                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                                {kelMap.get(row.kelurahan_id) || "—"}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-3.5 hidden md:table-cell">
+                                            <span className="text-xs text-slate-500 line-clamp-1">{row.alamat || "—"}</span>
+                                        </td>
+                                        <td className="px-5 py-3.5 text-center">
+                                            {row.jumlah_tenaga_medis > 0 ? (
+                                                <span className="inline-flex items-center justify-center text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 tabular-nums">
+                                                    {row.jumlah_tenaga_medis}
+                                                </span>
+                                            ) : (
+                                                <span className="text-slate-300 text-xs">—</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 </div>
+
                 {filteredData.length === 0 && (
                     <div className="py-12 text-center text-slate-400">
                         <Search className="w-8 h-8 mx-auto mb-2 text-slate-300" />
@@ -320,91 +343,134 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
         return filteredTableData.slice(start, start + ITEMS_PER_PAGE);
     }, [filteredTableData, currentPage]);
 
-    // Aggregate per-tahun dari semua bulan & kelurahan yang dipilih
+    // -------------------------------------------------------
+    // METODOLOGI: Data E-PPGBM dicatat per bulan per kelurahan.
+    // Untuk menghindari double-counting balita, kita ambil
+    // snapshot BULAN TERBARU dari setiap tahun per kelurahan.
+    // Ini adalah pendekatan point-in-time yang sesuai kaidah
+    // epidemiologi untuk menghitung prevalensi stunting.
+    // -------------------------------------------------------
+
+    // Ambil data sesuai filter kelurahan
     const selectedData = useMemo(() => {
         if (selectedKelurahan) return data.filter(d => d.kelurahan_id === selectedKelurahan);
         return data;
     }, [data, selectedKelurahan]);
 
-    const trendData = useMemo(() => {
-        const aggs: Record<number, any> = {};
-        selectedData.forEach(d => {
-            if (!aggs[d.tahun]) aggs[d.tahun] = { tahun: d.tahun, total_balita: 0, total_stunting: 0, gizi_buruk: 0, gizi_kurang: 0 };
-            aggs[d.tahun].total_balita += Number(d.balita_total) || 0;
-            aggs[d.tahun].total_stunting += Number(d.balita_stunting) || 0;
-            aggs[d.tahun].gizi_buruk += Number(d.balita_gizi_buruk) || 0;
-            aggs[d.tahun].gizi_kurang += Number(d.balita_gizi_kurang) || 0;
+    // Tahun terbaru dari seluruh dataset
+    const latestYear = useMemo(() =>
+        data.length > 0 ? Math.max(...data.map(d => Number(d.tahun))) : new Date().getFullYear()
+    , [data]);
+
+    // Helper: dari array rows, ambil satu snapshot per kelurahan (bulan terbaru)
+    function getLatestMonthSnapshot(rows: any[]): any[] {
+        const byKel: Record<string, any> = {};
+        rows.forEach(d => {
+            const key = d.kelurahan_id;
+            if (!byKel[key] || (Number(d.bulan) || 0) > (Number(byKel[key].bulan) || 0)) {
+                byKel[key] = d;
+            }
         });
-        return Object.values(aggs).map(a => ({
-            ...a,
-            prevalensi: a.total_balita > 0 ? ((a.total_stunting / a.total_balita) * 100).toFixed(1) : 0
-        })).sort((a, b) => a.tahun - b.tahun);
+        return Object.values(byKel);
+    }
+
+    // Tren tahunan: per tahun ambil snapshot bulan terbaru → sum lintas kelurahan
+    const trendData = useMemo(() => {
+        const years = [...new Set(selectedData.map(d => Number(d.tahun)))].sort((a, b) => a - b);
+        return years.map(tahun => {
+            const yearRows = selectedData.filter(d => Number(d.tahun) === tahun);
+            const snapshot = getLatestMonthSnapshot(yearRows);
+            const total_balita  = snapshot.reduce((s, d) => s + (Number(d.balita_total) || 0), 0);
+            const total_stunting = snapshot.reduce((s, d) => s + (Number(d.balita_stunting) || 0), 0);
+            const gizi_buruk    = snapshot.reduce((s, d) => s + (Number(d.balita_gizi_buruk) || 0), 0);
+            const gizi_kurang   = snapshot.reduce((s, d) => s + (Number(d.balita_gizi_kurang) || 0), 0);
+            const prevalensi    = total_balita > 0 ? Number(((total_stunting / total_balita) * 100).toFixed(1)) : 0;
+            return { tahun, total_balita, total_stunting, gizi_buruk, gizi_kurang, prevalensi };
+        });
     }, [selectedData]);
 
-    const latestYear = trendData.length > 0 ? trendData[trendData.length - 1].tahun : new Date().getFullYear();
-    const latestAgg = trendData[trendData.length - 1] || { total_stunting: 0, prevalensi: 0, total_balita: 0, gizi_buruk: 0, gizi_kurang: 0 };
-    const prevAgg = trendData[trendData.length - 2] || latestAgg;
+    // KPI dari tahun terbaru
+    const latestAgg  = trendData[trendData.length - 1] ?? { tahun: latestYear, total_balita: 0, total_stunting: 0, gizi_buruk: 0, gizi_kurang: 0, prevalensi: 0 };
+    const prevAgg    = trendData[trendData.length - 2] ?? latestAgg;
 
-    // Sebaran kelurahan untuk tahun terbaru
+    // Threshold prevalensi stunting nasional (Perpres 72/2021: target <14% pada 2024)
+    const prevalensiNum = Number(latestAgg.prevalensi);
+    const prevalensiBadge =
+        prevalensiNum >= 30 ? { label: "Sangat Tinggi", cls: "bg-red-100 text-red-700 border-red-200" }
+      : prevalensiNum >= 20 ? { label: "Tinggi",        cls: "bg-orange-100 text-orange-700 border-orange-200" }
+      : prevalensiNum >= 14 ? { label: "Di atas target", cls: "bg-amber-100 text-amber-700 border-amber-200" }
+      :                       { label: "Sesuai target",  cls: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+
+    // Sebaran kelurahan: snapshot bulan terbaru dari tahun terbaru
     const kelBarData = useMemo(() => {
-        const byKel: Record<string, any> = {};
-        data.filter(d => d.tahun === latestYear).forEach(d => {
-            if (!byKel[d.kelurahan_id]) byKel[d.kelurahan_id] = { nama: kelMap.get(d.kelurahan_id) || "Lainnya", stunting: 0, total: 0 };
-            byKel[d.kelurahan_id].stunting += Number(d.balita_stunting) || 0;
-            byKel[d.kelurahan_id].total += Number(d.balita_total) || 0;
-        });
-        return Object.values(byKel).map(d => ({
-            ...d,
-            prevalensi: d.total > 0 ? Number(((d.stunting / d.total) * 100).toFixed(1)) : 0
-        })).sort((a, b) => b.stunting - a.stunting);
+        const yearRows = data.filter(d => Number(d.tahun) === latestYear);
+        const snapshot = getLatestMonthSnapshot(yearRows);
+        return snapshot.map(d => ({
+            nama:      kelMap.get(d.kelurahan_id) || "—",
+            stunting:  Number(d.balita_stunting) || 0,
+            total:     Number(d.balita_total) || 0,
+            prevalensi: Number(d.balita_total) > 0
+                ? Number(((Number(d.balita_stunting) / Number(d.balita_total)) * 100).toFixed(1))
+                : 0,
+        })).sort((a, b) => b.prevalensi - a.prevalensi);
     }, [data, latestYear, kelMap]);
 
     return (
         <section className="space-y-6">
             <div className="flex items-center gap-3 mb-6">
-                <div className="p-2.5 bg-indigo-100 rounded-xl text-indigo-600">
+                <div className="p-2.5 bg-amber-100 rounded-xl text-amber-600">
                     <Scale className="w-6 h-6" />
                 </div>
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800">Kasus Stunting & Gizi</h2>
-                    <p className="text-slate-500 text-sm">Pemantauan prevalensi stunting, gizi buruk, dan gizi kurang pada balita berdasarkan data E-PPGBM (BNBA)</p>
+                    <p className="text-slate-500 text-sm">Pemantauan prevalensi stunting, gizi buruk, dan gizi kurang pada balita berdasarkan data E-PPGBM (BNBA) — snapshot bulan terbaru per tahun</p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="md:col-span-1 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center bg-gradient-to-br from-indigo-50 to-blue-50">
-                    <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-                        <ActivitySquare className="w-4 h-4" /> Prevalensi ({latestYear})
-                    </p>
-                    <div className="flex items-end gap-2 mb-2">
-                        <span className="text-5xl font-black text-slate-800">{latestAgg.prevalensi}</span>
-                        <span className="text-xl font-bold text-slate-500 mb-1">%</span>
+            {/* KPI Row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {/* Prevalensi card */}
+                <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between bg-gradient-to-br from-amber-50 to-orange-50">
+                    <div>
+                        <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+                            <ActivitySquare className="w-3 h-3" /> Prevalensi {latestYear}
+                        </p>
+                        <div className="flex items-end gap-1 mb-1.5">
+                            <span className="text-3xl font-black text-slate-800">{latestAgg.prevalensi}</span>
+                            <span className="text-base font-bold text-slate-500 mb-0.5">%</span>
+                        </div>
+                        <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-md border ${prevalensiBadge.cls}`}>
+                            {prevalensiBadge.label}
+                        </span>
                     </div>
                     {trendData.length > 1 && (
-                        <p className={`text-xs font-bold flex items-center gap-1 ${Number(latestAgg.prevalensi) < Number(prevAgg.prevalensi) ? 'text-emerald-500' : 'text-red-500'}`}>
+                        <p className={`text-[10px] font-bold flex items-center gap-0.5 mt-2 ${Number(latestAgg.prevalensi) < Number(prevAgg.prevalensi) ? 'text-emerald-600' : 'text-red-500'}`}>
                             {Number(latestAgg.prevalensi) < Number(prevAgg.prevalensi) ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
-                            {Math.abs(Number(latestAgg.prevalensi) - Number(prevAgg.prevalensi)).toFixed(1)}% dari tahun lalu
+                            {Math.abs(Number(latestAgg.prevalensi) - Number(prevAgg.prevalensi)).toFixed(1)}% vs tahun lalu
                         </p>
                     )}
                 </div>
-                <div className="md:col-span-3 grid grid-cols-3 gap-4">
-                    {[
-                        { label: "Balita Terdata", value: latestAgg.total_balita, icon: "👶", color: "blue" },
-                        { label: "Kasus Stunting", value: latestAgg.total_stunting, icon: "📏", color: "indigo" },
-                        { label: "Gizi Buruk & Kurang", value: (latestAgg.gizi_buruk || 0) + (latestAgg.gizi_kurang || 0), icon: "🩺", color: "amber" },
-                    ].map((stat, i) => (
-                        <div key={i} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-center">
-                            <div className="text-2xl mb-3">{stat.icon}</div>
-                            <span className="text-3xl font-black text-slate-800">{Number(stat.value).toLocaleString("id-ID")}</span>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{stat.label}</span>
+                {/* Other KPIs */}
+                {[
+                    { label: "Balita Terdata",      value: latestAgg.total_balita,  icon: "👶", sub: `Data ${latestYear}` },
+                    { label: "Kasus Stunting",       value: latestAgg.total_stunting, icon: "📏", sub: "Target <14%" },
+                    { label: "Gizi Buruk & Kurang",  value: (latestAgg.gizi_buruk || 0) + (latestAgg.gizi_kurang || 0), icon: "🩺", sub: "Perlu intervensi" },
+                ].map((stat, i) => (
+                    <div key={i} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                        <span className="text-base mb-1">{stat.icon}</span>
+                        <div>
+                            <span className="text-xl font-black text-slate-800 block">{Number(stat.value).toLocaleString("id-ID")}</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block leading-tight">{stat.label}</span>
+                            <span className="text-[10px] text-slate-400">{stat.sub}</span>
                         </div>
-                    ))}
-                </div>
+                    </div>
+                ))}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                 <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-                    <h3 className="text-base font-bold text-slate-800 mb-6">Tren Stunting Tahunan</h3>
+                    <h3 className="text-base font-bold text-slate-800 mb-1">Tren Stunting Tahunan</h3>
+                    <p className="text-xs text-slate-400 mb-6">Snapshot bulan terbaru per tahun — angka tidak akumulatif</p>
                     <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -583,11 +649,11 @@ function PosyanduSection({ data, kelurahans, selectedKelurahan }: { data: any[];
         return Object.entries(counts).map(([name, value]) => ({ name, value }));
     }, [selectedData]);
 
-    const STRATA_COLORS: Record<string, string> = {
-        "Mandiri": "bg-emerald-100 text-emerald-700 border-emerald-200",
-        "Purnama": "bg-blue-100 text-blue-700 border-blue-200",
-        "Madya": "bg-amber-100 text-amber-700 border-amber-200",
-        "Pratama": "bg-indigo-100 text-indigo-700 border-indigo-200"
+    const STRATA_CONFIG: Record<string, { badge: string; gradient: string; icon: string; barColor: string }> = {
+        "Mandiri":  { badge: "bg-blue-100 text-blue-700 border-blue-200", gradient: "from-blue-500 to-indigo-600", icon: "⭐", barColor: "bg-blue-500" },
+        "Purnama":  { badge: "bg-blue-100 text-blue-700 border-blue-200", gradient: "from-blue-500 to-indigo-600", icon: "🌕", barColor: "bg-blue-500" },
+        "Madya":    { badge: "bg-blue-100 text-blue-700 border-blue-200", gradient: "from-blue-500 to-indigo-600", icon: "🌗", barColor: "bg-blue-500" },
+        "Pratama":  { badge: "bg-blue-100 text-blue-700 border-blue-200", gradient: "from-blue-500 to-indigo-600", icon: "🌑", barColor: "bg-blue-500" },
     };
 
     const [posPage, setPosPage] = useState(1);
@@ -598,17 +664,17 @@ function PosyanduSection({ data, kelurahans, selectedKelurahan }: { data: any[];
     useEffect(() => { setPosPage(1); }, [selectedKelurahan]);
 
     // Mini cakupan bar helper
-    function CakupanBar({ label, value }: { label: string; value: number }) {
+    function CakupanBar({ label, value, barColor }: { label: string; value: number; barColor: string }) {
         const isGood = value >= 50;
         return (
-            <div className="space-y-0.5">
+            <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-medium text-slate-500">{label}</span>
-                    <span className={`text-[9px] font-bold ${isGood ? 'text-emerald-600' : 'text-amber-600'}`}>{value}%</span>
+                    <span className="text-[10px] font-semibold text-slate-500">{label}</span>
+                    <span className={`text-[10px] font-bold tabular-nums ${isGood ? 'text-emerald-600' : 'text-amber-500'}`}>{value}%</span>
                 </div>
-                <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
-                        className={`h-full rounded-full transition-all ${isGood ? 'bg-emerald-500' : 'bg-amber-400'}`}
+                        className={`h-full rounded-full transition-all duration-500 ${isGood ? barColor : 'bg-amber-400'}`}
                         style={{ width: `${Math.min(value, 100)}%` }}
                     />
                 </div>
@@ -663,76 +729,90 @@ function PosyanduSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                             const isActive = above50 >= 3 && (row.frekuensi_kegiatan || 0) >= 8;
                             const kaderArr = Array.isArray(row.anggota_kader) ? row.anggota_kader : [];
 
+                            const strata = row.strata || "Pratama";
+                            const cfg = STRATA_CONFIG[strata] ?? STRATA_CONFIG["Pratama"];
+
                             return (
-                                <div key={row.id} className="p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-white hover:border-indigo-200 hover:shadow-md transition-all">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <h4 className="font-bold text-slate-800 text-sm leading-tight">{row.nama}</h4>
-                                        <div className="flex items-center gap-1.5 shrink-0">
-                                            {isActive && (
-                                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-200">AKTIF</span>
-                                            )}
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${STRATA_COLORS[row.strata || "Pratama"] || STRATA_COLORS["Pratama"]}`}>
-                                                {row.strata || "Pratama"}
-                                            </span>
+                                <div key={row.id} className="rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group bg-white">
+                                    {/* Gradient Header */}
+                                    <div className={`bg-gradient-to-r ${cfg.gradient} px-4 pt-4 pb-5 relative overflow-hidden`}>
+                                        <div className="absolute -right-3 -top-3 text-5xl opacity-20 group-hover:opacity-30 transition-opacity select-none">
+                                            {cfg.icon}
                                         </div>
-                                    </div>
-
-                                    {/* Ketua & Lokasi */}
-                                    {row.ketua && (
-                                        <p className="text-[11px] text-slate-600 mb-0.5">
-                                            <span className="font-semibold">Ketua:</span> {row.ketua}
+                                        <div className="flex items-start justify-between gap-2 relative">
+                                            <h4 className="font-bold text-white text-sm leading-tight drop-shadow-sm">{row.nama}</h4>
+                                            <div className="flex items-center gap-1 shrink-0">
+                                                {isActive && (
+                                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-white/25 text-white border border-white/40 backdrop-blur-sm">AKTIF</span>
+                                                )}
+                                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider ${cfg.badge}`}>
+                                                    {strata}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {/* Location under name */}
+                                        <p className="text-[11px] text-white/80 flex items-center gap-1 mt-1.5 relative">
+                                            <MapPin className="w-3 h-3 shrink-0" />
+                                            <span className="truncate">{row.alamat || kelMap.get(row.kelurahan_id) || "—"}</span>
                                         </p>
-                                    )}
-                                    <p className="text-xs text-slate-500 flex items-center gap-1 mb-1">
-                                        <MapPin className="w-3 h-3 text-indigo-400 shrink-0" />
-                                        <span className="truncate">{row.alamat || kelMap.get(row.kelurahan_id) || "-"}</span>
-                                    </p>
-                                    {row.rt_rw && (
-                                        <p className="text-[10px] text-slate-400 mb-2">RT/RW: {row.rt_rw} · {kelMap.get(row.kelurahan_id) || ""}</p>
-                                    )}
-
-                                    {/* Stats row */}
-                                    <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-200 mb-2">
-                                        <div className="text-center">
-                                            <p className="text-sm font-black text-slate-700">{row.jumlah_kader || 0}</p>
-                                            <p className="text-[8px] font-bold text-slate-400 uppercase">Kader</p>
-                                        </div>
-                                        <div className="text-center">
-                                            <p className="text-sm font-black text-slate-700">{row.jumlah_balita || 0}</p>
-                                            <p className="text-[8px] font-bold text-slate-400 uppercase">Balita</p>
-                                        </div>
-                                        <div className="text-center">
-                                            <p className="text-sm font-black text-slate-700">{row.jumlah_lansia || 0}</p>
-                                            <p className="text-[8px] font-bold text-slate-400 uppercase">Lansia</p>
-                                        </div>
-                                        <div className="text-center">
-                                            <p className="text-sm font-black text-slate-700">{row.frekuensi_kegiatan || 0}×</p>
-                                            <p className="text-[8px] font-bold text-slate-400 uppercase">Kegiatan</p>
-                                        </div>
+                                        {row.rt_rw && (
+                                            <p className="text-[10px] text-white/60 mt-0.5 pl-4 relative">RT/RW: {row.rt_rw} · {kelMap.get(row.kelurahan_id) || ""}</p>
+                                        )}
                                     </div>
 
-                                    {/* Cakupan mini bars */}
-                                    {cakupans.some(c => c.val > 0) && (
-                                        <div className="space-y-1 pt-2 border-t border-slate-200">
-                                            {cakupans.map(c => (
-                                                <CakupanBar key={c.label} label={c.label} value={c.val} />
+                                    {/* White body */}
+                                    <div className="px-4 pt-3 pb-4 space-y-3 -mt-1 bg-white rounded-t-2xl relative z-10">
+                                        {/* Ketua */}
+                                        {row.ketua && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-base">👩‍⚕️</span>
+                                                <div>
+                                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Ketua Kader</p>
+                                                    <p className="text-xs font-semibold text-slate-700 leading-tight">{row.ketua}</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Stats chips */}
+                                        <div className="grid grid-cols-4 gap-1.5">
+                                            {[
+                                                { label: "Kader",    value: row.jumlah_kader || 0,            icon: "👥" },
+                                                { label: "Balita",   value: row.jumlah_balita || 0,           icon: "👶" },
+                                                { label: "Lansia",   value: row.jumlah_lansia || 0,           icon: "👴" },
+                                                { label: "Kegiatan", value: `${row.frekuensi_kegiatan || 0}×`, icon: "📅" },
+                                            ].map(s => (
+                                                <div key={s.label} className="flex flex-col items-center bg-slate-50 rounded-xl py-2 border border-slate-100">
+                                                    <span className="text-xs mb-0.5">{s.icon}</span>
+                                                    <p className="text-xs font-black text-slate-800 tabular-nums">{s.value}</p>
+                                                    <p className="text-[8px] font-bold text-slate-400 uppercase leading-none">{s.label}</p>
+                                                </div>
                                             ))}
                                         </div>
-                                    )}
 
-                                    {/* Kader names expandable */}
-                                    {kaderArr.length > 0 && (
-                                        <details className="mt-2 pt-2 border-t border-slate-200">
-                                            <summary className="text-[10px] font-bold text-indigo-600 cursor-pointer hover:text-indigo-700">
-                                                👥 {kaderArr.length} Anggota Kader
-                                            </summary>
-                                            <div className="mt-1 flex flex-wrap gap-1">
-                                                {kaderArr.map((name: string, idx: number) => (
-                                                    <span key={idx} className="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-medium">{name}</span>
+                                        {/* Cakupan bars */}
+                                        {cakupans.some(c => c.val > 0) && (
+                                            <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Cakupan Layanan</p>
+                                                {cakupans.map(c => (
+                                                    <CakupanBar key={c.label} label={c.label} value={c.val} barColor={cfg.barColor} />
                                                 ))}
                                             </div>
-                                        </details>
-                                    )}
+                                        )}
+
+                                        {/* Kader names */}
+                                        {kaderArr.length > 0 && (
+                                            <details className="pt-2 border-t border-slate-100">
+                                                <summary className="text-[10px] font-bold text-indigo-600 cursor-pointer hover:text-indigo-700 select-none">
+                                                    👥 {kaderArr.length} Anggota Kader
+                                                </summary>
+                                                <div className="mt-2 flex flex-wrap gap-1">
+                                                    {kaderArr.map((name: string, idx: number) => (
+                                                        <span key={idx} className="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-medium border border-indigo-100">{name}</span>
+                                                    ))}
+                                                </div>
+                                            </details>
+                                        )}
+                                    </div>
                                 </div>
                             );
                         })}
@@ -1050,7 +1130,7 @@ export default function KesehatanPage() {
 
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<HealthStatsData>({ facilities: [], stunting: [], posyandu: [], maternal: [] });
-    const [activeSection, setActiveSection] = useState<"fasilitas" | "posyandu" | "maternal">("fasilitas");
+    const [activeSection, setActiveSection] = useState<"fasilitas" | "stunting" | "posyandu" | "maternal">("fasilitas");
     const [selectedKelurahan, setSelectedKelurahan] = useState<string | null>(null);
 
     const fetchData = useCallback(async () => {
@@ -1076,7 +1156,7 @@ export default function KesehatanPage() {
 
     const sections = [
         { key: "fasilitas" as const, label: "Fasilitas Kesehatan", icon: Stethoscope, color: "indigo" },
-        // { key: "stunting" as const, label: "Stunting & Gizi", icon: Scale, color: "amber" }, // 🔒 Data rahasia Pemkot — disembunyikan sementara
+        { key: "stunting" as const, label: "Stunting & Gizi", icon: Scale, color: "amber" },
         { key: "posyandu" as const, label: "Posyandu", icon: Heart, color: "emerald" },
         { key: "maternal" as const, label: "Ibu & Anak", icon: Baby, color: "blue" },
     ];
@@ -1139,17 +1219,11 @@ export default function KesehatanPage() {
                 <div className="grid grid-cols-3 md:flex md:items-center gap-2 md:gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-10">
                     {sections.map((sec) => {
                         const isActive = activeSection === sec.key;
-                        const colorMap: Record<string, string> = {
-                            indigo: "bg-indigo-50 text-indigo-700 border-indigo-200",
-                            amber: "bg-amber-50 text-amber-700 border-amber-200",
-                            emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
-                            blue: "bg-blue-50 text-blue-700 border-blue-200",
-                        };
                         return (
                             <button
                                 key={sec.key}
                                 onClick={() => setActiveSection(sec.key)}
-                                className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-2 md:px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all text-center border ${isActive ? colorMap[sec.color] + " shadow-sm" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                                className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-2 md:px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all text-center border ${isActive ? "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                                     }`}
                             >
                                 <sec.icon className="w-4 h-4 flex-shrink-0" />
@@ -1170,10 +1244,9 @@ export default function KesehatanPage() {
                         {activeSection === "fasilitas" && (
                             <FasilitasSection data={data.facilities} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
                         )}
-                        {/* Stunting & Gizi — 🔒 disembunyikan sementara (data rahasia Pemkot) */}
-                        {/* {activeSection === "stunting" && (
+                        {activeSection === "stunting" && (
                             <StuntingSection data={data.stunting} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
-                        )} */}
+                        )}
                         {activeSection === "posyandu" && (
                             <PosyanduSection data={data.posyandu} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
                         )}

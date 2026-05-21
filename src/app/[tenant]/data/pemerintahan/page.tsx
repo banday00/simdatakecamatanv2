@@ -794,14 +794,16 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
             {/* Dimension Tabs */}
             <motion.div variants={fadeUp} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 {/* Tab Nav */}
-                <div className="flex border-b border-slate-100 overflow-x-auto">
+                <div className="grid grid-cols-2 sm:flex sm:flex-row border-b border-slate-100">
                     {TABS.map(tab => (
                         <button
                             key={tab.key}
                             onClick={() => setActiveTab(tab.key as 'agama' | 'pendidikan' | 'pekerjaan' | 'status_kawin' | 'goldar' | 'piramida' | 'dokumen')}
-                            className={`flex-shrink-0 px-4 py-3.5 text-xs font-bold transition-all border-b-2 ${activeTab === tab.key
-                                ? 'border-blue-500 text-blue-600 bg-blue-50/50'
-                                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                            className={`px-4 py-3.5 text-xs font-bold transition-all border-b-2 text-center
+                                sm:flex-shrink-0
+                                ${activeTab === tab.key
+                                    ? 'border-blue-500 text-blue-600 bg-blue-50/50'
+                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                                 }`}
                         >
                             {tab.label}

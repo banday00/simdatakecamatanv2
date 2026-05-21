@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sidakota-db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sidakota}
+      POSTGRES_USER: ${POSTGRES_USER:-sidakota}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sidakota}
+    volumes:
+      - sidakota-db-data:/var/lib/postgresql/data
+      - ./backupdb:/backups
+    ports:
+      - "5432:5432"
+    networks:
+      - sidakota-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sidakota} -d ${POSTGRES_DB:-sidakota}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  sidakota-db-data:
+    driver: local
+
+networks:
+  sidakota-network:
+    external: true

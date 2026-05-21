@@ -218,10 +218,8 @@ export default function HomePage() {
 
                         {/* Main headline */}
                         <h1 className="text-3xl xl:text-5xl font-black tracking-tight text-white drop-shadow-2xl leading-none mb-3">
-                            BOGOR{" "}
-                            <span className="bg-gradient-to-r from-cyan-300 via-blue-300 to-indigo-300 bg-clip-text text-transparent">
-                                TERHUBUNG
-                            </span>
+                            {/*SIMDATA{" "} */}
+                            {tenant?.nama?.toUpperCase() || "KECAMATAN"}
                         </h1>
 
                         {/* Sub-headline */}
@@ -246,7 +244,7 @@ export default function HomePage() {
                     >
                         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2 drop-shadow-sm">
                             SIMDATA <br />
-                            <span className="text-cyan-300">KECAMATAN</span>
+                            <span className="text-cyan-300">{tenant?.nama?.toUpperCase() || "KECAMATAN"}</span>
                         </h1>
                         <p className="text-blue-100 text-xs sm:text-sm max-w-[240px] sm:max-w-xs mx-auto font-medium">
                             Data Transparan untuk Pelayanan Lebih Baik
