@@ -62,8 +62,11 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
         setCurrentPage(1);
     }, [selectedKelurahan, searchQuery]);
 
-    const kelMap = new Map<string, string>();
-    kelurahans.forEach(k => kelMap.set(k.id, k.nama));
+    const kelMap = useMemo(() => {
+        const m = new Map<string, string>();
+        kelurahans.forEach(k => m.set(k.id, k.nama));
+        return m;
+    }, [kelurahans]);
 
     const filteredData = useMemo(() => {
         let result = facilities;
@@ -152,7 +155,7 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                     </div>
                     <div className="w-full flex-1 min-h-[400px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: -20, bottom: 60 }}>
+                            <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: 0, bottom: 60 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                 <XAxis
                                     dataKey="nama"
@@ -166,12 +169,8 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                                     interval={0}
                                 />
                                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} />
-                                <Bar dataKey="jumlah" name="Jumlah Sekolah" fill="#4f46e5" radius={[6, 6, 0, 0]} maxBarSize={40}>
-                                    {kelBarData.map((_, i) => (
-                                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                                    ))}
-                                </Bar>
+                                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} cursor={{ fill: "#f8fafc" }} />
+                                <Bar dataKey="jumlah" name="Jumlah Sekolah" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={40} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -187,7 +186,7 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                                     <Pie data={jenjangPieData} cx="50%" cy="50%" innerRadius={30} outerRadius={60} paddingAngle={2} dataKey="value">
                                         {jenjangPieData.map((d, i) => <Cell key={i} fill={JENJANG_COLORS[d.name] || CHART_COLORS[i % CHART_COLORS.length]} />)}
                                     </Pie>
-                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} formatter={(val, name) => [`${val} sekolah`, name]} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} formatter={(val, name) => [`${val} sekolah`, name]} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -211,7 +210,7 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                                     <Pie data={statusPieData} cx="50%" cy="50%" innerRadius={0} outerRadius={60} dataKey="value">
                                         {statusPieData.map((d, i) => <Cell key={i} fill={d.name.toLowerCase() === 'negeri' ? '#10b981' : '#f59e0b'} />)}
                                     </Pie>
-                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} formatter={(val, name) => [`${val} sekolah`, name]} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} formatter={(val, name) => [`${val} sekolah`, name]} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -558,11 +557,11 @@ function PartisipasiSection({ participation, facilities, kelurahans, selectedKel
                     <p className="text-[10px] text-slate-400 mb-4">Rata-rata APK per jenjang ({trendData[0]?.tahun || latestYear}–{latestYear})</p>
                     <div className="h-56">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                            <LineChart data={trendData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                 <XAxis dataKey="tahun" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} dy={8} />
                                 <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12 }} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} />
                                 <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '8px' }} />
                                 <Line type="monotone" dataKey="SD" name="SD (%)" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                                 <Line type="monotone" dataKey="SMP" name="SMP (%)" stroke="#4f46e5" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
@@ -578,7 +577,7 @@ function PartisipasiSection({ participation, facilities, kelurahans, selectedKel
                     <p className="text-[10px] text-slate-400 mb-4">Rata-rata AMH per tahun ({trendData[0]?.tahun || latestYear}–{latestYear})</p>
                     <div className="h-56">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                            <AreaChart data={trendData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorMelek" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
@@ -588,7 +587,7 @@ function PartisipasiSection({ participation, facilities, kelurahans, selectedKel
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                 <XAxis dataKey="tahun" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} dy={8} />
                                 <YAxis domain={[80, 100]} tick={{ fontSize: 10, fill: "#10b981" }} axisLine={false} tickLine={false} />
-                                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12 }} formatter={(value: number) => [`${value}%`, 'AMH']} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} formatter={(value: number) => [`${value}%`, 'AMH']} />
                                 <Area type="monotone" dataKey="melek_huruf" name="AMH (%)" stroke="#10b981" strokeWidth={2.5} fill="url(#colorMelek)" dot={{ r: 3, fill: '#10b981' }} activeDot={{ r: 5 }} />
                             </AreaChart>
                         </ResponsiveContainer>
@@ -611,7 +610,7 @@ function PartisipasiSection({ participation, facilities, kelurahans, selectedKel
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                 <XAxis dataKey="tahun" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} dy={8} />
                                 <YAxis tick={{ fontSize: 10, fill: "#f59e0b" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12 }} formatter={(value: number) => [`${value} jiwa`, 'APS']} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} formatter={(value: number) => [`${value} jiwa`, 'APS']} />
                                 <Bar dataKey="putus_sekolah" name="Total APS" fill="url(#colorPutus)" radius={[6, 6, 0, 0]} maxBarSize={45} />
                             </BarChart>
                         </ResponsiveContainer>
@@ -628,7 +627,7 @@ function PartisipasiSection({ participation, facilities, kelurahans, selectedKel
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                 <XAxis dataKey="tahun" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} dy={8} />
                                 <YAxis tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12 }} formatter={(value: number, name: string) => [`${value} jiwa`, name]} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} formatter={(value: number, name: string) => [`${value} jiwa`, name]} />
                                 <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                                 <Bar dataKey="putus_SD" name="SD" stackId="putus" fill="#3b82f6" maxBarSize={40} />
                                 <Bar dataKey="putus_SMP" name="SMP" stackId="putus" fill="#4f46e5" maxBarSize={40} />
@@ -646,12 +645,12 @@ function PartisipasiSection({ participation, facilities, kelurahans, selectedKel
                     <p className="text-[10px] text-slate-400 mb-4">APK per jenjang & jumlah putus sekolah</p>
                     <div className="h-72">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={kelComparisonData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                            <BarChart data={kelComparisonData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                 <XAxis dataKey="nama" tick={{ fontSize: 9, fill: "#64748b" }} axisLine={false} tickLine={false} dy={8} />
                                 <YAxis yAxisId="left" domain={[0, 100]} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "#f59e0b" }} axisLine={false} tickLine={false} />
-                                <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 12 }} cursor={{ fill: "#f8fafc" }} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} cursor={{ fill: "#f8fafc" }} />
                                 <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                                 <Bar yAxisId="left" dataKey="SD" name="APK SD (%)" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={16} />
                                 <Bar yAxisId="left" dataKey="SMP" name="APK SMP (%)" fill="#4f46e5" radius={[3, 3, 0, 0]} maxBarSize={16} />
@@ -789,8 +788,11 @@ const BENCHMARKS = {
 // Function removed
 
 function AnalisisSection({ facilities, participation, kelurahans, selectedKelurahan }: { facilities: any[]; participation: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
-    const kelMap = new Map<string, string>();
-    kelurahans.forEach(k => kelMap.set(k.id, k.nama));
+    const kelMap = useMemo(() => {
+        const m = new Map<string, string>();
+        kelurahans.forEach(k => m.set(k.id, k.nama));
+        return m;
+    }, [kelurahans]);
 
     const latestYearPartisipasi = participation.length > 0 ? Math.max(...participation.map(d => d.tahun)) : new Date().getFullYear();
     const latestPartisipasi = participation.filter(p => p.tahun === latestYearPartisipasi);
@@ -1097,9 +1099,9 @@ export default function PendidikanPage() {
     }, [fetchData]);
 
     const sections = [
-        { key: "sarana" as const, label: "Sarana Pendidikan", icon: School, color: "indigo" },
-        { key: "partisipasi" as const, label: "Partisipasi & Literasi", icon: LineChartIcon, color: "blue" },
-        { key: "analisis" as const, label: "Analisis & Insight", icon: Target, color: "emerald" },
+        { key: "sarana" as const, label: "Sarana Pendidikan", icon: School },
+        { key: "partisipasi" as const, label: "Partisipasi & Literasi", icon: LineChartIcon },
+        { key: "analisis" as const, label: "Analisis & Insight", icon: Target },
     ];
 
     return (

@@ -62,13 +62,7 @@ const TOPIK_ITEMS = [
 ];
 
 const LAYANAN_ITEMS = [
-    {
-        label: "Pajak Kendaraan",
-        href: "/layanan/pajak-kendaraan", // Internal Route
-        icon: Car,
-        desc: "Informasi pajak kendaraan bermotor",
-        color: "from-blue-500 to-indigo-600",
-    },
+
     {
         label: "PBB",
         href: "/layanan/pbb",

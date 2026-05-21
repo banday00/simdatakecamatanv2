@@ -54,8 +54,11 @@ function StatCard({ label, value, icon: Icon, color = "indigo", subtitle }: { la
 // COMPONENT: SEKTOR USAHA
 // ─────────────────────────────────────────────────────────────────────────────
 function SektorSection({ sectors, kelurahans, selectedKelurahan }: { sectors: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
-    const kelMap = new Map<string, string>();
-    kelurahans.forEach(k => kelMap.set(k.id, k.nama));
+    const kelMap = useMemo(() => {
+        const m = new Map<string, string>();
+        kelurahans.forEach(k => m.set(k.id, k.nama));
+        return m;
+    }, [kelurahans]);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -152,14 +155,12 @@ function SektorSection({ sectors, kelurahans, selectedKelurahan }: { sectors: an
                     <div className="flex-1 w-full relative">
                         {sektorChartData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%" minHeight={300}>
-                                <BarChart data={sektorChartData} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
+                                <BarChart data={sektorChartData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                     <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} angle={-45} textAnchor="end" />
-                                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{ fill: '#f8fafc' }} />
-                                    <Bar dataKey="jumlah_usaha" name="Jumlah Usaha" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={50}>
-                                        {sektorChartData.map((d, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                                    </Bar>
+                                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toLocaleString("id-ID")} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, fontSize: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} cursor={{ fill: '#f8fafc' }} formatter={(value: number) => [value.toLocaleString('id-ID'), 'Jumlah Usaha']} />
+                                    <Bar dataKey="jumlah_usaha" name="Jumlah Usaha" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={50} />
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
@@ -182,9 +183,9 @@ function SektorSection({ sectors, kelurahans, selectedKelurahan }: { sectors: an
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie data={sektorChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={2} dataKey="jumlah_tenaga_kerja">
-                                        {sektorChartData.map((d, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                                        {sektorChartData.map((d, i) => <Cell key={i} fill={["#6366f1", "#818cf8", "#a78bfa", "#c4b5fd", "#e0e7ff", "#4f46e5", "#7c3aed", "#8b5cf6"][i % 8]} />)}
                                     </Pie>
-                                    <Tooltip formatter={(value: number) => [`${value.toLocaleString('id-ID')} orang`, 'Tenaga Kerja']} contentStyle={{ borderRadius: 8, fontSize: "12px" }} />
+                                    <Tooltip formatter={(value: number) => [`${value.toLocaleString('id-ID')} orang`, 'Tenaga Kerja']} contentStyle={{ borderRadius: 12, fontSize: "12px", border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                                     <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "10px" }} />
                                 </PieChart>
                             </ResponsiveContainer>
@@ -210,14 +211,14 @@ function SektorSection({ sectors, kelurahans, selectedKelurahan }: { sectors: an
                 <div className="flex-1" style={{ minHeight: 250 }}>
                     {trendData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={250}>
-                            <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <LineChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                 <XAxis dataKey="tahun" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: '12px', border: '1px solid #e2e8f0' }} />
+                                <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toLocaleString("id-ID")} />
+                                <Tooltip contentStyle={{ borderRadius: 12, fontSize: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                                 <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
                                 {top3Sectors.map((s, i) => (
-                                    <Line key={s} type="monotone" dataKey={s} stroke={CHART_COLORS[i % CHART_COLORS.length]} strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                                    <Line key={s} type="monotone" dataKey={s} stroke={["#6366f1", "#818cf8", "#a78bfa"][i % 3]} strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
                                 ))}
                             </LineChart>
                         </ResponsiveContainer>
@@ -312,12 +313,15 @@ function SektorSection({ sectors, kelurahans, selectedKelurahan }: { sectors: an
 // COMPONENT: SARANA EKONOMI
 // ─────────────────────────────────────────────────────────────────────────────
 function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { facilities: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
-    const kelMap = new Map<string, string>();
-    kelurahans.forEach(k => kelMap.set(k.id, k.nama));
+    const kelMap = useMemo(() => {
+        const m = new Map<string, string>();
+        kelurahans.forEach(k => m.set(k.id, k.nama));
+        return m;
+    }, [kelurahans]);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 15;
+    const ITEMS_PER_PAGE = 10;
 
     useEffect(() => {
         setCurrentPage(1);
@@ -340,22 +344,26 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
         return filteredData.slice(start, start + ITEMS_PER_PAGE);
     }, [filteredData, currentPage]);
 
-    const jenisCount = new Map<string, number>();
-    filteredData.forEach(d => {
-        const j = d.jenis_nama || "Lainnya";
-        jenisCount.set(j, (jenisCount.get(j) || 0) + 1);
-    });
-    const jenisChartData = Array.from(jenisCount.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    const jenisChartData = useMemo(() => {
+        const jenisCount = new Map<string, number>();
+        filteredData.forEach(d => {
+            const j = d.jenis_nama || "Lainnya";
+            jenisCount.set(j, (jenisCount.get(j) || 0) + 1);
+        });
+        return Array.from(jenisCount.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    }, [filteredData]);
 
     // Most dominant type
     const topJenis = jenisChartData[0]?.name || "-";
 
-    const kelCount = new Map<string, number>();
-    filteredData.forEach(d => {
-        const kn = kelMap.get(d.kelurahan_id) || "Lainnya";
-        kelCount.set(kn, (kelCount.get(kn) || 0) + 1);
-    });
-    const kelChartData = Array.from(kelCount.entries()).map(([nama, jumlah]) => ({ nama, jumlah })).sort((a, b) => b.jumlah - a.jumlah);
+    const kelChartData = useMemo(() => {
+        const kelCount = new Map<string, number>();
+        filteredData.forEach(d => {
+            const kn = kelMap.get(d.kelurahan_id) || "Lainnya";
+            kelCount.set(kn, (kelCount.get(kn) || 0) + 1);
+        });
+        return Array.from(kelCount.entries()).map(([nama, jumlah]) => ({ nama, jumlah })).sort((a, b) => b.jumlah - a.jumlah);
+    }, [filteredData, kelMap]);
 
     return (
         <div className="space-y-6">
@@ -382,12 +390,12 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                     <div className="flex-1 relative">
                         {kelChartData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={kelChartData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                                <BarChart data={kelChartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                     <XAxis dataKey="nama" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} angle={-30} textAnchor="end" />
-                                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} cursor={{ fill: '#f8fafc' }} />
-                                    <Bar dataKey="jumlah" name="Jumlah Sarana" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toLocaleString("id-ID")} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, fontSize: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} cursor={{ fill: '#f8fafc' }} formatter={(value: number) => [value.toLocaleString('id-ID'), 'Jumlah Sarana']} />
+                                    <Bar dataKey="jumlah" name="Jumlah Sarana" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={40} />
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
@@ -403,9 +411,9 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie data={jenisChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={2} dataKey="value">
-                                        {jenisChartData.map((d, i) => <Cell key={i} fill={CHART_COLORS[(i + 2) % CHART_COLORS.length]} />)}
+                                        {jenisChartData.map((d, i) => <Cell key={i} fill={["#6366f1", "#818cf8", "#a78bfa", "#c4b5fd", "#e0e7ff", "#4f46e5", "#7c3aed", "#8b5cf6"][i % 8]} />)}
                                     </Pie>
-                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, fontSize: "12px", border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} formatter={(value: number) => [value.toLocaleString('id-ID'), 'Unit']} />
                                     <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "10px" }} />
                                 </PieChart>
                             </ResponsiveContainer>
@@ -496,12 +504,15 @@ function SaranaSection({ facilities, kelurahans, selectedKelurahan }: { faciliti
 // COMPONENT: POTENSI UMKM
 // ─────────────────────────────────────────────────────────────────────────────
 function UmkmSection({ potentials, kelurahans, selectedKelurahan }: { potentials: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
-    const kelMap = new Map<string, string>();
-    kelurahans.forEach(k => kelMap.set(k.id, k.nama));
+    const kelMap = useMemo(() => {
+        const m = new Map<string, string>();
+        kelurahans.forEach(k => m.set(k.id, k.nama));
+        return m;
+    }, [kelurahans]);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 12;
+    const ITEMS_PER_PAGE = 10;
 
     useEffect(() => {
         setCurrentPage(1);
@@ -584,11 +595,9 @@ function UmkmSection({ potentials, kelurahans, selectedKelurahan }: { potentials
                                     <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: '#334155', fontWeight: 600 }} axisLine={false} tickLine={false} />
                                     <Tooltip
                                         formatter={(val: number) => [formatRupiah(val), 'Omzet']}
-                                        contentStyle={{ borderRadius: 8, fontSize: '12px' }}
+                                        contentStyle={{ borderRadius: 12, fontSize: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                                     />
-                                    <Bar dataKey="omzet" fill="#34d399" radius={[0, 4, 4, 0]} barSize={24}>
-                                        {top10Omzet.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                                    </Bar>
+                                    <Bar dataKey="omzet" fill="#6366f1" radius={[0, 6, 6, 0]} barSize={24} />
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
@@ -603,10 +612,10 @@ function UmkmSection({ potentials, kelurahans, selectedKelurahan }: { potentials
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie data={statusData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={2} dataKey="value">
-                                    <Cell fill="#10b981" />
-                                    <Cell fill="#cbd5e1" />
+                                    <Cell fill="#6366f1" />
+                                    <Cell fill="#e2e8f0" />
                                 </Pie>
-                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: '12px' }} />
+                                <Tooltip contentStyle={{ borderRadius: 12, fontSize: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} formatter={(value: number) => [value.toLocaleString('id-ID'), '']} />
                                 <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '12px' }} />
                             </PieChart>
                         </ResponsiveContainer>
@@ -706,49 +715,48 @@ function UmkmSection({ potentials, kelurahans, selectedKelurahan }: { potentials
 // COMPONENT: ANALISIS & INSIGHT
 // ─────────────────────────────────────────────────────────────────────────────
 function AnalisisSection({ sectors, facilities, potentials, kelurahans, selectedKelurahan }: { sectors: any[]; facilities: any[]; potentials: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
+    const { records, rankedRecords, maxUmkm, maxSarana, maxUsaha } = useMemo(() => {
+        const analyticsMap = new Map<string, { id: string, name: string, umkm: number, sarana: number, usaha: number, score: number }>();
 
-    // Build combined analytical records per kelurahan
-    const analyticsMap = new Map<string, { id: string, name: string, umkm: number, sarana: number, usaha: number, score: number }>();
+        kelurahans.forEach(k => {
+            analyticsMap.set(k.id, { id: k.id, name: k.nama, umkm: 0, sarana: 0, usaha: 0, score: 0 });
+        });
 
-    kelurahans.forEach(k => {
-        analyticsMap.set(k.id, { id: k.id, name: k.nama, umkm: 0, sarana: 0, usaha: 0, score: 0 });
-    });
+        potentials.forEach(p => {
+            if (p.kelurahan_id && analyticsMap.has(p.kelurahan_id)) {
+                analyticsMap.get(p.kelurahan_id)!.umkm += 1;
+            }
+        });
 
-    potentials.forEach(p => {
-        if (p.kelurahan_id && analyticsMap.has(p.kelurahan_id)) {
-            analyticsMap.get(p.kelurahan_id)!.umkm += 1;
-        }
-    });
+        facilities.forEach(f => {
+            if (f.kelurahan_id && analyticsMap.has(f.kelurahan_id)) {
+                analyticsMap.get(f.kelurahan_id)!.sarana += 1;
+            }
+        });
 
-    facilities.forEach(f => {
-        if (f.kelurahan_id && analyticsMap.has(f.kelurahan_id)) {
-            analyticsMap.get(f.kelurahan_id)!.sarana += 1;
-        }
-    });
+        sectors.forEach(s => {
+            if (s.kelurahan_id && analyticsMap.has(s.kelurahan_id)) {
+                analyticsMap.get(s.kelurahan_id)!.usaha += (s.jumlah_usaha || 0);
+            }
+        });
 
-    sectors.forEach(s => {
-        if (s.kelurahan_id && analyticsMap.has(s.kelurahan_id)) {
-            analyticsMap.get(s.kelurahan_id)!.usaha += (s.jumlah_usaha || 0);
-        }
-    });
+        let mxU = 0, mxS = 0, mxUs = 0;
+        const recs = Array.from(analyticsMap.values());
+        recs.forEach(r => {
+            if (r.umkm > mxU) mxU = r.umkm;
+            if (r.sarana > mxS) mxS = r.sarana;
+            if (r.usaha > mxUs) mxUs = r.usaha;
+        });
 
-    // Score computation
-    let maxUmkm = 0, maxSarana = 0, maxUsaha = 0;
-    const records = Array.from(analyticsMap.values());
-    records.forEach(r => {
-        if (r.umkm > maxUmkm) maxUmkm = r.umkm;
-        if (r.sarana > maxSarana) maxSarana = r.sarana;
-        if (r.usaha > maxUsaha) maxUsaha = r.usaha;
-    });
+        recs.forEach(r => {
+            const scoreUmkm = mxU > 0 ? (r.umkm / mxU) * 100 : 0;
+            const scoreSarana = mxS > 0 ? (r.sarana / mxS) * 100 : 0;
+            const scoreUsaha = mxUs > 0 ? (r.usaha / mxUs) * 100 : 0;
+            r.score = Math.round((scoreUmkm * 0.4) + (scoreSarana * 0.3) + (scoreUsaha * 0.3));
+        });
 
-    records.forEach(r => {
-        const scoreUmkm = maxUmkm > 0 ? (r.umkm / maxUmkm) * 100 : 0;
-        const scoreSarana = maxSarana > 0 ? (r.sarana / maxSarana) * 100 : 0;
-        const scoreUsaha = maxUsaha > 0 ? (r.usaha / maxUsaha) * 100 : 0;
-        r.score = Math.round((scoreUmkm * 0.4) + (scoreSarana * 0.3) + (scoreUsaha * 0.3));
-    });
-
-    const rankedRecords = [...records].sort((a, b) => b.score - a.score);
+        return { records: recs, rankedRecords: [...recs].sort((a, b) => b.score - a.score), maxUmkm: mxU, maxSarana: mxS, maxUsaha: mxUs };
+    }, [kelurahans, potentials, facilities, sectors]);
 
     // Radar Data
     const focusKelurahanId = selectedKelurahan || (rankedRecords[0]?.id);
@@ -776,8 +784,8 @@ function AnalisisSection({ sectors, facilities, potentials, kelurahans, selected
                                 <PolarGrid stroke="#e2e8f0" />
                                 <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: '#64748b' }} />
                                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                                <Radar name={focusRecord?.name} dataKey="A" stroke="#10b981" fill="#34d399" fillOpacity={0.4} strokeWidth={2} />
-                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: '11px' }} />
+                                <Radar name={focusRecord?.name} dataKey="A" stroke="#4f46e5" fill="#6366f1" fillOpacity={0.4} strokeWidth={2} />
+                                <Tooltip contentStyle={{ borderRadius: 12, fontSize: '11px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} formatter={(value: number) => [`${Math.round(value)}`, '']} />
                             </RadarChart>
                         </ResponsiveContainer>
                     </div>
@@ -829,8 +837,8 @@ function AnalisisSection({ sectors, facilities, potentials, kelurahans, selected
                 </h4>
                 <div className="text-xs text-slate-600 space-y-1.5 leading-relaxed">
                     <p><strong>Skor Kinerja Ekonomi</strong> dihitung menggunakan metode <em>min-max normalization</em> dengan bobot: <strong>UMKM Terdata (40%)</strong>, <strong>Sarana Ekonomi (30%)</strong>, dan <strong>Volume Usaha Sektor (30%)</strong>.</p>
+                    <p>Rumus: <code className="bg-white px-1.5 py-0.5 rounded text-indigo-700 text-[11px]">Skor = ((UMKM/Max) × 0.4 + (Sarana/Max) × 0.3 + (Usaha/Max) × 0.3) × 100</code></p>
                     <p>Skor ini bersifat <strong>komparatif relatif</strong> antar-kelurahan dalam satu kota — bukan indeks absolut resmi dari BPS. Kelurahan dengan skor tertinggi (100) artinya unggul di ketiga dimensi tersebut dibandingkan kelurahan lain.</p>
-
                 </div>
             </div>
         </div>

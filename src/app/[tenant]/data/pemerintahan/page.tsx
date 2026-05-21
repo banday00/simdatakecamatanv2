@@ -696,8 +696,8 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
             {/* Header */}
             <motion.div variants={fadeUp} className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-blue-50">
-                        <Users className="w-5 h-5 text-blue-600" />
+                    <div className="p-2.5 rounded-xl bg-indigo-50">
+                        <Users className="w-5 h-5 text-indigo-600" />
                     </div>
                     <div>
                         <h2 className="text-xl font-extrabold text-slate-800">Data Kependudukan</h2>
@@ -713,7 +713,7 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
                                 key={p.id}
                                 onClick={() => setSelectedPeriode(p.id)}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${activePeriodeId === p.id
-                                    ? 'bg-blue-600 text-white shadow-sm'
+                                    ? 'bg-indigo-600 text-white shadow-sm'
                                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                     }`}
                             >
@@ -727,7 +727,7 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
             {/* KPI Cards */}
             <motion.div variants={staggerContainer} className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 {[
-                    { label: 'Total Penduduk', value: totalPenduduk.toLocaleString('id-ID'), sub: 'jiwa', icon: Users, color: 'bg-blue-50 text-blue-600', border: 'border-blue-100' },
+                    { label: 'Total Penduduk', value: totalPenduduk.toLocaleString('id-ID'), sub: 'jiwa', icon: Users, color: 'bg-indigo-50 text-indigo-600', border: 'border-indigo-100' },
                     { label: 'Laki-laki', value: totalLk.toLocaleString('id-ID'), sub: `${totalPenduduk > 0 ? ((totalLk / totalPenduduk) * 100).toFixed(1) : 0}%`, icon: UserCheck, color: 'bg-cyan-50 text-cyan-600', border: 'border-cyan-100' },
                     { label: 'Perempuan', value: totalPr.toLocaleString('id-ID'), sub: `${totalPenduduk > 0 ? ((totalPr / totalPenduduk) * 100).toFixed(1) : 0}%`, icon: Baby, color: 'bg-rose-50 text-rose-600', border: 'border-rose-100' },
                     { label: 'Jumlah KK', value: totalKK.toLocaleString('id-ID'), sub: 'kepala keluarga', icon: HomeIcon, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
@@ -751,11 +751,11 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
                         <h3 className="text-base font-bold text-slate-800 mb-4">Penduduk per Kelurahan</h3>
                         <div className="h-64 sm:h-72">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={kelBarData} barGap={2} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                                <BarChart data={kelBarData} barGap={2} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                     <XAxis dataKey="nama" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} dy={8} />
                                     <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}rb` : String(v)} />
-                                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} formatter={(val: number) => val.toLocaleString('id-ID') + ' jiwa'} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} formatter={(val: number) => val.toLocaleString('id-ID') + ' jiwa'} />
                                     <Legend iconType="circle" wrapperStyle={{ paddingTop: '12px', fontSize: '11px' }} />
                                     <Bar dataKey="lk" name="Laki-laki" fill="#3b82f6" radius={[0, 0, 4, 4]} stackId="pop" maxBarSize={40} />
                                     <Bar dataKey="pr" name="Perempuan" fill="#f43f5e" radius={[4, 4, 0, 0]} stackId="pop" maxBarSize={40} />
@@ -772,7 +772,7 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
                                         <Cell fill="#3b82f6" />
                                         <Cell fill="#f43f5e" />
                                     </Pie>
-                                    <Tooltip formatter={(v: number) => v.toLocaleString('id-ID')} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} formatter={(v: number) => v.toLocaleString('id-ID')} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -802,7 +802,7 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
                             className={`px-4 py-3.5 text-xs font-bold transition-all border-b-2 text-center
                                 sm:flex-shrink-0
                                 ${activeTab === tab.key
-                                    ? 'border-blue-500 text-blue-600 bg-blue-50/50'
+                                    ? 'border-indigo-500 text-indigo-600 bg-indigo-50/50'
                                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                                 }`}
                         >
@@ -824,7 +824,7 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
                                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                                             <XAxis type="number" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}rb` : String(v)} />
                                             <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} width={120} />
-                                            <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }} formatter={(val: number) => val.toLocaleString('id-ID') + ' jiwa'} />
+                                            <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} formatter={(val: number) => val.toLocaleString('id-ID') + ' jiwa'} />
                                             <Legend iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
                                             <Bar dataKey="lk" name="Laki-laki" fill="#3b82f6" radius={[0, 4, 4, 0]} stackId="g" maxBarSize={24} />
                                             <Bar dataKey="pr" name="Perempuan" fill="#f43f5e" radius={[0, 4, 4, 0]} stackId="g" maxBarSize={24} />
@@ -837,7 +837,7 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
                                             <Pie data={activeTabData.data.map(d => ({ name: d.name, value: d.total }))} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value">
                                                 {activeTabData.data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                                             </Pie>
-                                            <Tooltip formatter={(v: number) => v.toLocaleString('id-ID')} />
+                                            <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} formatter={(v: number) => v.toLocaleString('id-ID')} />
                                         </PieChart>
                                     </div>
                                     <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
@@ -881,7 +881,7 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
                                             <XAxis type="number" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false}
                                                 tickFormatter={(v) => { const abs = Math.abs(v); return abs >= 1000 ? `${(abs / 1000).toFixed(0)}rb` : String(abs); }} />
                                             <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} width={95} />
-                                            <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
+                                            <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }}
                                                 formatter={(val: number, name: string) => [Math.abs(val).toLocaleString('id-ID') + ' jiwa', name === 'lk' ? 'Laki-laki' : 'Perempuan']} />
                                             <Bar dataKey="lk" name="Laki-laki" fill="#3b82f6" radius={[0, 0, 0, 0]} stackId="pyramid" maxBarSize={20} />
                                             <Bar dataKey="pr" name="Perempuan" fill="#fb7185" radius={[0, 0, 0, 0]} stackId="pyramid" maxBarSize={20} />
@@ -984,7 +984,7 @@ function KependudukanSection({ kData, kelurahans, selectedKelurahan }: { kData: 
                                             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                                             <XAxis dataKey="nama" tick={{ fontSize: 9, fill: '#64748b' }} axisLine={false} tickLine={false} dy={8} />
                                             <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                                            <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 }}
+                                            <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }}
                                                 formatter={(val: number) => `${val.toFixed(1)}%`} />
                                             <Legend iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
                                             <Bar dataKey="ktp" name="KTP-el" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={20} />
@@ -1060,6 +1060,12 @@ function LembagaSection({ data, kelurahans, selectedKelurahan }: { data: Lembaga
 
     const [filterJenis, setFilterJenis] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 12;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedKelurahan, filterJenis, searchQuery]);
 
     // 1. Filter Data based on Filters (Kelurahan + Jenis + Search)
     const filteredData = useMemo(() => {
@@ -1119,8 +1125,8 @@ function LembagaSection({ data, kelurahans, selectedKelurahan }: { data: Lembaga
     return (
         <motion.section variants={staggerContainer} initial="hidden" animate="visible" className="space-y-6">
             <motion.div variants={fadeUp} className="flex items-center gap-3 mb-2">
-                <div className="p-2.5 rounded-xl bg-amber-50">
-                    <Building2 className="w-5 h-5 text-amber-600" />
+                <div className="p-2.5 rounded-xl bg-indigo-50">
+                    <Building2 className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div>
                     <h2 className="text-xl font-extrabold text-slate-800">Lembaga Kemasyarakatan</h2>
@@ -1163,7 +1169,7 @@ function LembagaSection({ data, kelurahans, selectedKelurahan }: { data: Lembaga
                 <div className="flex flex-wrap gap-2">
                     <button
                         onClick={() => setFilterJenis(null)}
-                        className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${filterJenis === null ? "bg-amber-100 text-amber-800 border-2 border-amber-300" : "bg-slate-50 text-slate-600 border-2 border-transparent hover:bg-slate-100"
+                        className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${filterJenis === null ? "bg-indigo-100 text-indigo-800 border-2 border-indigo-300" : "bg-slate-50 text-slate-600 border-2 border-transparent hover:bg-slate-100"
                             }`}
                     >
                         🗺️ Semua ({chartBaseData.length})
@@ -1172,7 +1178,7 @@ function LembagaSection({ data, kelurahans, selectedKelurahan }: { data: Lembaga
                         <button
                             key={jenis}
                             onClick={() => setFilterJenis(filterJenis === jenis ? null : jenis)}
-                            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${filterJenis === jenis ? "bg-amber-100 text-amber-800 border-2 border-amber-300" : "bg-slate-50 text-slate-600 border-2 border-transparent hover:bg-slate-100"
+                            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${filterJenis === jenis ? "bg-indigo-100 text-indigo-800 border-2 border-indigo-300" : "bg-slate-50 text-slate-600 border-2 border-transparent hover:bg-slate-100"
                                 }`}
                         >
                             {LEMBAGA_ICON_MAP[jenis] || "📋"} {jenis} ({count})
@@ -1195,7 +1201,7 @@ function LembagaSection({ data, kelurahans, selectedKelurahan }: { data: Lembaga
                                             <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                                         ))}
                                     </Pie>
-                                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} formatter={(val: number) => `${val} lembaga`} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} formatter={(val: number) => `${val} lembaga`} />
                                     <Legend iconType="circle" layout="vertical" verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                                 </PieChart>
                             </ResponsiveContainer>
@@ -1216,12 +1222,8 @@ function LembagaSection({ data, kelurahans, selectedKelurahan }: { data: Lembaga
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                         <XAxis dataKey="nama" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
                                         <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                        <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} />
-                                        <Bar dataKey="jumlah" name="Jumlah" radius={[6, 6, 0, 0]} maxBarSize={40}>
-                                            {kelBarData.map((_, i) => (
-                                                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                                            ))}
-                                        </Bar>
+                                        <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} formatter={(value: number) => [value.toLocaleString('id-ID'), 'Jumlah']} />
+                                        <Bar dataKey="jumlah" name="Jumlah" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={40} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             ) : (
@@ -1235,13 +1237,13 @@ function LembagaSection({ data, kelurahans, selectedKelurahan }: { data: Lembaga
             {/* Data Cards Grid */}
             <motion.div variants={fadeUp} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                    <h3 className="text-base font-bold text-slate-800">Daftar Lembaga ({filteredData.length})</h3>
+                    <h3 className="text-base font-bold text-slate-800">Daftar Lembaga <span className="text-slate-400 font-medium text-sm">({filteredData.length})</span></h3>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
                             type="text"
                             placeholder="Cari lembaga..."
-                            className="pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 text-sm w-full md:w-56"
+                            className="pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white text-sm w-full md:w-56 bg-slate-50 transition-all"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -1249,22 +1251,25 @@ function LembagaSection({ data, kelurahans, selectedKelurahan }: { data: Lembaga
                 </div>
 
                 <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {filteredData.slice(0, 30).map((row) => (
-                        <div key={row.id} className="p-4 rounded-xl border border-slate-100 hover:border-amber-200 hover:shadow-md transition-all bg-white">
+                    {filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((row) => (
+                        <div key={row.id} className="p-4 rounded-xl border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all bg-white group">
                             <div className="flex items-start gap-3">
-                                <span className="text-2xl">{LEMBAGA_ICON_MAP[row.jenis] || "📋"}</span>
+                                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-lg flex-shrink-0 group-hover:bg-indigo-100 transition-colors">
+                                    {LEMBAGA_ICON_MAP[row.jenis] || "📋"}
+                                </div>
                                 <div className="min-w-0 flex-1">
                                     <h4 className="font-bold text-slate-800 text-sm truncate">{row.nama}</h4>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700">{row.jenis}</span>
-                                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${row.status === "aktif" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                                        <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">{row.jenis}</span>
+                                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${row.status === "aktif" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-slate-100 text-slate-500 border border-slate-200"}`}>
                                             {row.status || "aktif"}
                                         </span>
                                     </div>
                                     {row.ketua && <p className="text-xs text-slate-500 mt-1.5">Ketua: <b className="text-slate-700">{row.ketua}</b></p>}
                                     <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                                        <MapPin className="w-3 h-3" />
+                                        <MapPin className="w-3 h-3 text-indigo-400" />
                                         {kelMap.get(row.kelurahan_id) || "-"}
+                                        {row.jumlah_anggota > 0 && <span className="ml-auto text-slate-500 font-semibold">{row.jumlah_anggota} anggota</span>}
                                     </p>
                                 </div>
                             </div>
@@ -1276,6 +1281,20 @@ function LembagaSection({ data, kelurahans, selectedKelurahan }: { data: Lembaga
                     <div className="p-12 text-center text-slate-400">
                         <Search className="w-8 h-8 mx-auto mb-2 text-slate-300" />
                         <p className="font-medium">Tidak ada lembaga ditemukan</p>
+                    </div>
+                )}
+
+                {Math.ceil(filteredData.length / ITEMS_PER_PAGE) > 1 && (
+                    <div className="p-5 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">
+                        <span className="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
+                            <span className="hidden sm:inline">Menampilkan {Math.min(filteredData.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(filteredData.length, currentPage * ITEMS_PER_PAGE)} dari {filteredData.length}</span>
+                            <span className="sm:hidden">{filteredData.length} lembaga</span>
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">←</button>
+                            <span className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 rounded-lg border border-slate-200">{currentPage} / {Math.ceil(filteredData.length / ITEMS_PER_PAGE)}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredData.length / ITEMS_PER_PAGE), p + 1))} disabled={currentPage === Math.ceil(filteredData.length / ITEMS_PER_PAGE)} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors">→</button>
+                        </div>
                     </div>
                 )}
             </motion.div>
@@ -1339,9 +1358,9 @@ function PemerintahanContent() {
     }, [fetchData]);
 
     const sections = [
-        { key: "profil" as const, label: "Profil Wilayah", icon: Landmark, color: "indigo" },
-        { key: "kependudukan" as const, label: "Kependudukan", icon: Users, color: "blue" },
-        { key: "lembaga" as const, label: "Lembaga", icon: Building2, color: "amber" },
+        { key: "profil" as const, label: "Profil Wilayah", icon: Landmark },
+        { key: "kependudukan" as const, label: "Kependudukan", icon: Users },
+        { key: "lembaga" as const, label: "Lembaga", icon: Building2 },
     ];
 
     return (
@@ -1402,16 +1421,11 @@ function PemerintahanContent() {
                 <div className="grid grid-cols-3 md:flex md:items-center gap-2 md:gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-10">
                     {sections.map((sec) => {
                         const isActive = activeSection === sec.key;
-                        const colorMap: Record<string, string> = {
-                            indigo: "bg-indigo-50 text-indigo-700 border-indigo-200",
-                            blue: "bg-blue-50 text-blue-700 border-blue-200",
-                            amber: "bg-amber-50 text-amber-700 border-amber-200",
-                        };
                         return (
                             <button
                                 key={sec.key}
                                 onClick={() => setActiveSection(sec.key)}
-                                className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-2 md:px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all text-center border ${isActive ? colorMap[sec.color] + " shadow-sm" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                                className={`flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-2 md:px-5 py-3 rounded-xl text-xs md:text-sm font-bold transition-all text-center border ${isActive ? "bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                                     }`}
                             >
                                 <sec.icon className="w-4 h-4 flex-shrink-0" />

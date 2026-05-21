@@ -57,8 +57,11 @@ type HealthStatsData = {
 function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
     const [searchQuery, setSearchQuery] = useState("");
 
-    const kelMap = new Map<string, string>();
-    kelurahans.forEach(k => kelMap.set(k.id, k.nama));
+    const kelMap = useMemo(() => {
+        const m = new Map<string, string>();
+        kelurahans.forEach(k => m.set(k.id, k.nama));
+        return m;
+    }, [kelurahans]);
 
     const filteredData = useMemo(() => {
         let result = data;
@@ -130,7 +133,7 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
                     </div>
                     <div className="flex-1 min-h-[350px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
+                            <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                 <XAxis 
                                     dataKey="nama" 
@@ -143,12 +146,8 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
                                     height={60} 
                                 />
                                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} />
-                                <Bar dataKey="jumlah" name="Jumlah Faskes" radius={[6, 6, 0, 0]} maxBarSize={40}>
-                                    {kelBarData.map((_, i) => (
-                                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                                    ))}
-                                </Bar>
+                                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} cursor={{ fill: "#f8fafc" }} />
+                                <Bar dataKey="jumlah" name="Jumlah Faskes" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={40} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -162,7 +161,7 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
                                 <Pie data={typePieData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={2} dataKey="value">
                                     {typePieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                                 </Pie>
-                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px", border: "1px solid #f1f5f9" }} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} />
                             </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -311,8 +310,11 @@ function FasilitasSection({ data, kelurahans, selectedKelurahan }: { data: any[]
    Section 2: Stunting (BNBA Agregat View)
 ============================================================ */
 function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
-    const kelMap = new Map<string, string>();
-    kelurahans.forEach(k => kelMap.set(k.id, k.nama));
+    const kelMap = useMemo(() => {
+        const m = new Map<string, string>();
+        kelurahans.forEach(k => m.set(k.id, k.nama));
+        return m;
+    }, [kelurahans]);
 
     const BULAN_NAMES = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
@@ -473,12 +475,12 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                     <p className="text-xs text-slate-400 mb-6">Snapshot bulan terbaru per tahun — angka tidak akumulatif</p>
                     <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <LineChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                 <XAxis dataKey="tahun" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
                                 <YAxis yAxisId="left" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#4f46e5" }} axisLine={false} tickLine={false} />
-                                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} />
                                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                                 <Line yAxisId="left" type="monotone" dataKey="total_stunting" name="Jml Kasus" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
                                 <Line yAxisId="right" type="monotone" dataKey="prevalensi" name="Prevalensi (%)" stroke="#4f46e5" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
@@ -492,7 +494,7 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                         <h3 className="text-base font-bold text-slate-800 mb-6">Sebaran per Kelurahan ({latestYear})</h3>
                         <div className="h-64">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: -20, bottom: 50 }}>
+                                <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: 0, bottom: 50 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                     <XAxis 
                                         dataKey="nama" 
@@ -506,7 +508,7 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                                         interval={0}
                                     />
                                     <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} cursor={{ fill: "#f8fafc" }} />
                                     <Bar dataKey="stunting" name="Balita Stunting" radius={[4, 4, 0, 0]} maxBarSize={30}>
                                         {kelBarData.map((d, i) => (
                                             <Cell key={i} fill={d.prevalensi > 10 ? "#ef4444" : "#fbbf24"} />
@@ -620,8 +622,11 @@ function StuntingSection({ data, kelurahans, selectedKelurahan }: { data: any[];
    Section 3: Posyandu
 ============================================================ */
 function PosyanduSection({ data, kelurahans, selectedKelurahan }: { data: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
-    const kelMap = new Map<string, string>();
-    kelurahans.forEach(k => kelMap.set(k.id, k.nama));
+    const kelMap = useMemo(() => {
+        const m = new Map<string, string>();
+        kelurahans.forEach(k => m.set(k.id, k.nama));
+        return m;
+    }, [kelurahans]);
 
     const selectedData = useMemo(() => {
         let result = data;
@@ -876,7 +881,7 @@ function PosyanduSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                                         return <Cell key={i} fill={colors[d.name as keyof typeof colors] || CHART_COLORS[i % CHART_COLORS.length]} />
                                     })}
                                 </Pie>
-                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px", border: "1px solid #f1f5f9" }} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} />
                                 <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
                             </PieChart>
                         </ResponsiveContainer>
@@ -919,8 +924,11 @@ function PosyanduSection({ data, kelurahans, selectedKelurahan }: { data: any[];
    Section 4: Ibu & Anak (Maternal)
 ============================================================ */
 function MaternalSection({ data, kelurahans, selectedKelurahan }: { data: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
-    const kelMap = new Map<string, string>();
-    kelurahans.forEach(k => kelMap.set(k.id, k.nama));
+    const kelMap = useMemo(() => {
+        const m = new Map<string, string>();
+        kelurahans.forEach(k => m.set(k.id, k.nama));
+        return m;
+    }, [kelurahans]);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -1013,11 +1021,11 @@ function MaternalSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                 <h3 className="text-base font-bold text-slate-800 mb-6">Tren Layanan KIA ({trendData[0]?.tahun} - {latestYear})</h3>
                 <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <AreaChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorIbuHamil" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                                 </linearGradient>
                                 <linearGradient id="colorBayi" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -1027,9 +1035,9 @@ function MaternalSection({ data, kelurahans, selectedKelurahan }: { data: any[];
                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                             <XAxis dataKey="tahun" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
                             <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                            <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} />
+                            <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} />
                             <Legend wrapperStyle={{ paddingTop: "10px", fontSize: "12px" }} />
-                            <Area type="monotone" dataKey="ibu_hamil" name="Ibu Hamil" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorIbuHamil)" />
+                            <Area type="monotone" dataKey="ibu_hamil" name="Ibu Hamil" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorIbuHamil)" />
                             <Area type="monotone" dataKey="bayi_lahir_hidup" name="Lahir Hidup" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorBayi)" />
                         </AreaChart>
                     </ResponsiveContainer>
@@ -1155,10 +1163,10 @@ export default function KesehatanPage() {
     }, [fetchData]);
 
     const sections = [
-        { key: "fasilitas" as const, label: "Fasilitas Kesehatan", icon: Stethoscope, color: "indigo" },
-        { key: "stunting" as const, label: "Stunting & Gizi", icon: Scale, color: "amber" },
-        { key: "posyandu" as const, label: "Posyandu", icon: Heart, color: "emerald" },
-        { key: "maternal" as const, label: "Ibu & Anak", icon: Baby, color: "blue" },
+        { key: "fasilitas" as const, label: "Fasilitas Kesehatan", icon: Stethoscope },
+        { key: "stunting" as const, label: "Stunting & Gizi", icon: Scale },
+        { key: "posyandu" as const, label: "Posyandu", icon: Heart },
+        { key: "maternal" as const, label: "Ibu & Anak", icon: Baby },
     ];
 
     return (

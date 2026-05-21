@@ -58,16 +58,20 @@ function BantuanSection({ assistance, kelurahans, selectedKelurahan }: { assista
     const totalPenerima = filteredData.reduce((acc, curr) => acc + (Number(curr.jumlah_penerima) || 0), 0);
     const totalAnggaran = filteredData.reduce((acc, curr) => acc + (Number(curr.total_anggaran) || 0), 0);
     const fmtAnggaran = (v: number) => v >= 1e9 ? `Rp ${(v / 1e9).toFixed(2)} M` : v >= 1e6 ? `Rp ${(v / 1e6).toFixed(1)} Jt` : `Rp ${v.toLocaleString("id-ID")}`;
-    const totalTersalurkan = filteredData.filter(d => d.status_penyaluran === "Tersalurkan").length;
-    const persentaseTersalurkan = filteredData.length > 0 ? (totalTersalurkan / filteredData.length * 100).toFixed(1) : "0.0";
-    // Rata-rata realisasi distribusi fisik (pct_tersalurkan field)
-    const avgPct = filteredData.length > 0
-        ? (filteredData.reduce((acc, d) => acc + (Number(d.pct_tersalurkan) || 0), 0) / filteredData.length).toFixed(1)
+    // KPI: % Realisasi Anggaran (weighted by total_anggaran, bukan by record count)
+    const anggaranTersalurkan = filteredData
+        .filter(d => d.status_penyaluran === "Tersalurkan")
+        .reduce((acc, d) => acc + (Number(d.total_anggaran) || 0), 0);
+    const pctRealisasiAnggaran = totalAnggaran > 0 ? (anggaranTersalurkan / totalAnggaran * 100).toFixed(1) : "0.0";
+    // Rata-rata realisasi distribusi fisik — hanya record yang memiliki data realisasi
+    const withPct = filteredData.filter(d => Number(d.pct_tersalurkan) > 0);
+    const avgPct = withPct.length > 0
+        ? (withPct.reduce((acc, d) => acc + (Number(d.pct_tersalurkan) || 0), 0) / withPct.length).toFixed(1)
         : "0.0";
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 5;
+    const ITEMS_PER_PAGE = 10;
     const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
     const paginatedData = useMemo(() => {
         const start = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -109,7 +113,7 @@ function BantuanSection({ assistance, kelurahans, selectedKelurahan }: { assista
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard label="Total Penerima" value={totalPenerima.toLocaleString("id-ID")} sub="Keluarga Penerima Manfaat" icon={Users} color="bg-indigo-50 text-indigo-600" border="border-indigo-100" />
                 <KpiCard label="Total Anggaran" value={fmtAnggaran(totalAnggaran)} icon={Banknote} color="bg-emerald-50 text-emerald-600" border="border-emerald-100" />
-                <KpiCard label="% Status Tersalurkan" value={`${persentaseTersalurkan}%`} sub={`Realisasi rata-rata ${avgPct}%`} icon={HandHeart} color="bg-blue-50 text-blue-600" border="border-blue-100" />
+                <KpiCard label="Realisasi Anggaran" value={`${pctRealisasiAnggaran}%`} sub={`Realisasi fisik rata-rata ${avgPct}%`} icon={HandHeart} color="bg-blue-50 text-blue-600" border="border-blue-100" />
                 <KpiCard label="Program Bantuan" value={typeBarData.length} icon={Heart} color="bg-rose-50 text-rose-600" border="border-rose-100" />
             </div>
 
@@ -118,14 +122,12 @@ function BantuanSection({ assistance, kelurahans, selectedKelurahan }: { assista
                     <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2">Penerima per Jenis Bantuan</h3>
                     <div className="h-72">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={typeBarData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                            <BarChart data={typeBarData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
                                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toLocaleString("id-ID")} />
-                                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Penerima"]} />
-                                <Bar dataKey="value" name="Penerima" fill="#4f46e5" radius={[6, 6, 0, 0]} maxBarSize={50}>
-                                    {typeBarData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                                </Bar>
+                                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Penerima"]} />
+                                <Bar dataKey="value" name="Penerima" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={50} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -157,12 +159,12 @@ function BantuanSection({ assistance, kelurahans, selectedKelurahan }: { assista
                         <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2">Top 10 Wilayah Penerima Bantuan</h3>
                         <div className="h-64">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                                <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                     <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
                                     <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} />
-                                    <Bar dataKey="value" name="Penerima" fill="#3b82f6" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} cursor={{ fill: "#f8fafc" }} />
+                                    <Bar dataKey="value" name="Penerima" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={40} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -200,7 +202,7 @@ function BantuanSection({ assistance, kelurahans, selectedKelurahan }: { assista
                                         <div className="text-xs text-slate-500">{row.jumlah_kk_penerima ? `${Number(row.jumlah_kk_penerima).toLocaleString("id-ID")} KK` : "Jiwa"}</div>
                                     </td>
                                     <td className="px-5 py-4">
-                                        <div className="font-bold text-emerald-600">Rp {row.total_anggaran?.toLocaleString("id-ID") || 0}</div>
+                                        <div className="font-bold text-emerald-600">{fmtAnggaran(Number(row.total_anggaran) || 0)}</div>
                                         <div className="text-xs text-slate-500">{row.sumber_anggaran || "-"}</div>
                                     </td>
                                     <td className="px-5 py-4">
@@ -273,7 +275,7 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
                 return (kelName.includes(q)) || (s.jenis_disabilitas?.toLowerCase().includes(q));
             }
             return true;
-        }).sort((a,b) => a.kelurahan_id.localeCompare(b.kelurahan_id));
+        }).sort((a,b) => (kelMap.get(a.kelurahan_id) || "").localeCompare(kelMap.get(b.kelurahan_id) || ""));
     }, [disability, selectedKelurahan, searchQuery, kelMap]);
 
     const totalPages = Math.ceil(filteredTableData.length / ITEMS_PER_PAGE);
@@ -285,7 +287,8 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
     const totalPenyandang = filteredData.reduce((acc, curr) => acc + (curr.jumlah || 0), 0);
     const totalBantuan = filteredData.reduce((acc, curr) => acc + (curr.penerima_bantuan || 0), 0);
     const persentaseBantuan = totalPenyandang > 0 ? (totalBantuan / totalPenyandang * 100).toFixed(1) : "0.0";
-    const latestYear = new Date().getFullYear();
+    const totalL = filteredData.reduce((acc, curr) => acc + (curr.laki_laki || 0), 0);
+    const totalP = filteredData.reduce((acc, curr) => acc + (curr.perempuan || 0), 0);
 
     // Charts
     const typeBarData = useMemo(() => {
@@ -298,14 +301,8 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
     }, [filteredData]);
 
     const genderPieData = useMemo(() => {
-        const l = filteredData.reduce((acc, curr) => acc + (curr.laki_laki || 0), 0);
-        const p = filteredData.reduce((acc, curr) => acc + (curr.perempuan || 0), 0);
-        return [{ name: "Laki-laki", value: l }, { name: "Perempuan", value: p }].filter(d => d.value > 0);
-    }, [filteredData]);
-
-    const ageBarData = useMemo(() => {
-        return [] as { name: string; value: number }[];
-    }, [filteredData]);
+        return [{ name: "Laki-laki", value: totalL }, { name: "Perempuan", value: totalP }].filter(d => d.value > 0);
+    }, [totalL, totalP]);
 
     const kelTimelineData = useMemo(() => {
         const kelData: Record<string, any> = {};
@@ -324,8 +321,8 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard label="Penyandang Disabilitas" value={totalPenyandang.toLocaleString("id-ID")} sub={`Data tahun ${latestYear}`} icon={Accessibility} color="bg-indigo-50 text-indigo-600" border="border-indigo-100" />
-                <KpiCard label="Penerima Bantuan" value={totalBantuan.toLocaleString("id-ID")} sub="Sesuai UU 8/2016" icon={HandHeart} color="bg-emerald-50 text-emerald-600" border="border-emerald-100" />
+                <KpiCard label="Penyandang Disabilitas" value={totalPenyandang.toLocaleString("id-ID")} sub="Data terkini terregistrasi" icon={Accessibility} color="bg-indigo-50 text-indigo-600" border="border-indigo-100" />
+                <KpiCard label="Penerima Bantuan" value={totalBantuan.toLocaleString("id-ID")} sub="Ref. UU No. 8/2016" icon={HandHeart} color="bg-emerald-50 text-emerald-600" border="border-emerald-100" />
                 <KpiCard label="Cakupan Intervensi" value={`${persentaseBantuan}%`} sub="Penerima / Total Penyandang" icon={Activity} color="bg-blue-50 text-blue-600" border="border-blue-100" />
                 <KpiCard label="Jenis Terbanyak" value={typeBarData[0]?.name || "-"} sub={`${(typeBarData[0]?.value || 0).toLocaleString("id-ID")} orang`} icon={Users} color="bg-amber-50 text-amber-600" border="border-amber-100" />
             </div>
@@ -335,46 +332,34 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
                     <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2">Distribusi Jenis Disabilitas</h3>
                     <div className="h-72">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={typeBarData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                            <BarChart data={typeBarData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} dy={10} />
                                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toLocaleString("id-ID")} />
-                                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Orang"]} />
-                                <Bar dataKey="value" name="Jumlah" fill="#8b5cf6" radius={[6, 6, 0, 0]} maxBarSize={50}>
-                                    {typeBarData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                                </Bar>
+                                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Orang"]} />
+                                <Bar dataKey="value" name="Jumlah" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={50} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                <div className="lg:col-span-4 flex flex-col gap-6">
-                    <div className="flex-1 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
-                        <h3 className="text-sm font-bold text-slate-800 mb-4">Komposisi Gender</h3>
-                        <div className="flex-1 relative min-h-[150px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={genderPieData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
-                                        {genderPieData.map((d, i) => <Cell key={i} fill={d.name === "Laki-laki" ? "#3b82f6" : "#ec4899"} />)}
-                                    </Pie>
-                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Orang"]} />
-                                    <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                    <div className="flex-1 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
-                        <h3 className="text-sm font-bold text-slate-800 mb-2">Berdasarkan Usia</h3>
-                        <div className="flex-1 relative min-h-[150px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart layout="vertical" data={ageBarData} margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                                    <XAxis type="number" hide />
-                                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Orang"]} />
-                                    <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} barSize={15} />
-                                </BarChart>
-                            </ResponsiveContainer>
+                <div className="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
+                    <h3 className="text-sm font-bold text-slate-800 mb-4">Komposisi Gender</h3>
+                    <div className="flex-1 relative min-h-[280px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie data={genderPieData} cx="50%" cy="45%" innerRadius={55} outerRadius={80} paddingAngle={5} dataKey="value">
+                                    {genderPieData.map((d, i) => <Cell key={i} fill={d.name === "Laki-laki" ? "#6366f1" : "#a78bfa"} />)}
+                                </Pie>
+                                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)", fontSize: "12px" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Orang"]} />
+                                <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ paddingBottom: "40px" }}>
+                            <div className="text-center">
+                                <span className="block text-2xl font-black text-slate-800">{totalPenyandang.toLocaleString("id-ID")}</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase">Total</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -384,14 +369,14 @@ function DisabilitasSection({ disability, kelurahans, selectedKelurahan }: { dis
                         <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2">Sebaran Tertinggi per Kelurahan</h3>
                         <div className="h-64">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={kelTimelineData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                                <BarChart data={kelTimelineData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                     <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} angle={-45} textAnchor="end" axisLine={false} tickLine={false} dy={10} height={60} interval={0} />
                                     <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Orang"]} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Orang"]} />
                                     <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
-                                    <Bar dataKey="L" name="Laki-laki" stackId="a" fill="#3b82f6" maxBarSize={40} />
-                                    <Bar dataKey="P" name="Perempuan" stackId="a" fill="#ec4899" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                                    <Bar dataKey="L" name="Laki-laki" stackId="a" fill="#6366f1" maxBarSize={40} />
+                                    <Bar dataKey="P" name="Perempuan" stackId="a" fill="#a78bfa" radius={[6, 6, 0, 0]} maxBarSize={40} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -493,7 +478,7 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
     const latestYear = years[0] || new Date().getFullYear();
 
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 5;
+    const ITEMS_PER_PAGE = 10;
     const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
     const paginatedData = useMemo(() => filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE), [filteredData, currentPage]);
 
@@ -539,10 +524,10 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard label="Total Penerima" value={totalPenerima.toLocaleString("id-ID")} sub={`Agregat data tahun ${latestYear}`} icon={HomeIcon} color="bg-amber-50 text-amber-600" border="border-amber-100" />
+                <KpiCard label="Total Penerima" value={totalPenerima.toLocaleString("id-ID")} sub={`Data terakhir tahun ${latestYear}`} icon={HomeIcon} color="bg-indigo-50 text-indigo-600" border="border-indigo-100" />
                 <KpiCard label="Bansos Tunai" value={totalTunai.toLocaleString("id-ID")} sub="Penerima bantuan terdata" icon={Users} color="bg-emerald-50 text-emerald-600" border="border-emerald-100" />
-                <KpiCard label="Tidak Terencana" value={totalTidakTerencana.toLocaleString("id-ID")} sub="Penerima bantuan insidental" icon={Activity} color="bg-rose-50 text-rose-600" border="border-rose-100" />
-                <KpiCard label="Kategori Aktif" value={kategoriPieData.length.toLocaleString("id-ID")} sub="Jenis dukungan RTLH" icon={TrendingUp} color="bg-blue-50 text-blue-600" border="border-blue-100" />
+                <KpiCard label="Tidak Terencana" value={totalTidakTerencana.toLocaleString("id-ID")} sub="Penerima bantuan insidental" icon={Activity} color="bg-amber-50 text-amber-600" border="border-amber-100" />
+                <KpiCard label="Kategori Aktif" value={kategoriPieData.length.toLocaleString("id-ID")} sub="Jenis program RTLH" icon={TrendingUp} color="bg-blue-50 text-blue-600" border="border-blue-100" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -551,14 +536,14 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
                     {kelBarData.length > 0 ? (
                         <div className="h-72">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                                <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                                     <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} angle={-45} textAnchor="end" axisLine={false} tickLine={false} dy={10} height={60} interval={0} />
                                     <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toLocaleString("id-ID")} />
-                                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Penerima"]} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Penerima"]} />
                                     <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
-                                    <Bar dataKey="Tunai" name="Bantuan Sosial Tunai" stackId="a" fill="#10b981" maxBarSize={40} />
-                                    <Bar dataKey="TidakTerencana" name="Bantuan Sosial Tidak Terencana" stackId="a" fill="#f59e0b" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                                    <Bar dataKey="Tunai" name="Bantuan Sosial Tunai" stackId="a" fill="#6366f1" maxBarSize={40} />
+                                    <Bar dataKey="TidakTerencana" name="Bantuan Sosial Tidak Terencana" stackId="a" fill="#a78bfa" radius={[6, 6, 0, 0]} maxBarSize={40} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -572,9 +557,9 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie data={kategoriPieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value">
-                                    {kategoriPieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                                    {kategoriPieData.map((_, i) => <Cell key={i} fill={["#6366f1", "#a78bfa", "#c4b5fd", "#818cf8"][i % 4]} />)}
                                 </Pie>
-                                <Tooltip formatter={(v: number) => `${v.toLocaleString("id-ID")} penerima`} contentStyle={{ borderRadius: 8, fontSize: "12px" }} />
+                                <Tooltip formatter={(v: number) => `${v.toLocaleString("id-ID")} penerima`} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)", fontSize: "12px" }} />
                                 <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                             </PieChart>
                         </ResponsiveContainer>
@@ -592,12 +577,12 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
                 <h3 className="text-base font-bold text-slate-800 mb-6">Tren Penerima RTLH per Tahun</h3>
                 <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={yearBarData} margin={{ top: 10, right: 10, left: -20, bottom: 10 }}>
+                        <BarChart data={yearBarData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                             <XAxis dataKey="year" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
                             <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toLocaleString("id-ID")} />
-                            <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Penerima"]} />
-                            <Bar dataKey="value" name="Penerima" fill="#0f766e" radius={[8, 8, 0, 0]} maxBarSize={52} />
+                            <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Penerima"]} />
+                            <Bar dataKey="value" name="Penerima" fill="#6366f1" radius={[8, 8, 0, 0]} maxBarSize={52} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
@@ -606,7 +591,7 @@ function PerumahanSection({ housing, kelurahans, selectedKelurahan }: { housing:
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                     <h3 className="text-base font-bold text-slate-800">Ringkasan Penerima RTLH</h3>
-                    <span className="text-xs font-bold text-amber-600 px-3 py-1 bg-amber-100 rounded-lg">{totalPenerima.toLocaleString("id-ID")} penerima</span>
+                    <span className="text-xs font-bold text-indigo-600 px-3 py-1 bg-indigo-100 rounded-lg">{totalPenerima.toLocaleString("id-ID")} penerima</span>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
@@ -712,7 +697,7 @@ function KeagamaanSection({ religious, kelurahans, selectedKelurahan }: { religi
                 <KpiCard label="Total Tempat Ibadah" value={totalIbadah.toLocaleString("id-ID")} sub="Seluruh jenis" icon={ChurchIcon} color="bg-indigo-50 text-indigo-600" border="border-indigo-100" />
                 <KpiCard label="Masjid / Musholla" value={totalMasjid.toLocaleString("id-ID")} sub="Termasuk Musholla" icon={ChurchIcon} color="bg-emerald-50 text-emerald-600" border="border-emerald-100" />
                 <KpiCard label="Gereja" value={totalGereja.toLocaleString("id-ID")} sub="Katolik & Protestan" icon={ChurchIcon} color="bg-amber-50 text-amber-600" border="border-amber-100" />
-                <KpiCard label="Lainnya" value={totalLainnya.toLocaleString("id-ID")} sub={lainnyaTypes} icon={ChurchIcon} color="bg-rose-50 text-rose-600" border="border-rose-100" />
+                <KpiCard label="Lainnya" value={totalLainnya.toLocaleString("id-ID")} sub={lainnyaTypes} icon={ChurchIcon} color="bg-blue-50 text-blue-600" border="border-blue-100" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -722,9 +707,9 @@ function KeagamaanSection({ religious, kelurahans, selectedKelurahan }: { religi
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie data={typePieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value">
-                                    {typePieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                                    {typePieData.map((_, i) => <Cell key={i} fill={["#6366f1", "#818cf8", "#a78bfa", "#c4b5fd", "#e0e7ff", "#4f46e5", "#7c3aed", "#8b5cf6"][i % 8]} />)}
                                 </Pie>
-                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Tempat"]} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)", fontSize: "12px" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Tempat"]} />
                                 <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                             </PieChart>
                         </ResponsiveContainer>
@@ -744,7 +729,7 @@ function KeagamaanSection({ religious, kelurahans, selectedKelurahan }: { religi
                                 <Pie data={conditionPieData} cx="50%" cy="50%" innerRadius={0} outerRadius={80} dataKey="value">
                                     {conditionPieData.map((d, i) => <Cell key={i} fill={d.name === "Baik" ? "#10b981" : d.name === "Sedang" ? "#f59e0b" : "#ef4444"} />)}
                                 </Pie>
-                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Tempat"]} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)", fontSize: "12px" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Tempat"]} />
                                 <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                             </PieChart>
                         </ResponsiveContainer>
@@ -759,7 +744,7 @@ function KeagamaanSection({ religious, kelurahans, selectedKelurahan }: { religi
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                                     <XAxis type="number" hide />
                                     <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                    <Tooltip contentStyle={{ borderRadius: 8, fontSize: "12px" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Tempat"]} />
+                                    <Tooltip contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)", fontSize: "12px" }} cursor={{ fill: "#f8fafc" }} formatter={(v: number) => [v.toLocaleString("id-ID"), "Tempat"]} />
                                     <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={15} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -778,28 +763,53 @@ function KeagamaanSection({ religious, kelurahans, selectedKelurahan }: { religi
                 </div>
                 <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-slate-50/50">
                     {paginatedData.map((item, i) => (
-                        <div key={i} className="bg-white p-5 rounded-xl border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all group flex flex-col relative overflow-hidden">
-                            <div className="flex items-start justify-between mb-3">
-                                <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                                    <ChurchIcon className="w-5 h-5" />
+                        <div key={i} className="bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-lg hover:border-indigo-200 transition-all overflow-hidden group">
+                            {/* Gradient Header */}
+                            <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3 flex items-center justify-between">
+                                <div className="min-w-0">
+                                    <h4 className="font-bold text-white text-sm line-clamp-1">{item.nama}</h4>
+                                    <p className="text-[10px] text-white/70 font-mono mt-0.5">{item.jenis}</p>
                                 </div>
-                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${item.kondisi === "Baik" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : item.kondisi === "Sedang" ? "bg-amber-50 text-amber-700 border-amber-100" : "bg-red-50 text-red-700 border-red-100"}`}>
-                                    {item.kondisi || "Baik"}
-                                </span>
+                                {item.kondisi && (
+                                    <span className="shrink-0 ml-2 px-2 py-0.5 rounded-lg bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold border border-white/30">{item.kondisi}</span>
+                                )}
                             </div>
-                            <h4 className="font-bold text-slate-800 text-lg mb-1 line-clamp-1">{item.nama}</h4>
-                            <span className="text-xs font-medium text-indigo-600 mb-3">{item.jenis}</span>
-                            <div className="mt-auto space-y-2 pt-4 border-t border-slate-100">
-                                <div className="flex items-start gap-2 text-xs text-slate-600">
-                                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                                    <span className="line-clamp-2 leading-relaxed">{item.alamat || "-"}</span>
+
+                            <div className="p-4">
+                                {/* Badges */}
+                                <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                                    <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border bg-indigo-50 text-indigo-600 border-indigo-200">{item.jenis}</span>
+                                    {item.status_tanah && (
+                                        <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border bg-emerald-50 text-emerald-600 border-emerald-200">{item.status_tanah}</span>
+                                    )}
                                 </div>
-                                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                                    <span>{kelMap.get(item.kelurahan_id) || "-"}</span>
-                                    <div className="flex items-center gap-2">
-                                        {item.tahun_berdiri && <span className="font-medium text-slate-500">Est. {item.tahun_berdiri}</span>}
-                                        {item.kapasitas && <span className="font-medium bg-slate-100 px-2 py-0.5 rounded text-slate-600">{item.kapasitas.toLocaleString("id-ID")} Orang</span>}
+
+                                {/* Stats */}
+                                {(item.kapasitas || item.tahun_berdiri) && (
+                                    <div className={`grid ${item.kapasitas && item.tahun_berdiri ? 'grid-cols-2' : 'grid-cols-1'} gap-1 bg-slate-50 rounded-lg p-2.5 mb-2.5`}>
+                                        {item.kapasitas && (
+                                            <div className="text-center">
+                                                <p className="text-sm font-black text-indigo-600">{Number(item.kapasitas).toLocaleString("id-ID")}</p>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase">Kapasitas</p>
+                                            </div>
+                                        )}
+                                        {item.tahun_berdiri && (
+                                            <div className="text-center">
+                                                <p className="text-sm font-black text-indigo-600">{item.tahun_berdiri}</p>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase">Tahun Berdiri</p>
+                                            </div>
+                                        )}
                                     </div>
+                                )}
+
+                                {/* Footer */}
+                                <div className="mt-2.5 pt-2.5 border-t border-slate-100 space-y-1">
+                                    <div className="flex items-center text-[10px] text-slate-500 gap-1">
+                                        <MapPin className="w-3 h-3" /> {kelMap.get(item.kelurahan_id) || "-"}
+                                    </div>
+                                    {item.alamat && (
+                                        <p className="text-[10px] text-slate-400 line-clamp-1">{item.alamat}</p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -879,7 +889,7 @@ function AnalisisSection({ assistance, disability, housing, religious, kelurahan
             { subject: "Beban Bantuan", A: current.skorBantuan, B: avgBantuan, fullMark: 100 },
             { subject: "Beban Disabilitas", A: current.skorDisabilitas, B: avgDisabilitas, fullMark: 100 },
             { subject: "Penerima RTLH", A: current.skorRtlh, B: avgRtlh, fullMark: 100 },
-            { subject: "Fasilitas Agama", A: current.skorIbadah, B: kelStats.reduce((s, k) => s + k.skorIbadah, 0) / kelStats.length || 0, fullMark: 100 }
+            { subject: "Tempat Ibadah", A: current.skorIbadah, B: kelStats.reduce((s, k) => s + k.skorIbadah, 0) / kelStats.length || 0, fullMark: 100 }
         ];
     }, [kelStats, selectedKelurahan, kelMap]);
 
@@ -950,24 +960,15 @@ function AnalisisSection({ assistance, disability, housing, religious, kelurahan
 
             {/* Methodology note */}
             <div className="mt-6 p-5 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-500 leading-relaxed space-y-2">
-                <p className="font-bold text-slate-700 text-sm">Cara Perhitungan Indeks Kerentanan Sosial</p>
-                <p>Indeks ini merupakan skor komposit tertimbang yang mengukur tingkat kebutuhan intervensi sosial suatu kelurahan, skala 0-100:</p>
-                <ul className="list-disc list-inside space-y-1 pl-2">
-                    <li><span className="font-semibold text-slate-700">Beban Bantuan (30%)</span> - Total penerima bantuan sosial relatif terhadap kelurahan dengan penerima tertinggi.</li>
-                    <li><span className="font-semibold text-slate-700">Beban Disabilitas (30%)</span> - Jumlah penyandang disabilitas relatif terhadap kelurahan dengan jumlah tertinggi.</li>
-                    <li><span className="font-semibold text-slate-700">Penerima RTLH (40%)</span> - Jumlah warga penerima bantuan RTLH relatif terhadap kelurahan dengan jumlah tertinggi.</li>
-                </ul>
-                <p className="text-slate-400">Formula: <span className="font-mono bg-slate-100 px-1 rounded">Skor = (Bantuan x 0.3) + (Disabilitas x 0.3) + (RTLH x 0.4)</span>. Skor lebih tinggi berarti kebutuhan intervensi lebih besar.</p>
-            </div>
-            <div className="hidden">
-                <p className="font-bold text-slate-700 text-sm">📊 Cara Perhitungan Indeks Kerentanan Sosial</p>
-                <p>Indeks ini merupakan skor komposit tertimbang yang mengukur tingkat kebutuhan intervensi sosial suatu kelurahan, skala 0–100:</p>
+                <p className="font-bold text-slate-700 text-sm">Metodologi Indeks Kerentanan Sosial</p>
+                <p>Indeks ini merupakan skor komposit tertimbang yang mengukur tingkat kebutuhan intervensi sosial suatu kelurahan, skala 0–100. Setiap indikator dinormalisasi terhadap nilai tertinggi antar kelurahan (min-max normalization):</p>
                 <ul className="list-disc list-inside space-y-1 pl-2">
                     <li><span className="font-semibold text-slate-700">Beban Bantuan (30%)</span> — Total penerima bantuan sosial (KPM) relatif terhadap kelurahan dengan penerima tertinggi.</li>
                     <li><span className="font-semibold text-slate-700">Beban Disabilitas (30%)</span> — Jumlah penyandang disabilitas relatif terhadap kelurahan dengan jumlah tertinggi.</li>
-                    <li><span className="font-semibold text-slate-700">Kebutuhan RTLH (40%)</span> — Sisa RTLH belum direhab relatif terhadap kelurahan tertinggi. Bobot terbesar karena menyangkut pemenuhan hak dasar hunian layak (UU No. 1/2011 tentang Perumahan dan Kawasan Permukiman).</li>
+                    <li><span className="font-semibold text-slate-700">Kebutuhan RTLH (40%)</span> — Jumlah warga penerima bantuan RTLH relatif terhadap kelurahan tertinggi. Bobot terbesar karena menyangkut pemenuhan hak dasar hunian layak (UU No. 1/2011 tentang Perumahan dan Kawasan Permukiman).</li>
                 </ul>
                 <p className="text-slate-400">Formula: <span className="font-mono bg-slate-100 px-1 rounded">Skor = (Bantuan × 0.3) + (Disabilitas × 0.3) + (RTLH × 0.4)</span>. Skor lebih tinggi = perlu prioritas intervensi lebih besar.</p>
+                <p className="text-slate-400 italic">Catatan: Dimensi "Tempat Ibadah" pada radar chart bersifat informatif dan tidak masuk dalam perhitungan skor kerentanan.</p>
             </div>
         </div>
     );
