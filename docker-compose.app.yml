@@ -1,6 +1,6 @@
 services:
   app:
-    container_name: sidakota-app
+    container_name: simdata-app
     build:
       context: .
       dockerfile: Dockerfile
@@ -12,7 +12,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-sidakota}:${POSTGRES_PASSWORD:-sidakota}@sidakota-db:5432/${POSTGRES_DB:-sidakota}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-simdata}:${POSTGRES_PASSWORD:-simdata}@simdata-db:5432/${POSTGRES_DB:-simdata}
       - AUTH_SECRET=${AUTH_SECRET}
       - AUTH_URL=${AUTH_URL}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
@@ -22,16 +22,16 @@ services:
       - N8N_WEBHOOK_PAJAK_KENDARAAN=${N8N_WEBHOOK_PAJAK_KENDARAAN}
       - N8N_WEBHOOK_PBB=${N8N_WEBHOOK_PBB}
     volumes:
-      - sidakota-uploads:/app/uploads
+      - simdata-uploads:/app/uploads
     networks:
-      - sidakota-network
+      - simdata-network
     env_file:
       - .env.production
 
 volumes:
-  sidakota-uploads:
+  simdata-uploads:
     driver: local
 
 networks:
-  sidakota-network:
+  simdata-network:
     external: true

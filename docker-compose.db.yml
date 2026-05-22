@@ -1,30 +1,30 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: sidakota-db
+    container_name: simdata-db
     restart: always
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-sidakota}
-      POSTGRES_USER: ${POSTGRES_USER:-sidakota}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sidakota}
+      POSTGRES_DB: ${POSTGRES_DB:-simdata}
+      POSTGRES_USER: ${POSTGRES_USER:-simdata}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-simdata}
     volumes:
-      - sidakota-db-data:/var/lib/postgresql/data
+      - simdata-db-data:/var/lib/postgresql/data
       - ./backupdb:/backups
     ports:
       - "5455:5432"
     networks:
-      - sidakota-network
+      - simdata-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sidakota} -d ${POSTGRES_DB:-sidakota}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-simdata} -d ${POSTGRES_DB:-simdata}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
 
 volumes:
-  sidakota-db-data:
+  simdata-db-data:
     driver: local
 
 networks:
-  sidakota-network:
+  simdata-network:
     external: true
