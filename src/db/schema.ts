@@ -90,6 +90,9 @@ export const userProfiles = pgTable("user_profiles", {
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     currentSessionId: text("current_session_id"),
+    currentSessionIp: text("current_session_ip"),
+    currentSessionUa: text("current_session_ua"),
+    currentSessionAt: timestamp("current_session_at", { withTimezone: true }),
     passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),
     email: text("email"),
 });

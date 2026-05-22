@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/context";
 import { useTenant } from "@/lib/tenant/context";
 import { useTenantPath } from "@/lib/tenant/use-tenant-path";
+import { useSessionGuard } from "@/hooks/use-session-guard";
 import {
     LogOut,
     Loader2,
@@ -33,6 +34,9 @@ function ExecutiveLayoutInner({ children }: { children: React.ReactNode }) {
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Single-session enforcement: kick user if another device logs in
+    useSessionGuard();
 
     const handleSignOut = useCallback(async () => {
         await signOut();

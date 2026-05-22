@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
+import { randomUUID } from "crypto";
 import { pool } from "@/db/client";
 import type { AppSessionUser } from "@/lib/auth/types";
 
@@ -77,6 +78,7 @@ async function findUser(email: string): Promise<AppSessionUser | null> {
         passwordChangedAt: row.password_changed_at?.toISOString?.() ?? row.password_changed_at ?? null,
         passwordResetRequired: row.password_reset_required,
         updatedAt: row.updated_at?.toISOString?.() ?? row.updated_at ?? null,
+        sessionToken: null,
         profile,
     } satisfies AppSessionUser;
 }
@@ -95,7 +97,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 email: {},
                 password: {},
             },
-            async authorize(credentials) {
+            async authorize(credentials, request) {
                 const email = String(credentials?.email ?? "").trim().toLowerCase();
                 const password = String(credentials?.password ?? "");
 
@@ -127,6 +129,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     return null;
                 }
 
+                // Generate unique session token for single-session enforcement
+                const sessionToken = randomUUID();
+                const loginIp = request?.headers?.get?.("x-forwarded-for")?.split(",")[0]?.trim()
+                    ?? request?.headers?.get?.("x-real-ip")
+                    ?? null;
+                const loginUa = request?.headers?.get?.("user-agent") ?? null;
+
                 await Promise.all([
                     recordLoginAttempt(email, true),
                     pool.query(
@@ -134,10 +143,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                         [appUser.id]
                     ),
                     pool.query(
-                        `UPDATE user_profiles SET last_login = now() WHERE id = $1`,
-                        [appUser.id]
+                        `UPDATE user_profiles
+                         SET last_login = now(),
+                             current_session_id = $2,
+                             current_session_ip = $3,
+                             current_session_ua = $4,
+                             current_session_at = now()
+                         WHERE id = $1`,
+                        [appUser.id, sessionToken, loginIp, loginUa]
                     ),
                 ]);
+
+                appUser.sessionToken = sessionToken;
 
                 return {
                     ...appUser,

@@ -141,7 +141,7 @@ function BantuanSection({ assistance, kelurahans, selectedKelurahan }: { assista
                                 <Pie data={budgetPieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value">
                                     {budgetPieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                                 </Pie>
-                                <Tooltip formatter={(value: number) => value >= 1e9 ? `Rp ${(value / 1e9).toFixed(2)} M` : `Rp ${(value / 1e6).toFixed(1)} Jt`} contentStyle={{ borderRadius: 8, fontSize: "12px" }} />
+                                <Tooltip formatter={(value: number) => value >= 1e9 ? `Rp ${(value / 1e9).toFixed(2)} M` : `Rp ${(value / 1e6).toFixed(1)} Jt`} contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)", fontSize: 12 }} />
                                 <Legend layout="horizontal" verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                             </PieChart>
                         </ResponsiveContainer>
@@ -1024,13 +1024,7 @@ export default function SosialPage() {
         { id: "analisis", label: "Analisis & Insight", icon: Activity },
     ];
 
-    const colorMap: Record<string, string> = {
-        bantuan: "text-rose-600 bg-rose-50 border-rose-100",
-        disabilitas: "text-indigo-600 bg-indigo-50 border-indigo-100",
-        perumahan: "text-emerald-600 bg-emerald-50 border-emerald-100",
-        keagamaan: "text-amber-600 bg-amber-50 border-amber-100",
-        analisis: "text-blue-600 bg-blue-50 border-blue-100"
-    };
+
 
     if (!tenant) return null;
 
@@ -1099,7 +1093,7 @@ export default function SosialPage() {
                                 idx >= 3 ? "col-span-3 sm:col-span-1 sm:flex-1" : "sm:flex-1"
                             } flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-2 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all text-center border ${
                                 activeSection === section.id
-                                    ? section.id === "analisis" ? "bg-slate-800 text-white shadow-md border-slate-700 ring-1 ring-slate-900/10" : "bg-indigo-50 text-indigo-700 shadow-sm border-indigo-200 ring-1 ring-indigo-500/10"
+                                    ? "bg-indigo-50 text-indigo-700 shadow-sm border-indigo-200 ring-1 ring-indigo-500/10"
                                     : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                             }`}
                         >

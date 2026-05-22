@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth/context";
 import { useTenant } from "@/lib/tenant/context";
 import { stripTenantPath } from "@/lib/tenant/path";
 import { useTenantPath } from "@/lib/tenant/use-tenant-path";
+import { useSessionGuard } from "@/hooks/use-session-guard";
 import { cn } from "@/lib/utils";
 import {
     BarChart3,
@@ -248,6 +249,9 @@ function AdminLayoutInner({
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+
+    // Single-session enforcement: kick user if another device logs in
+    useSessionGuard();
 
     // Add reference for auto-logout timer
     const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);

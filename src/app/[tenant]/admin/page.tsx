@@ -10,10 +10,8 @@ import {
     GraduationCap,
     Hospital,
     Newspaper,
-    Store,
     Landmark,
     ChevronRight,
-    BarChart3,
     Shield,
     MapPin,
     Hammer,
@@ -30,15 +28,9 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
-    PieChart,
-    Pie,
-    Cell,
-    Legend,
-    AreaChart,
-    Area,
 } from "recharts";
 
-const CHART_COLORS = ["#4f46e5", "#3b82f6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
+
 
 const modules = [
     { label: "Pemerintahan", href: "/admin/pemerintahan/profil", icon: Landmark, color: "from-indigo-500 to-blue-600", desc: "Profil & Kependudukan" },
@@ -52,7 +44,7 @@ const modules = [
     { label: "WebGIS", href: "/admin/peta", icon: MapPin, color: "from-lime-500 to-green-600", desc: "Peta Interaktif" },
 ];
 
-type KelurahanStats = { nama: string; penduduk: number; lembaga: number; fasilitas: number };
+
 
 export default function AdminDashboard() {
     const { tenant, kelurahans } = useTenant();
@@ -93,25 +85,7 @@ export default function AdminDashboard() {
         jumlah_rt: k.jumlah_rt || 0,
     }));
 
-    const pieData = [
-        { name: "Pemerintahan", value: 30 },
-        { name: "Kesehatan", value: 22 },
-        { name: "Pendidikan", value: 18 },
-        { name: "Ekonomi", value: 15 },
-        { name: "Infrastruktur", value: 10 },
-        { name: "Sosial", value: 5 },
-    ];
 
-    const trendData = [
-        { bulan: "Jan", kelengkapan: 45 },
-        { bulan: "Feb", kelengkapan: 52 },
-        { bulan: "Mar", kelengkapan: 58 },
-        { bulan: "Apr", kelengkapan: 63 },
-        { bulan: "Mei", kelengkapan: 68 },
-        { bulan: "Jun", kelengkapan: 72 },
-        { bulan: "Jul", kelengkapan: 78 },
-        { bulan: "Agu", kelengkapan: 82 },
-    ];
 
     const statCards = [
         { label: "Total Penduduk", value: totalPenduduk.toLocaleString("id-ID"), icon: Users, color: "from-blue-500 to-indigo-600", iconBg: "bg-blue-500/20" },
@@ -143,94 +117,25 @@ export default function AdminDashboard() {
                 })}
             </div>
 
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                {/* Bar Chart */}
-                <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-6 hover:shadow-lg transition-shadow">
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h3 className="text-sm font-bold text-slate-800">Jumlah RW & RT per Kelurahan</h3>
-                            <p className="text-xs text-slate-400 mt-0.5">{kelurahans.length} kelurahan terdaftar</p>
-                        </div>
-                        <span className="text-[10px] font-bold px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg uppercase tracking-wider">Wilayah</span>
-                    </div>
-                    <div className="h-72">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={kelurahanChart} barGap={4}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                <XAxis dataKey="nama" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} dy={10} />
-                                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                                <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: "12px" }} cursor={{ fill: "#f8fafc" }} />
-                                <Bar dataKey="jumlah_rw" name="RW" fill="#4f46e5" radius={[6, 6, 0, 0]} maxBarSize={28} />
-                                <Bar dataKey="jumlah_rt" name="RT" fill="#93c5fd" radius={[6, 6, 0, 0]} maxBarSize={28} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* Pie Chart */}
-                <div className="bg-white rounded-2xl border border-slate-100 p-6 hover:shadow-lg transition-shadow">
-                    <div className="mb-6">
-                        <h3 className="text-sm font-bold text-slate-800">Distribusi Data</h3>
-                        <p className="text-xs text-slate-400 mt-0.5">Per modul data aktif</p>
-                    </div>
-                    <div className="h-52 relative">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={2} dataKey="value">
-                                    {pieData.map((_, idx) => (
-                                        <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: "11px", border: "1px solid #e2e8f0" }} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-2xl font-black text-slate-800">100%</span>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase">Data</span>
-                        </div>
-                    </div>
-                    <div className="space-y-2 mt-4">
-                        {pieData.map((d, i) => (
-                            <div key={d.name} className="flex justify-between items-center text-xs">
-                                <span className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS[i] }} />
-                                    <span className="text-slate-600">{d.name}</span>
-                                </span>
-                                <span className="font-bold text-slate-700">{d.value}%</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Trend Chart */}
+            {/* Chart: RW & RT per Kelurahan */}
             <div className="bg-white rounded-2xl border border-slate-100 p-6 hover:shadow-lg transition-shadow">
                 <div className="flex items-center justify-between mb-6">
                     <div>
-                        <h3 className="text-sm font-bold text-slate-800">Tren Kelengkapan Data</h3>
-                        <p className="text-xs text-slate-400 mt-0.5">Persentase kelengkapan data per bulan</p>
+                        <h3 className="text-sm font-bold text-slate-800">Jumlah RW & RT per Kelurahan</h3>
+                        <p className="text-xs text-slate-400 mt-0.5">{kelurahans.length} kelurahan terdaftar</p>
                     </div>
-                    <span className="text-[10px] font-bold px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-lg">+37% YTD</span>
+                    <span className="text-[10px] font-bold px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-lg uppercase tracking-wider">Wilayah</span>
                 </div>
-                <div className="h-64">
+                <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={trendData}>
-                            <defs>
-                                <linearGradient id="adminColorKelengkapan" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1} />
-                                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
+                        <BarChart data={kelurahanChart} barGap={4}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                            <XAxis dataKey="bulan" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                            <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                            <Tooltip
-                                contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: "12px" }}
-                                formatter={(val: number) => [`${val}%`, "Kelengkapan"]}
-                            />
-                            <Area type="monotone" dataKey="kelengkapan" stroke="#4f46e5" strokeWidth={2.5} fillOpacity={1} fill="url(#adminColorKelengkapan)" dot={{ r: 4, fill: "#4f46e5", strokeWidth: 2, stroke: "#fff" }} activeDot={{ r: 6 }} />
-                        </AreaChart>
+                            <XAxis dataKey="nama" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} dy={10} />
+                            <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                            <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: "12px" }} cursor={{ fill: "#f8fafc" }} />
+                            <Bar dataKey="jumlah_rw" name="RW" fill="#4f46e5" radius={[6, 6, 0, 0]} maxBarSize={28} />
+                            <Bar dataKey="jumlah_rt" name="RT" fill="#93c5fd" radius={[6, 6, 0, 0]} maxBarSize={28} />
+                        </BarChart>
                     </ResponsiveContainer>
                 </div>
             </div>

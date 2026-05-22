@@ -411,8 +411,11 @@ function PartisipasiSection({ participation, facilities, kelurahans, selectedKel
         });
         return map;
     }, [facilities]);
-    const kelMap = new Map<string, string>();
-    kelurahans.forEach(k => kelMap.set(k.id, k.nama));
+    const kelMap = useMemo(() => {
+        const m = new Map<string, string>();
+        kelurahans.forEach(k => m.set(k.id, k.nama));
+        return m;
+    }, [kelurahans]);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -977,7 +980,7 @@ function AnalisisSection({ facilities, participation, kelurahans, selectedKelura
                                 <Radar name={activeKelurahanMetric ? activeKelurahanMetric.nama : (kelMetrics[0] as any)?.nama} dataKey="A" stroke="#4f46e5" fill="#4f46e5" fillOpacity={0.5} />
                                 <Radar name="Rata-rata Kecamatan" dataKey="B" stroke="#94a3b8" fill="#cbd5e1" fillOpacity={0.3} />
                                 <Legend wrapperStyle={{ fontSize: '11px' }} />
-                                <Tooltip contentStyle={{ borderRadius: 8, fontSize: '12px' }} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} />
                             </RadarChart>
                         </ResponsiveContainer>
                     </div>

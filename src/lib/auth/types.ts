@@ -6,6 +6,7 @@ export type AppUser = {
     passwordChangedAt: string | null;
     passwordResetRequired: boolean;
     updatedAt: string | null;
+    sessionToken: string | null;
 };
 
 export type AppSessionUser = AppUser & UserProfile & {

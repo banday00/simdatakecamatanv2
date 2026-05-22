@@ -253,9 +253,7 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
                                 <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#64748b" }} />
                                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }} />
                                 <Tooltip cursor={{ fill: "#f8fafc" }} contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} />
-                                <Bar dataKey="jumlah" name="Jumlah Proyek" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={16}>
-                                    {barData.map((_, index) => <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
-                                </Bar>
+                                <Bar dataKey="jumlah" name="Jumlah Proyek" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={16} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -710,7 +708,7 @@ export default function DataInfrastrukturPage() {
                         <Trophy className="w-4 h-4 flex-shrink-0" />
                         <span className="leading-tight">Sarana Olahraga</span>
                     </button>
-                    <button onClick={() => setActiveTab("analisis")} className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-3 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all text-center border ${activeTab === "analisis" ? "bg-slate-800 text-white shadow-md border-slate-700 ring-1 ring-slate-900/10" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}>
+                    <button onClick={() => setActiveTab("analisis")} className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 px-3 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all text-center border ${activeTab === "analisis" ? "bg-indigo-50 text-indigo-700 shadow-sm border-indigo-200 ring-1 ring-indigo-500/10" : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}>
                         <Activity className="w-4 h-4 flex-shrink-0" />
                         <span className="leading-tight">Analisis &amp; Insight</span>
                     </button>
