@@ -23,6 +23,7 @@ services:
       - N8N_WEBHOOK_PBB=${N8N_WEBHOOK_PBB}
     volumes:
       - simdata-uploads:/app/uploads
+      - ./backupdb:/app/backupdb
     networks:
       - simdata-network
     env_file:
