@@ -16,7 +16,7 @@ async function one<T extends QueryResultRow = Record<string, unknown>>(sql: stri
 
 export async function getPublicKesehatanData(tenantSlug: string) {
     const tenant = await getTenantBySlug(tenantSlug);
-    const [facilities, stunting, posyandu, maternal] = await Promise.all([
+    const [facilities, stunting, posyandu, maternal, odfSummary, odfKelurahan] = await Promise.all([
         rows(
             `SELECT hf.*, COALESCE(rjfk.nama, 'Lainnya') AS jenis_nama
              FROM health_facilities hf
@@ -46,9 +46,16 @@ export async function getPublicKesehatanData(tenantSlug: string) {
              ORDER BY created_at DESC, tahun DESC`,
             [tenant.id]
         ),
+        // ODF data from rasajaga — no tenant_id filter
+        rows(
+            `SELECT * FROM odfsummary_rasajaga ORDER BY id DESC LIMIT 1`
+        ),
+        rows(
+            `SELECT * FROM odfsummary_rasajaga_kelurahan ORDER BY village_name ASC`
+        ),
     ]);
 
-    return { facilities, stunting, posyandu, maternal };
+    return { facilities, stunting, posyandu, maternal, odfSummary, odfKelurahan };
 }
 
 export async function getPublicKelurahans(tenantSlug: string) {
@@ -254,6 +261,7 @@ export async function getPublicHomeData(tenantSlug: string) {
         populationRows,
         latestStuntingPeriod,
         news,
+        latestPopPeriod,
     ] = await Promise.all([
         one<{
             health_count: number;
@@ -302,6 +310,17 @@ export async function getPublicHomeData(tenantSlug: string) {
              LIMIT 3`,
             [tenant.id]
         ),
+        one<{ tahun: number; semester: number }>(
+            `SELECT p.tahun, p.semester
+             FROM gov_ref_periode p
+             WHERE p.id = (
+                 SELECT periode_id FROM gov_fact_populasi_summary
+                 WHERE tenant_id = $1
+                 ORDER BY periode_id DESC
+                 LIMIT 1
+             )`,
+            [tenant.id]
+        ),
     ]);
 
     let stuntingTotal = 0;
@@ -332,5 +351,9 @@ export async function getPublicHomeData(tenantSlug: string) {
         proyek_berjalan: counts?.proyek_count ?? 0,
     };
 
-    return { stats, populationRows, news };
+    const populationPeriod = latestPopPeriod
+        ? { tahun: latestPopPeriod.tahun, semester: latestPopPeriod.semester }
+        : null;
+
+    return { stats, populationRows, news, populationPeriod };
 }

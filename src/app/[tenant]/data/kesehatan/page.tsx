@@ -10,7 +10,8 @@ import type { Kelurahan } from "@/types";
 import {
     MapPin, ChevronLeft, Heart, Search, Filter,
     Activity, ArrowUpDown, ChevronDown, ChevronUp,
-    Stethoscope, Baby, ActivitySquare, Scale
+    Stethoscope, Baby, ActivitySquare, Scale, Droplets,
+    Building2, Target, CheckCircle2, AlertCircle, Users
 } from "lucide-react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -49,6 +50,8 @@ type HealthStatsData = {
     stunting: Record<string, unknown>[];
     posyandu: Record<string, unknown>[];
     maternal: Record<string, unknown>[];
+    odfSummary: Record<string, unknown>[];
+    odfKelurahan: Record<string, unknown>[];
 };
 
 /* ============================================================
@@ -1130,6 +1133,377 @@ function MaternalSection({ data, kelurahans, selectedKelurahan }: { data: any[];
 }
 
 /* ============================================================
+   Section 5: ODF (Open Defecation Free) — Data Rasajaga
+============================================================ */
+function ODFSection({ summary, kelurahan }: { summary: Record<string, unknown> | null; kelurahan: Record<string, unknown>[] }) {
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [sortField, setSortField] = useState<"village_name" | "total_data">("total_data");
+    const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+    const ITEMS_PER_PAGE = 12;
+
+    useEffect(() => { setCurrentPage(1); }, [searchQuery, sortField, sortDir]);
+
+    // Summary KPIs
+    const s = summary || {} as Record<string, unknown>;
+    const target = Number(s.target) || 0;
+    const realization = Number(s.realization) || 0;
+    const nowProgress = Number(s.now_progress) || 0;
+    const notRealization = Number(s.not_realization) || 0;
+    const familyCard = Number(s.family_card) || 0;
+    const familyCardRemaining = Number(s.family_card_remaining) || 0;
+    const komunal = Number(s.komunal) || 0;
+    const sharing = Number(s.sharing) || 0;
+    const individu = Number(s.individu) || 0;
+    const komunalAfter = Number(s.komunal_after) || 0;
+    const sharingAfter = Number(s.sharing_after) || 0;
+    const individuAfter = Number(s.individu_after) || 0;
+    const totalKelOdf = kelurahan.length;
+    const realisasiPct = target > 0 ? ((realization / target) * 100).toFixed(1) : "0";
+
+    // District aggregation
+    const districtData = useMemo(() => {
+        const agg: Record<string, { name: string; total: number; count: number }> = {};
+        kelurahan.forEach(k => {
+            const dist = String(k.district_name || "Lainnya");
+            if (!agg[dist]) agg[dist] = { name: dist, total: 0, count: 0 };
+            agg[dist].total += Number(k.total_data) || 0;
+            agg[dist].count += 1;
+        });
+        return Object.values(agg).sort((a, b) => b.total - a.total);
+    }, [kelurahan]);
+
+    // Kelurahan bar chart data (top 30)
+    const kelBarData = useMemo(() => {
+        return [...kelurahan]
+            .sort((a, b) => (Number(b.total_data) || 0) - (Number(a.total_data) || 0))
+            .slice(0, 30)
+            .map(k => ({
+                nama: String(k.village_name || "—"),
+                jumlah: Number(k.total_data) || 0,
+            }));
+    }, [kelurahan]);
+
+    // Table filter & sort
+    const filteredData = useMemo(() => {
+        let result = [...kelurahan];
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(k =>
+                String(k.village_name || "").toLowerCase().includes(q) ||
+                String(k.district_name || "").toLowerCase().includes(q)
+            );
+        }
+        result.sort((a, b) => {
+            const aVal = sortField === "village_name" ? String(a[sortField] || "") : Number(a[sortField]) || 0;
+            const bVal = sortField === "village_name" ? String(b[sortField] || "") : Number(b[sortField]) || 0;
+            if (typeof aVal === "string" && typeof bVal === "string") {
+                return sortDir === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            }
+            return sortDir === "asc" ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
+        });
+        return result;
+    }, [kelurahan, searchQuery, sortField, sortDir]);
+
+    const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+    const paginatedData = useMemo(() => filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE), [filteredData, currentPage]);
+
+    const handleSort = (field: "village_name" | "total_data") => {
+        if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
+        else { setSortField(field); setSortDir(field === "village_name" ? "asc" : "desc"); }
+    };
+
+    if (!summary) {
+        return (
+            <section className="py-16 text-center">
+                <Droplets className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                <p className="text-slate-500 font-medium">Data ODF belum tersedia.</p>
+            </section>
+        );
+    }
+
+    return (
+        <section className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 bg-cyan-100 rounded-xl text-cyan-600">
+                    <Droplets className="w-6 h-6" />
+                </div>
+                <div>
+                    <h2 className="text-2xl font-bold text-slate-800">ODF (Open Defecation Free)</h2>
+                    <p className="text-slate-500 text-sm">Data BABS Tertutup — Sumber: <a href="https://rasajaga.kotabogor.go.id" target="_blank" rel="noopener noreferrer" className="text-cyan-600 hover:underline font-medium">rasajaga.kotabogor.go.id</a></p>
+                </div>
+            </div>
+
+            {/* Main KPI Row */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-gradient-to-br from-cyan-50 to-sky-50 p-5 rounded-2xl border border-cyan-100 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-3 -top-3 text-5xl opacity-15 group-hover:opacity-25 transition-opacity select-none">🏘️</div>
+                    <p className="text-[10px] font-bold text-cyan-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Kelurahan ODF
+                    </p>
+                    <span className="text-3xl font-black text-slate-800 block">{totalKelOdf}</span>
+                    <span className="text-[10px] font-bold text-cyan-600 bg-cyan-100 px-2 py-0.5 rounded-md inline-block mt-1">100% ODF</span>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-3 -top-3 text-5xl opacity-15 group-hover:opacity-25 transition-opacity select-none">🎯</div>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1">
+                        <Target className="w-3 h-3" /> Target Rumah
+                    </p>
+                    <span className="text-3xl font-black text-slate-800 block">{target.toLocaleString("id-ID")}</span>
+                    <span className="text-[10px] text-slate-400">BABS Tertutup</span>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-3 -top-3 text-5xl opacity-15 group-hover:opacity-25 transition-opacity select-none">✅</div>
+                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-2">Selesai Intervensi</p>
+                    <span className="text-3xl font-black text-emerald-600 block">{realization.toLocaleString("id-ID")}</span>
+                    <span className="text-[10px] font-bold text-emerald-500">{realisasiPct}% dari target</span>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden group">
+                    <div className="absolute -right-3 -top-3 text-5xl opacity-15 group-hover:opacity-25 transition-opacity select-none">⏳</div>
+                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-2">Belum Intervensi</p>
+                    <span className="text-3xl font-black text-amber-600 block">{notRealization.toLocaleString("id-ID")}</span>
+                    <span className="text-[10px] text-slate-400">Proses: {nowProgress.toLocaleString("id-ID")}</span>
+                </div>
+            </div>
+
+            {/* Intervention breakdown cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Rencana Intervensi */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                    <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-indigo-500" /> Rencana Intervensi
+                    </h3>
+                    <div className="grid grid-cols-3 gap-3">
+                        {[
+                            { label: "IPAL Komunal", value: komunal, icon: "🏗️", color: "text-indigo-600" },
+                            { label: "Sharing", value: sharing, icon: "🤝", color: "text-blue-600" },
+                            { label: "Individu", value: individu, icon: "🏠", color: "text-violet-600" },
+                        ].map((item, i) => (
+                            <div key={i} className="bg-slate-50 rounded-xl p-3 text-center border border-slate-100">
+                                <span className="text-lg block mb-1">{item.icon}</span>
+                                <span className={`text-xl font-black ${item.color} block`}>{item.value.toLocaleString("id-ID")}</span>
+                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">{item.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Setelah Intervensi */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                    <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" /> Setelah Intervensi
+                    </h3>
+                    <div className="grid grid-cols-3 gap-3">
+                        {[
+                            { label: "IPAL Komunal", value: komunalAfter, icon: "🏗️", color: "text-emerald-600" },
+                            { label: "Sharing", value: sharingAfter, icon: "🤝", color: "text-teal-600" },
+                            { label: "Individu", value: individuAfter, icon: "🏠", color: "text-green-600" },
+                        ].map((item, i) => (
+                            <div key={i} className="bg-emerald-50/50 rounded-xl p-3 text-center border border-emerald-100">
+                                <span className="text-lg block mb-1">{item.icon}</span>
+                                <span className={`text-xl font-black ${item.color} block`}>{item.value.toLocaleString("id-ID")}</span>
+                                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">{item.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Target KK */}
+            <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                <h3 className="text-sm font-bold text-slate-800 mb-4">Target & Intervensi KK BABS Tertutup</h3>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-sky-50 rounded-xl p-4 text-center border border-sky-100">
+                        <span className="text-[10px] font-bold text-sky-600 uppercase tracking-widest block mb-1">Target KK</span>
+                        <span className="text-2xl font-black text-slate-800">{familyCard.toLocaleString("id-ID")}</span>
+                    </div>
+                    <div className="bg-amber-50 rounded-xl p-4 text-center border border-amber-100">
+                        <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest block mb-1">Belum Intervensi KK</span>
+                        <span className="text-2xl font-black text-slate-800">{familyCardRemaining.toLocaleString("id-ID")}</span>
+                    </div>
+                </div>
+                {/* Progress bar */}
+                <div className="mt-4">
+                    <div className="flex justify-between text-xs font-bold text-slate-600 mb-1.5">
+                        <span>Progress Intervensi KK</span>
+                        <span>{familyCard > 0 ? (((familyCard - familyCardRemaining) / familyCard) * 100).toFixed(1) : 0}%</span>
+                    </div>
+                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                            className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-sky-500 transition-all duration-700"
+                            style={{ width: `${familyCard > 0 ? Math.min(((familyCard - familyCardRemaining) / familyCard) * 100, 100) : 0}%` }}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                {/* Bar Chart — Kelurahan */}
+                <div className="md:col-span-8 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <h3 className="text-base font-bold text-slate-800">BABS Tertutup per Kelurahan</h3>
+                            <p className="text-xs text-slate-400">Top 30 kelurahan berdasarkan jumlah target rumah</p>
+                        </div>
+                        <span className="text-xs font-bold px-3 py-1 bg-cyan-50 text-cyan-600 rounded-lg">{totalKelOdf} Kelurahan</span>
+                    </div>
+                    <div className="h-[380px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={kelBarData} margin={{ top: 10, right: 10, left: 0, bottom: 60 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                                <XAxis
+                                    dataKey="nama"
+                                    tick={{ fontSize: 9, fill: "#64748b" }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                    dy={10}
+                                    angle={-55}
+                                    textAnchor="end"
+                                    height={80}
+                                    interval={0}
+                                />
+                                <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} cursor={{ fill: "#f8fafc" }} />
+                                <Bar dataKey="jumlah" name="Target Rumah" radius={[4, 4, 0, 0]} maxBarSize={24}>
+                                    {kelBarData.map((d, i) => (
+                                        <Cell key={i} fill={d.jumlah > 500 ? "#ef4444" : d.jumlah > 200 ? "#f59e0b" : "#06b6d4"} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* District Pie */}
+                <div className="md:col-span-4 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col">
+                    <h3 className="text-base font-bold text-slate-800 mb-6">Distribusi per Kecamatan</h3>
+                    <div className="w-full h-48 relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie data={districtData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={2} dataKey="total" nameKey="name">
+                                    {districtData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                                </Pie>
+                                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: 12 }} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className="text-2xl font-black text-slate-800">{districtData.length}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Kecamatan</span>
+                        </div>
+                    </div>
+                    <div className="w-full mt-3 space-y-2">
+                        {districtData.map((d, i) => (
+                            <div key={d.name} className="flex justify-between items-center text-xs">
+                                <span className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                    {d.name}
+                                    <span className="text-[10px] text-slate-400">({d.count} kel)</span>
+                                </span>
+                                <span className="font-bold tabular-nums">{d.total.toLocaleString("id-ID")}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Data Table */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <h3 className="text-base font-bold text-slate-800">Data per Kelurahan</h3>
+                        <span className="text-xs font-bold px-3 py-1 bg-cyan-50 text-cyan-600 rounded-lg">{filteredData.length} Kelurahan</span>
+                    </div>
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Cari kelurahan, kecamatan..."
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:bg-white transition-all"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-200">
+                            <tr>
+                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider">#</th>
+                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none hover:text-slate-700" onClick={() => handleSort("village_name")}>
+                                    <span className="flex items-center gap-1">Kelurahan <ArrowUpDown className="w-3 h-3" /></span>
+                                </th>
+                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider">Kecamatan</th>
+                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-right cursor-pointer select-none hover:text-slate-700" onClick={() => handleSort("total_data")}>
+                                    <span className="flex items-center justify-end gap-1">Target Rumah <ArrowUpDown className="w-3 h-3" /></span>
+                                </th>
+                                <th className="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {paginatedData.map((row, idx) => {
+                                const total = Number(row.total_data) || 0;
+                                const rowNum = (currentPage - 1) * ITEMS_PER_PAGE + idx + 1;
+                                return (
+                                    <tr key={String(row.id)} className="hover:bg-slate-50/70 transition-colors">
+                                        <td className="px-5 py-3.5 text-xs text-slate-400 font-mono tabular-nums">{rowNum}</td>
+                                        <td className="px-5 py-3.5">
+                                            <span className="font-semibold text-slate-800 text-sm">{String(row.village_name || "—")}</span>
+                                        </td>
+                                        <td className="px-5 py-3.5">
+                                            <span className="text-xs text-slate-600 flex items-center gap-1">
+                                                <Building2 className="w-3 h-3 text-slate-400 shrink-0" />
+                                                {String(row.district_name || "—")}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-3.5 text-right">
+                                            <span className="font-bold text-slate-700 tabular-nums">{total.toLocaleString("id-ID")}</span>
+                                        </td>
+                                        <td className="px-5 py-3.5 text-center">
+                                            {total === 0 ? (
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                                    <CheckCircle2 className="w-3 h-3" /> Bebas BABS
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border bg-amber-50 text-amber-700 border-amber-200">
+                                                    <AlertCircle className="w-3 h-3" /> {total.toLocaleString("id-ID")} rumah
+                                                </span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+                {filteredData.length === 0 && (
+                    <div className="py-12 text-center text-slate-400">
+                        <Search className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                        <p className="font-medium">Data tidak ditemukan</p>
+                    </div>
+                )}
+                {totalPages > 1 && (
+                    <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3 sm:justify-between">
+                        <span className="text-xs text-slate-500">
+                            Halaman <span className="font-bold text-slate-700">{currentPage}</span> dari <span className="font-bold text-slate-700">{totalPages}</span>
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">←</button>
+                            <span className="px-3 py-1.5 text-xs font-bold bg-slate-100 text-slate-700 rounded-lg border border-slate-200">{currentPage} / {totalPages}</span>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">→</button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </section>
+    );
+}
+
+/* ============================================================
    Main Page
 ============================================================ */
 export default function KesehatanPage() {
@@ -1137,8 +1511,8 @@ export default function KesehatanPage() {
     const toTenantPath = useTenantPath();
 
     const [loading, setLoading] = useState(true);
-    const [data, setData] = useState<HealthStatsData>({ facilities: [], stunting: [], posyandu: [], maternal: [] });
-    const [activeSection, setActiveSection] = useState<"fasilitas" | "stunting" | "posyandu" | "maternal">("fasilitas");
+    const [data, setData] = useState<HealthStatsData>({ facilities: [], stunting: [], posyandu: [], maternal: [], odfSummary: [], odfKelurahan: [] });
+    const [activeSection, setActiveSection] = useState<"fasilitas" | "posyandu" | "maternal" | "odf">("fasilitas");
     const [selectedKelurahan, setSelectedKelurahan] = useState<string | null>(null);
 
     const fetchData = useCallback(async () => {
@@ -1164,9 +1538,10 @@ export default function KesehatanPage() {
 
     const sections = [
         { key: "fasilitas" as const, label: "Fasilitas Kesehatan", icon: Stethoscope },
-        { key: "stunting" as const, label: "Stunting & Gizi", icon: Scale },
+        // { key: "stunting" as const, label: "Stunting & Gizi", icon: Scale },
         { key: "posyandu" as const, label: "Posyandu", icon: Heart },
         { key: "maternal" as const, label: "Ibu & Anak", icon: Baby },
+        { key: "odf" as const, label: "ODF (BABS)", icon: Droplets },
     ];
 
     return (
@@ -1224,7 +1599,7 @@ export default function KesehatanPage() {
             {/* Main Content */}
             <main className="px-6 max-w-7xl mx-auto -mt-16 relative z-20 pb-16">
                 {/* Section Tabs - Grid on mobile, inline on desktop */}
-                <div className="grid grid-cols-3 md:flex md:items-center gap-2 md:gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-10">
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:flex md:items-center gap-2 md:gap-1 bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm mb-10">
                     {sections.map((sec) => {
                         const isActive = activeSection === sec.key;
                         return (
@@ -1252,14 +1627,18 @@ export default function KesehatanPage() {
                         {activeSection === "fasilitas" && (
                             <FasilitasSection data={data.facilities} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
                         )}
-                        {activeSection === "stunting" && (
+                        {/* Stunting tab hidden */}
+                        {/* {activeSection === "stunting" && (
                             <StuntingSection data={data.stunting} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
-                        )}
+                        )} */}
                         {activeSection === "posyandu" && (
                             <PosyanduSection data={data.posyandu} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
                         )}
                         {activeSection === "maternal" && (
                             <MaternalSection data={data.maternal} kelurahans={kelurahans} selectedKelurahan={selectedKelurahan} />
+                        )}
+                        {activeSection === "odf" && (
+                            <ODFSection summary={data.odfSummary?.[0] || null} kelurahan={data.odfKelurahan || []} />
                         )}
                     </div>
                 )}
