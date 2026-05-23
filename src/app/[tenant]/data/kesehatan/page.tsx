@@ -1231,7 +1231,7 @@ function ODFSection({ summary, kelurahan }: { summary: Record<string, unknown> |
                 </div>
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800">ODF (Open Defecation Free)</h2>
-                    <p className="text-slate-500 text-sm">Data BABS Tertutup — Sumber: <a href="https://rasajaga.kotabogor.go.id" target="_blank" rel="noopener noreferrer" className="text-cyan-600 hover:underline font-medium">rasajaga.kotabogor.go.id</a></p>
+                    <p className="text-slate-500 text-sm">Data BABS Tertutup</p>
                 </div>
             </div>
 

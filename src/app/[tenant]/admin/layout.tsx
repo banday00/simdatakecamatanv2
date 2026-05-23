@@ -79,7 +79,7 @@ const navGroups = [
                 label: "Kesehatan", href: "/admin/kesehatan", icon: Heart,
                 children: [
                     { label: "Fasilitas", href: "/admin/kesehatan/fasilitas" },
-                    { label: "Stunting", href: "/admin/kesehatan/stunting" },
+                    //{ label: "Stunting", href: "/admin/kesehatan/stunting" },
                     { label: "Posyandu", href: "/admin/kesehatan/posyandu" },
                     { label: "Ibu & Anak", href: "/admin/kesehatan/maternal" },
                 ],

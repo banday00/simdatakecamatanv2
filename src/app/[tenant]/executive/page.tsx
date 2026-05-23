@@ -1,19 +1,19 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useTenant } from "@/lib/tenant/context";
 import { useAuth } from "@/lib/auth/context";
 import {
   Users, Home, Heart, Droplets, HandHeart, Accessibility, GraduationCap, AlertTriangle,
-  TrendingUp, TrendingDown, Minus, Loader2, Filter,
+  Loader2, Filter, Info,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, AreaChart, Area, ReferenceLine, ComposedChart, Line,
+  PieChart, Pie, Cell, ReferenceLine, ComposedChart, Line,
 } from "recharts";
 
 const COLORS = ["#6366f1","#06b6d4","#f59e0b","#ef4444","#10b981","#8b5cf6","#ec4899","#f97316"];
 const fmt = (n: number) => n?.toLocaleString("id-ID") ?? "0";
-const fmtRp = (n: number) => `Rp ${(n/1e6).toFixed(0)} Jt`;
+const fmtRp = (n: number | null | undefined) => `Rp ${((n ?? 0)/1e6).toFixed(0)} Jt`;
 const badge = (v: number, lo: number, hi: number) =>
   v >= hi ? "bg-red-100 text-red-700" : v >= lo ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700";
 
@@ -85,24 +85,75 @@ export default function ExecutiveDashboardPage() {
         <StatCard icon={AlertTriangle} label="Warga Miskin (Desil 1-2)" value={fmt(s.dtsen_miskin)} sub={`dari ${fmt(s.dtsen_total)} DTSEN`} color="red" alert="high"/>
       </div>
 
+      {/* Empty State Banner */}
+      {data.piramida_penduduk.length === 0 && data.stunting_per_kelurahan.length === 0 &&
+       data.sanitasi_per_kelurahan.length === 0 && data.bansos_distribusi.length === 0 &&
+       data.scoreboard.length === 0 && (
+        <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700">
+          <Info className="w-5 h-5 shrink-0"/>
+          <div>
+            <p className="text-sm font-semibold">Belum ada data visualisasi</p>
+            <p className="text-xs mt-0.5 text-amber-600">Data grafik dan tabel belum tersedia. Pastikan data sudah diinput melalui panel admin.</p>
+          </div>
+        </div>
+      )}
+
       {/* 2. Piramida Penduduk */}
-      {data.piramida_penduduk.length > 0 && (
-        <Card title="Piramida Penduduk — Kelompok Umur" subtitle="Distribusi demografi berdasarkan jenis kelamin">
-          <div className="h-[400px]">
-            <ResponsiveContainer>
-              <BarChart layout="vertical" data={data.piramida_penduduk} margin={{left:20,right:20}}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0"/>
-                <XAxis type="number" tick={{fontSize:11}} tickFormatter={v=>fmt(Math.abs(v))}/>
-                <YAxis type="category" dataKey="label" tick={{fontSize:11}} width={60}/>
-                <Tooltip formatter={(v:number)=>fmt(Math.abs(v))}/>
-                <Legend/>
-                <Bar dataKey="lk" name="Laki-laki" fill="#3b82f6" radius={[4,0,0,4]}/>
-                <Bar dataKey="pr" name="Perempuan" fill="#ec4899" radius={[0,4,4,0]}/>
-              </BarChart>
-            </ResponsiveContainer>
+      {data.piramida_penduduk.length > 0 && (() => {
+        const piramidaReversed = [...data.piramida_penduduk].reverse();
+        return (
+        <Card title="Piramida Penduduk" subtitle="Distribusi penduduk berdasarkan kelompok umur dan jenis kelamin">
+          {/* Legend */}
+          <div className="flex items-center justify-end gap-5 mb-3">
+            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#5B93D3] inline-block"/> <span className="text-xs text-slate-600 font-medium">Laki-laki</span></div>
+            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#F087A0] inline-block"/> <span className="text-xs text-slate-600 font-medium">Perempuan</span></div>
+          </div>
+          <div className="flex gap-6">
+            {/* Chart */}
+            <div className="flex-1 h-[560px] min-w-0">
+              <ResponsiveContainer>
+                <BarChart layout="vertical" data={piramidaReversed} margin={{left:10,right:10,top:5,bottom:5}} barSize={14} stackOffset="sign">
+                  <CartesianGrid horizontal={false} stroke="#f1f5f9"/>
+                  <XAxis type="number" tick={{fontSize:10,fill:"#94a3b8"}} tickFormatter={(v:number)=>{const a=Math.abs(v);return a>=1000?`${(a/1000).toFixed(0)}rb`:String(a);}} axisLine={{stroke:"#e2e8f0"}} tickLine={false}/>
+                  <YAxis type="category" dataKey="label" tick={{fontSize:11,fill:"#64748b"}} width={50} axisLine={false} tickLine={false}/>
+                  <Tooltip
+                    formatter={(v:number,name:string)=>[fmt(Math.abs(v)),name==="lk"?"Laki-laki":"Perempuan"]}
+                    labelFormatter={(l:string)=>`Kelompok ${l}`}
+                    contentStyle={{borderRadius:10,border:"1px solid #e2e8f0",boxShadow:"0 4px 12px rgba(0,0,0,.08)",fontSize:12}}
+                  />
+                  <ReferenceLine x={0} stroke="#cbd5e1"/>
+                  <Bar dataKey="lk" name="lk" fill="#5B93D3" stackId="pyramid" radius={[4,0,0,4]}/>
+                  <Bar dataKey="pr" name="pr" fill="#F087A0" stackId="pyramid" radius={[0,4,4,0]}/>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Data Table */}
+            <div className="hidden lg:block w-[320px] shrink-0">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-white">
+                  <tr className="border-b-2 border-slate-200">
+                    <th className="text-left py-2 px-2 font-bold text-slate-600">Kelompok</th>
+                    <th className="text-right py-2 px-2 font-bold text-[#5B93D3]">LK</th>
+                    <th className="text-right py-2 px-2 font-bold text-[#F087A0]">PR</th>
+                    <th className="text-right py-2 px-2 font-bold text-slate-700">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.piramida_penduduk.map((row:any,i:number)=>(
+                    <tr key={i} className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
+                      <td className="py-1.5 px-2 font-medium text-slate-600">{row.label}</td>
+                      <td className="py-1.5 px-2 text-right text-[#5B93D3] font-semibold">{fmt(Math.abs(row.lk))}</td>
+                      <td className="py-1.5 px-2 text-right text-[#F087A0] font-semibold">{fmt(row.pr)}</td>
+                      <td className="py-1.5 px-2 text-right font-bold text-slate-700">{fmt(Math.abs(row.lk)+row.pr)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </Card>
-      )}
+        );
+      })()}
 
       {/* 3. Stunting per Kelurahan */}
       {data.stunting_per_kelurahan.length > 0 && (

@@ -87,7 +87,11 @@ function AuthContextBridge({ children }: { children: ReactNode }) {
     }
 
     async function refreshSession() {
-        await update();
+        // Pass data to trigger a POST request to the session endpoint.
+        // Without data, update() sends a GET which just re-reads the stale JWT cookie.
+        // With data, it sends a POST which fires the JWT callback with trigger="update",
+        // allowing us to re-fetch fresh user data from the database.
+        await update({ refresh: true });
     }
 
     return (

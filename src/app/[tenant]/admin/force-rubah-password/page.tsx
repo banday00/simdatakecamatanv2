@@ -7,7 +7,7 @@ import { useTenantPath } from "@/lib/tenant/use-tenant-path";
 import { KeyRound, ShieldAlert, Loader2, LogOut } from "lucide-react";
 
 export default function ForceChangePasswordPage() {
-    const { profile, signOut } = useAuth();
+    const { profile, signOut, refreshSession } = useAuth();
     const router = useRouter();
     const toTenantPath = useTenantPath();
 
@@ -64,13 +64,19 @@ export default function ForceChangePasswordPage() {
 
             setSuccess(true);
 
-            // Redirect to admin after short delay
-            setTimeout(() => {
-                router.push(toTenantPath("/admin"));
-            }, 2000);
+            // Refresh session so passwordResetRequired is cleared before redirect
+            await refreshSession();
 
-        } catch (err: any) {
-            setError(err.message || "Terjadi kesalahan saat merubah password.");
+            // Redirect based on role after short delay
+            setTimeout(() => {
+                const destination = profile?.role === "executive_dashboard"
+                    ? toTenantPath("/executive")
+                    : toTenantPath("/admin");
+                router.push(destination);
+            }, 1500);
+
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Terjadi kesalahan saat merubah password.");
         } finally {
             setIsSubmitting(false);
         }

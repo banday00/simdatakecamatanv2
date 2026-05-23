@@ -42,6 +42,7 @@ type Stats = {
 
 type NewsItem = { id: string; judul: string; ringkasan?: string; gambar?: string; published_at: string; kategori?: string; slug: string };
 type KelChart = { nama: string; penduduk: number; laki_laki: number; perempuan: number };
+type PopulationPeriod = { tahun: number; semester: number } | null;
 
 // GovTech Palette: Gold (Prestige), Cyan (Tech), Blue (Trust), Emerald (Growth)
 const CHART_COLORS = ["#eab308", "#06b6d4", "#3b82f6", "#10b981", "#f43f5e", "#8b5cf6", "#f97316", "#14b8a6"];
@@ -103,6 +104,7 @@ export default function HomePage() {
     const [kelChart, setKelChart] = useState<KelChart[]>([]);
     const [moduleDistrib, setModuleDistrib] = useState<{ name: string; value: number }[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
+    const [populationPeriod, setPopulationPeriod] = useState<PopulationPeriod>(null);
 
     const loadStats = useCallback(async () => {
         if (!tenant) return;
@@ -162,6 +164,7 @@ export default function HomePage() {
                 })
             );
             setNews(result.data.news || []);
+            setPopulationPeriod(result.data.populationPeriod || null);
         } catch (error) {
             console.error("Error loading stats:", error);
         }
@@ -291,10 +294,17 @@ export default function HomePage() {
                         <div className="flex items-center justify-between mb-6">
                             <div>
                                 <h4 className="text-xl font-bold text-slate-900">Penduduk per Kelurahan</h4>
-                                <p className="text-sm text-slate-500 mt-1">Data kependudukan real-time per wilayah</p>
+                                <p className="text-sm text-slate-500 mt-1">
+                                    {populationPeriod
+                                        ? `Data kependudukan Semester ${populationPeriod.semester} Tahun ${populationPeriod.tahun}`
+                                        : "Data kependudukan per wilayah"}
+                                </p>
                             </div>
-                            <div className="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100">
-                                Live Update
+                            <div className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold border border-indigo-100 flex items-center gap-1.5">
+                                <Calendar className="w-3 h-3" />
+                                {populationPeriod
+                                    ? `Semester ${populationPeriod.semester}/${populationPeriod.tahun}`
+                                    : "—"}
                             </div>
                         </div>
                         <div className="h-80">
@@ -580,7 +590,7 @@ export default function HomePage() {
                                     { label: "Penduduk", value: stats.penduduk > 0 ? stats.penduduk.toLocaleString("id-ID") : "-", icon: Users },
                                     { label: "Kelurahan", value: stats.kelurahan, icon: MapPin },
                                     { label: "Modul Data", value: `${modules.length}`, icon: BarChart3 },
-                                    { label: "Update", value: "Real-time", icon: Activity },
+                                    { label: "Periode Data", value: populationPeriod ? `Semester ${populationPeriod.semester}/${populationPeriod.tahun}` : "—", icon: Calendar },
                                 ].map((item, idx) => (
                                     <motion.div
                                         key={item.label}

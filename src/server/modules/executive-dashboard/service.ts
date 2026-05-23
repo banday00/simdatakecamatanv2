@@ -205,7 +205,7 @@ async function fetchPiramidaPenduduk(tenantId: string, kelurahanId: string | nul
     const result = await pool.query(
         `WITH latest AS (SELECT MAX(periode_id) AS id FROM gov_fact_populasi_kelompok_umur WHERE tenant_id = $1 ${kelFilter})
          SELECT r.rentang_umur AS label,
-                COALESCE(SUM(f.jml_lk),0)::int AS lk,
+                -COALESCE(SUM(f.jml_lk),0)::int AS lk,
                 COALESCE(SUM(f.jml_pr),0)::int AS pr
          FROM gov_fact_populasi_kelompok_umur f
          JOIN ref_kelompok_umur r ON r.id = f.kelompok_umur_id
@@ -254,6 +254,11 @@ async function fetchSanitasiPerKelurahan(tenantId: string, kelurahanId: string |
     const params: unknown[] = [tenantId];
     if (kelurahanId) params.push(kelurahanId);
 
+    const yearFilter = tahun
+        ? (kelurahanId ? "AND tahun = $3" : "AND tahun = $2")
+        : "";
+    if (tahun) params.push(tahun);
+
     const result = await pool.query(
         `SELECT k.nama AS kelurahan,
                 s.akses_air_bersih_persen::numeric(5,1) AS air_bersih,
@@ -261,7 +266,7 @@ async function fetchSanitasiPerKelurahan(tenantId: string, kelurahanId: string |
                 s.rumah_kumuh::int AS rumah_kumuh,
                 s.tahun
          FROM (SELECT DISTINCT ON (kelurahan_id) *
-               FROM infra_sanitation WHERE tenant_id = $1 ${kelFilter}
+               FROM infra_sanitation WHERE tenant_id = $1 ${kelFilter} ${yearFilter}
                ORDER BY kelurahan_id, tahun DESC, created_at DESC) s
          JOIN kelurahans k ON k.id = s.kelurahan_id
          ORDER BY k.nama ASC`,
@@ -387,12 +392,17 @@ async function fetchPutusSekolahPerKelurahan(tenantId: string, kelurahanId: stri
     const params: unknown[] = [tenantId];
     if (kelurahanId) params.push(kelurahanId);
 
+    const yearFilter = tahun
+        ? (kelurahanId ? "AND tahun = $3" : "AND tahun = $2")
+        : "";
+    if (tahun) params.push(tahun);
+
     const result = await pool.query(
         `SELECT k.nama AS kelurahan,
                 COALESCE(SUM(e.angka_putus_sekolah),0)::int AS putus_sekolah,
                 COALESCE(AVG(e.angka_melek_huruf),0)::numeric(5,1) AS melek_huruf
          FROM (SELECT DISTINCT ON (kelurahan_id, jenjang) *
-               FROM edu_participation WHERE tenant_id = $1 ${kelFilter}
+               FROM edu_participation WHERE tenant_id = $1 ${kelFilter} ${yearFilter}
                ORDER BY kelurahan_id, jenjang, tahun DESC, semester DESC) e
          JOIN kelurahans k ON k.id = e.kelurahan_id
          GROUP BY k.id, k.nama

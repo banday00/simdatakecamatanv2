@@ -166,11 +166,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }),
     ],
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger }) {
             if (user) {
                 const appUser = user as unknown as AppSessionUser;
                 token.user = appUser;
             }
+
+            // When session.update() is called (e.g. after password change),
+            // re-fetch fresh user data from DB so passwordResetRequired etc. are up to date.
+            if (trigger === "update" && token.user) {
+                const currentUser = token.user as AppSessionUser;
+                const freshUser = await findUser(currentUser.email);
+                if (freshUser) {
+                    // Preserve the existing sessionToken from the original login
+                    freshUser.sessionToken = currentUser.sessionToken;
+                    token.user = freshUser;
+                }
+            }
+
             return token;
         },
         async session({ session, token }) {
