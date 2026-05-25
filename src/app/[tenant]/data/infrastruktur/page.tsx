@@ -544,9 +544,22 @@ function OlahragaSection({ sports, kelurahans, selectedKelurahan }: { sports: an
 // ─────────────────────────────────────────────────────────────────────────────
 function AnalisisSection({ sanitation, development, sports, kelurahans, selectedKelurahan }: { sanitation: any[]; development: PublicDevelopmentProject[]; sports: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
     const kelsToAnalyze = selectedKelurahan ? kelurahans.filter(k => k.id === selectedKelurahan) : kelurahans;
+    const developmentYears = development
+        .map((project) => project.tahun)
+        .filter((year): year is number => typeof year === "number");
+    const latestDevelopmentYear = developmentYears.length ? Math.max(...developmentYears) : null;
+
     const analysisData = kelsToAnalyze.map(k => {
         const san = sanitation.filter(s => s.kelurahan_id === k.id).sort((a, b) => b.tahun - a.tahun)[0] || {};
-        const devCount = development.filter(s => s.kelurahan_id === k.id).length;
+        const currentDevelopment = development.filter((project) =>
+            project.kelurahan_id === k.id && (latestDevelopmentYear == null || project.tahun === latestDevelopmentYear)
+        );
+        const devCount = currentDevelopment.length;
+        const verifiedDev = currentDevelopment.filter((project) => project.is_verify === 1 || project.status_paket === "TERVALIDASI").length;
+        const avgDevProgress = devCount
+            ? currentDevelopment.reduce((sum, project) => sum + (Number(project.total_progress) || 0), 0) / devCount
+            : 0;
+        const verificationScore = devCount ? (verifiedDev / devCount) * 100 : 0;
         const sportCount = sports.filter(s => s.kelurahan_id === k.id).length;
 
         // Skor per dimensi (0–100)
@@ -557,7 +570,7 @@ function AnalisisSection({ sanitation, development, sports, kelurahans, selected
         const totalKK = (san.rt_jamban_sehat || 0) + (san.rt_tanpa_jamban || 0);
         const jambanScore = totalKK > 0 ? Math.min(100, Math.round(((san.rt_jamban_sehat || 0) / totalKK) * 100)) : 0;
 
-        const devScore = Math.min(devCount * 5, 100);
+        const devScore = Math.round((avgDevProgress * 0.7) + (verificationScore * 0.3));
         const sportScore = Math.min(sportCount * 10, 100);
         const kumuhPenalty = Math.max(0, 100 - (san.rumah_kumuh || 0) * 10);
 
@@ -571,7 +584,8 @@ function AnalisisSection({ sanitation, development, sports, kelurahans, selected
             name: k.nama, id: k.id, score: totalScore,
             air: airScore, sanitasi: sanScore, jamban: jambanScore,
             pembangunan: devScore, olahraga: sportScore, kumuh: kumuhPenalty, odf: odfBonus,
-            rawDev: devCount, rawSport: sportCount, statusOdf: san.status_odf || "Belum ODF",
+            rawDev: devCount, verifiedDev, developmentYear: latestDevelopmentYear,
+            rawSport: sportCount, statusOdf: san.status_odf || "Belum ODF",
         };
     }).sort((a, b) => b.score - a.score);
     const topPerformer = analysisData.filter(d => d.score > 0).slice(0, 5);
@@ -615,7 +629,7 @@ function AnalisisSection({ sanitation, development, sports, kelurahans, selected
                                     <h4 className="font-bold text-slate-800 truncate">{kel.name}</h4>
                                     <p className="text-xs text-slate-500 truncate">
                                         ODF: <span className={`font-semibold ${kel.statusOdf === "ODF" ? "text-emerald-600" : "text-slate-500"}`}>{kel.statusOdf}</span>
-                                        {" | "}Proyek: <span className="font-semibold text-slate-700">{kel.rawDev}</span>
+                                        {" | "}Paket {kel.developmentYear ?? "-"}: <span className="font-semibold text-slate-700">{kel.rawDev}</span>
                                     </p>
                                 </div>
                                 <div className="text-right shrink-0">
@@ -649,7 +663,7 @@ function AnalisisSection({ sanitation, development, sports, kelurahans, selected
                     </div>
                     <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-100">
                         <p className="font-bold text-amber-700 mb-1">🏗️ Pembangunan</p>
-                        <p>Skor = <code className="bg-amber-100 px-1 rounded">min(jumlah_proyek × 5, 100)</code>. Setiap proyek bernilai 5 poin, maks 100.</p>
+                        <p>Skor memakai paket pekerjaan tahun terbaru: <code className="bg-amber-100 px-1 rounded">70% rata-rata progress + 30% rasio terverifikasi</code>.</p>
                     </div>
                     <div className="p-3 bg-violet-50/50 rounded-xl border border-violet-100">
                         <p className="font-bold text-violet-700 mb-1">🏟️ Olahraga</p>
