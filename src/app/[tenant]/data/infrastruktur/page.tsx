@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useTenant } from "@/lib/tenant/context";
 import { useTenantPath } from "@/lib/tenant/use-tenant-path";
@@ -8,25 +8,80 @@ import { Navbar } from "@/components/ui/navbar";
 import { Footer } from "@/components/ui/footer";
 import type { Kelurahan } from "@/types";
 import {
-    ChevronLeft, TrendingUp, MapPin, Hammer, CheckCircle, Clock, Banknote,
-    Droplets, Trash2, Trees, BarChart3, Trophy, ArrowUpRight, Search, Users,
-    Pipette, ChevronDown, Activity, Factory, PieChart as PieChartIcon, Info
+    ChevronLeft, MapPin, Hammer, CheckCircle, Clock, Banknote,
+    Droplets, BarChart3, Trophy,
+    Pipette, ChevronDown, Activity, PieChart as PieChartIcon, Info
 } from "lucide-react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, PieChart, Pie, Cell, Legend,
-    AreaChart, Area, RadarChart, Radar, PolarGrid,
+    RadarChart, Radar, PolarGrid,
     PolarAngleAxis, PolarRadiusAxis
 } from "recharts";
 
-const THEME = {
-    gradient: "from-indigo-500 to-indigo-700",
-    bgGradient: "bg-gradient-to-br from-indigo-600 via-indigo-700 to-blue-800",
-    lightBg: "bg-indigo-50",
-    textColor: "text-indigo-700",
+const CHART_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4", "#f97316", "#14b8a6", "#ec4899", "#84cc16"];
+
+type PublicDevelopmentProject = {
+    id: string;
+    tenant_id: string;
+    kelurahan_id: string | null;
+    kode_paket: string | null;
+    nama_paket: string | null;
+    ket_paket: string | null;
+    tahun: number | null;
+    nama_kecamatan: string | null;
+    nama_kelurahan: string | null;
+    nilai_kontrak: number;
+    hps: number;
+    pagu: number;
+    total_progress: number;
+    status_paket: string | null;
+    is_verify: number;
+    detail_count: number;
+    jenis_pekerjaan: string | null;
+    volume_summary: string | null;
+    lokasi_summary: string | null;
+    rt_rw_summary: string | null;
+    tgl_mulai: string | null;
+    tgl_selesai: string | null;
+    durasi_kontrak_hari: number | null;
+    sisa_hari: number | null;
+    nama_kontraktor: string | null;
+    progress_status_label: string | null;
+    detail_avg_progress: number | null;
 };
 
-const CHART_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4", "#f97316", "#14b8a6", "#ec4899", "#84cc16"];
+const formatCurrencyCompact = (value: number | null | undefined) => {
+    const amount = Number(value) || 0;
+    if (amount >= 1_000_000_000) return `Rp${(amount / 1_000_000_000).toLocaleString("id-ID", { maximumFractionDigits: 1 })} M`;
+    if (amount >= 1_000_000) return `Rp${(amount / 1_000_000).toLocaleString("id-ID", { maximumFractionDigits: 1 })} Jt`;
+    return `Rp${amount.toLocaleString("id-ID")}`;
+};
+
+const formatCurrencyFull = (value: number | null | undefined) =>
+    `Rp${(Number(value) || 0).toLocaleString("id-ID")}`;
+
+const formatDateId = (value: string | null | undefined) => {
+    if (!value) return "-";
+    return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+};
+
+const formatPackageStatus = (status: string | null | undefined) => {
+    const labelMap: Record<string, string> = {
+        TERVALIDASI: "Tervalidasi",
+        BELUM_MULAI: "Belum Mulai",
+        MENUNGGU_VALIDASI: "Menunggu Validasi",
+        SEDANG_DIPROSES: "Sedang Diproses",
+    };
+    return labelMap[status || ""] || status || "Belum Ada Status";
+};
+
+const packageStatusColors: Record<string, string> = {
+    TERVALIDASI: "bg-emerald-100 text-emerald-700",
+    BELUM_MULAI: "bg-slate-100 text-slate-700",
+    MENUNGGU_VALIDASI: "bg-amber-100 text-amber-700",
+    SEDANG_DIPROSES: "bg-blue-100 text-blue-700",
+};
 
 // StatCard removed — using ekonomi-style inline cards directly in each section
 
@@ -189,49 +244,46 @@ function SanitasiSection({ sanitation, kelurahans, selectedKelurahan }: { sanita
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT: PEMBANGUNAN
 // ─────────────────────────────────────────────────────────────────────────────
-function PembangunanSection({ development, kelurahans, selectedKelurahan }: { development: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
-    const filtered = selectedKelurahan ? development.filter(s => s.kelurahan_id === selectedKelurahan) : development;
-    const years = Array.from(new Set(filtered.map(s => s.tahun))).sort((a, b) => b - a);
+function PembangunanSection({ development, kelurahans, selectedKelurahan }: { development: PublicDevelopmentProject[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
+    const filtered = selectedKelurahan ? development.filter((project) => project.kelurahan_id === selectedKelurahan) : development;
+    const years = Array.from(new Set(filtered.map((project) => project.tahun).filter((year): year is number => typeof year === "number"))).sort((a, b) => b - a);
     const latestYear = years[0] || new Date().getFullYear();
-    const latestData = filtered.filter(s => s.tahun === latestYear);
-
-    // Normalize legacy status values to standard form values
-    const normalizeStatus = (raw: string | null | undefined): string => {
-        const map: Record<string, string> = {
-            selesai: "Selesai", berjalan: "Proses", terhenti: "Bermasalah",
-            rencana: "Rencana", proses: "Proses", bermasalah: "Bermasalah",
-        };
-        if (!raw) return "Rencana";
-        return map[raw.toLowerCase()] || raw;
-    };
+    const latestData = filtered.filter((project) => project.tahun === latestYear);
 
     const totalProyek = latestData.length;
-    const selesai = latestData.filter(s => normalizeStatus(s.status) === "Selesai").length;
-    const proses = latestData.filter(s => normalizeStatus(s.status) === "Proses").length;
-    const avgProgress = latestData.length ? Math.round(latestData.reduce((s, r) => s + (r.progress_persen || 0), 0) / latestData.length) : 0;
+    const terverifikasi = latestData.filter((project) => project.is_verify === 1 || project.status_paket === "TERVALIDASI").length;
+    const totalNilaiKontrak = latestData.reduce((sum, project) => sum + (Number(project.nilai_kontrak) || 0), 0);
+    const avgProgress = latestData.length ? Math.round(latestData.reduce((sum, project) => sum + (Number(project.total_progress) || 0), 0) / latestData.length) : 0;
     const [page, setPage] = useState(1);
     const limit = 10;
     const paginationData = latestData.slice((page - 1) * limit, page * limit);
     const totalPages = Math.ceil(totalProyek / limit);
 
     const statusMap = new Map<string, number>();
-    latestData.forEach(d => { const key = normalizeStatus(d.status); statusMap.set(key, (statusMap.get(key) || 0) + 1); });
+    latestData.forEach((project) => {
+        const key = formatPackageStatus(project.status_paket);
+        statusMap.set(key, (statusMap.get(key) || 0) + 1);
+    });
     const barData = Array.from(statusMap.entries()).map(([name, jumlah]) => ({ name, jumlah })).sort((a, b) => b.jumlah - a.jumlah);
 
-    const danaMap = new Map<string, number>();
-    latestData.forEach(d => { const sum = d.sumber_dana || "Lainnya"; danaMap.set(sum, (danaMap.get(sum) || 0) + 1); });
-    const pieData = Array.from(danaMap.entries()).map(([name, value]) => ({ name, value }));
-
-    const statusColors: Record<string, string> = { "Selesai": "bg-emerald-100 text-emerald-700", "Proses": "bg-amber-100 text-amber-700", "Rencana": "bg-blue-100 text-blue-700", "Bermasalah": "bg-rose-100 text-rose-700" };
+    const kelurahanValueMap = new Map<string, number>();
+    latestData.forEach((project) => {
+        const kelurahanName = kelurahans.find((kel) => kel.id === project.kelurahan_id)?.nama || project.nama_kelurahan || "Lainnya";
+        kelurahanValueMap.set(kelurahanName, (kelurahanValueMap.get(kelurahanName) || 0) + (Number(project.nilai_kontrak) || 0));
+    });
+    const valueByKelurahan = Array.from(kelurahanValueMap.entries())
+        .map(([name, nilai]) => ({ name, nilai }))
+        .sort((a, b) => b.nilai - a.nilai)
+        .slice(0, 10);
 
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { label: 'Total Proyek', value: totalProyek, sub: `Tahun ${latestYear}`, icon: Hammer, color: 'bg-indigo-50 text-indigo-600', border: 'border-indigo-100' },
-                    { label: 'Selesai', value: selesai, sub: 'Proyek tuntas', icon: CheckCircle, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
-                    { label: 'Dalam Proses', value: proses, sub: 'Tahap konstruksi', icon: Clock, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
-                    { label: 'Rata-rata Progress', value: `${avgProgress}%`, sub: 'Realisasi lapangan', icon: BarChart3, color: 'bg-rose-50 text-rose-600', border: 'border-rose-100' },
+                    { label: 'Total Paket', value: totalProyek, sub: `Tahun ${latestYear}`, icon: Hammer, color: 'bg-indigo-50 text-indigo-600', border: 'border-indigo-100' },
+                    { label: 'Terverifikasi', value: terverifikasi, sub: 'Paket valid', icon: CheckCircle, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
+                    { label: 'Nilai Kontrak', value: formatCurrencyCompact(totalNilaiKontrak), sub: 'Total paket publik', icon: Banknote, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
+                    { label: 'Rata-rata Progress', value: `${avgProgress}%`, sub: 'Realisasi paket', icon: BarChart3, color: 'bg-rose-50 text-rose-600', border: 'border-rose-100' },
                 ].map((item) => (
                     <div key={item.label} className={`bg-white p-4 rounded-2xl border ${item.border} shadow-sm hover:shadow-md transition-all`}>
                         <div className={`inline-flex p-2 rounded-xl ${item.color} mb-3`}>
@@ -259,44 +311,69 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><Banknote className="w-5 h-5 text-indigo-600" /> Sumber Pendanaan Proyek</h3>
+                    <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><Banknote className="w-5 h-5 text-indigo-600" /> Nilai Kontrak per Kelurahan</h3>
                     <div className="h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2} dataKey="value" label={false}>
-                                    {pieData.map((_, index) => <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
-                                </Pie>
-                                <Tooltip contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} />
-                                <Legend layout="vertical" verticalAlign="middle" align="right" iconType="circle" wrapperStyle={{ fontSize: "12px" }} />
-                            </PieChart>
+                            <BarChart data={valueByKelurahan} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#64748b" }} interval={0} angle={-45} textAnchor="end" height={70} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#64748b" }} tickFormatter={(value) => formatCurrencyCompact(Number(value)).replace("Rp", "")} />
+                                <Tooltip formatter={(value) => [formatCurrencyFull(Number(value)), "Nilai Kontrak"]} cursor={{ fill: "#f8fafc" }} contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} />
+                                <Bar dataKey="nilai" name="Nilai Kontrak" fill="#10b981" radius={[4, 4, 0, 0]} barSize={18} />
+                            </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
             </div>
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-slate-100 bg-slate-50/50"><h3 className="font-bold text-slate-800">Daftar Proyek Infrastruktur</h3></div>
+                <div className="p-5 border-b border-slate-100 bg-slate-50/50"><h3 className="font-bold text-slate-800">Daftar Paket Pekerjaan Infrastruktur</h3></div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100 font-semibold">
-                            <tr><th className="px-6 py-4">Nama Proyek</th><th className="px-6 py-4">Kelurahan</th><th className="px-6 py-4">Instansi Pelaksana</th><th className="px-6 py-4">Sumber Dana</th><th className="px-6 py-4">Volume</th><th className="px-6 py-4">Progress</th><th className="px-6 py-4 text-center">Status</th></tr>
+                            <tr><th className="px-6 py-4">Paket</th><th className="px-6 py-4">Kelurahan</th><th className="px-6 py-4">Jenis / Lokasi</th><th className="px-6 py-4">Nilai</th><th className="px-6 py-4">Jadwal</th><th className="px-6 py-4">Progress</th><th className="px-6 py-4 text-center">Status</th></tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {paginationData.map((row, i) => (
-                                <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                            {paginationData.map((row) => (
+                                <tr key={row.id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="px-6 py-4">
-                                        <p className="font-bold text-slate-800">{row.nama_proyek}</p>
-                                        {row.keterangan && <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{row.keterangan}</p>}
+                                        <p className="font-bold text-slate-800 min-w-[220px]">{row.nama_paket || "-"}</p>
+                                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                            {row.kode_paket && <span className="inline-flex px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold text-slate-500">{row.kode_paket}</span>}
+                                            <span className="inline-flex px-2 py-0.5 rounded-md bg-indigo-50 text-[10px] font-bold text-indigo-600">{row.detail_count || 0} detail</span>
+                                        </div>
+                                        {row.nama_kontraktor && <p className="text-xs text-slate-500 mt-1 line-clamp-1">Kontraktor: {row.nama_kontraktor}</p>}
+                                        {row.ket_paket && <p className="text-xs text-slate-400 mt-1 line-clamp-1">{row.ket_paket}</p>}
                                     </td>
-                                    <td className="px-6 py-4"><p className="font-semibold text-slate-700">{kelurahans.find(k => k.id === row.kelurahan_id)?.nama}</p></td>
-                                    <td className="px-6 py-4"><span className="text-sm text-slate-600">{row.instansi_pelaksana || "-"}</span></td>
-                                    <td className="px-6 py-4"><span className="inline-flex px-2 py-1 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100">{row.sumber_dana || "-"}</span></td>
                                     <td className="px-6 py-4">
-                                        {row.volume != null
-                                            ? <span className="text-sm font-medium text-slate-700">{Number(row.volume).toLocaleString('id-ID')} <span className="text-slate-400 text-xs">{row.satuan || ''}</span></span>
-                                            : <span className="text-slate-400 text-xs">-</span>}
+                                        <p className="font-semibold text-slate-700">{kelurahans.find(k => k.id === row.kelurahan_id)?.nama || row.nama_kelurahan || "-"}</p>
+                                        {row.nama_kecamatan && <p className="text-xs text-slate-400 mt-0.5">{row.nama_kecamatan}</p>}
                                     </td>
-                                    <td className="px-6 py-4"><div className="flex items-center gap-2"><div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-indigo-500 rounded-full" style={{ width: `${row.progress_persen || 0}%` }} /></div><span className="text-xs font-bold w-8">{row.progress_persen || 0}%</span></div></td>
-                                    <td className="px-6 py-4 text-center"><span className={`inline-flex items-center px-2 py-1 text-xs font-bold rounded-lg ${statusColors[normalizeStatus(row.status)] || "bg-slate-100 text-slate-700"}`}>{normalizeStatus(row.status)}</span></td>
+                                    <td className="px-6 py-4 min-w-[220px]">
+                                        <p className="text-sm font-semibold text-slate-700 line-clamp-1">{row.jenis_pekerjaan || "-"}</p>
+                                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{[row.rt_rw_summary, row.lokasi_summary].filter(Boolean).join(" - ") || "-"}</p>
+                                        {row.volume_summary && <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">Volume: {row.volume_summary}</p>}
+                                    </td>
+                                    <td className="px-6 py-4 min-w-[150px]">
+                                        <p className="font-bold text-slate-800">{formatCurrencyCompact(row.nilai_kontrak)}</p>
+                                        <p className="text-[10px] text-slate-400 mt-1">Pagu {formatCurrencyCompact(row.pagu)}</p>
+                                    </td>
+                                    <td className="px-6 py-4 min-w-[160px]">
+                                        <p className="text-xs font-semibold text-slate-700">{formatDateId(row.tgl_mulai)} - {formatDateId(row.tgl_selesai)}</p>
+                                        <p className="text-[10px] text-slate-400 mt-1">{row.durasi_kontrak_hari ? `${row.durasi_kontrak_hari} hari` : "Durasi belum tersedia"}</p>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min(100, Math.max(0, row.total_progress || 0))}%` }} />
+                                            </div>
+                                            <span className="text-xs font-bold w-8">{row.total_progress || 0}%</span>
+                                        </div>
+                                        {row.progress_status_label && <p className="text-[10px] text-slate-400 mt-1">{row.progress_status_label}</p>}
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className={`inline-flex items-center px-2 py-1 text-xs font-bold rounded-lg ${packageStatusColors[row.status_paket || ""] || "bg-slate-100 text-slate-700"}`}>{formatPackageStatus(row.status_paket)}</span>
+                                        {row.is_verify === 1 && <p className="text-[10px] text-emerald-600 font-bold mt-1">Terverifikasi</p>}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -465,7 +542,7 @@ function OlahragaSection({ sports, kelurahans, selectedKelurahan }: { sports: an
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT: ANALISIS & INSIGHT
 // ─────────────────────────────────────────────────────────────────────────────
-function AnalisisSection({ sanitation, development, sports, kelurahans, selectedKelurahan }: { sanitation: any[]; development: any[]; sports: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
+function AnalisisSection({ sanitation, development, sports, kelurahans, selectedKelurahan }: { sanitation: any[]; development: PublicDevelopmentProject[]; sports: any[]; kelurahans: Kelurahan[]; selectedKelurahan: string | null }) {
     const kelsToAnalyze = selectedKelurahan ? kelurahans.filter(k => k.id === selectedKelurahan) : kelurahans;
     const analysisData = kelsToAnalyze.map(k => {
         const san = sanitation.filter(s => s.kelurahan_id === k.id).sort((a, b) => b.tahun - a.tahun)[0] || {};
@@ -605,7 +682,7 @@ export default function DataInfrastrukturPage() {
     const [selectedKelurahan, setSelectedKelurahan] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState("sanitasi");
     const [sanitation, setSanitation] = useState<any[]>([]);
-    const [development, setDevelopment] = useState<any[]>([]);
+    const [development, setDevelopment] = useState<PublicDevelopmentProject[]>([]);
     const [sports, setSports] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 

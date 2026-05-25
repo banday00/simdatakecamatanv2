@@ -23,7 +23,7 @@ export default async function TenantLandingPage() {
                         SIMDATA Kecamatan
                     </div>
                     <h1 className="mt-3 text-2xl font-extrabold leading-tight text-slate-900 md:text-4xl">
-                        Sistem Informasi Manajemen Data Kecamatan
+                        Sistem Informasi Data Kecamatan <br /> Kota Bogor
                     </h1>
                     <p className="mx-auto mt-2 max-w-lg text-sm font-medium leading-relaxed text-slate-700 md:text-base">
                         Data terhubung, layanan cepat, keputusan tepat.

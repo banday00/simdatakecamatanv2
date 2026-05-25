@@ -1,5 +1,7 @@
 "use client";
 
+import { Eye, EyeOff } from "lucide-react";
+
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useTenant } from "@/lib/tenant/context";
@@ -385,7 +387,28 @@ function PenggunaFormModal({ open, onClose, onSubmit, editRow, isSubmitting, kel
         role: "admin_kelurahan", kelurahan_id: "", is_active: "true",
     });
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [passwordStrength, setPasswordStrength] = useState({ score: 0, text: "", color: "bg-gray-200" });
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    // Password strength calculation (matching change-password modal pattern)
+    const getPasswordStrength = (pw: string) => {
+        if (!pw) return { score: 0, label: "", color: "", bgColor: "", textColor: "", checks: { length: false, lower: false, upper: false, number: false, special: false } };
+        const checks = {
+            length: pw.length >= 8,
+            lower: /[a-z]/.test(pw),
+            upper: /[A-Z]/.test(pw),
+            number: /[0-9]/.test(pw),
+            special: /[^A-Za-z0-9]/.test(pw),
+        };
+        const passed = Object.values(checks).filter(Boolean).length;
+        if (passed <= 2) return { score: 1, label: "Lemah", color: "text-red-600", bgColor: "bg-red-500", textColor: "text-red-600", checks };
+        if (passed === 3) return { score: 2, label: "Sedang", color: "text-amber-600", bgColor: "bg-amber-500", textColor: "text-amber-600", checks };
+        if (passed === 4) return { score: 3, label: "Kuat", color: "text-blue-600", bgColor: "bg-blue-500", textColor: "text-blue-600", checks };
+        return { score: 4, label: "Sangat Kuat", color: "text-emerald-600", bgColor: "bg-emerald-500", textColor: "text-emerald-600", checks };
+    };
+
+    const passwordStrength = getPasswordStrength(String(form.password));
+    const allPasswordChecksPassed = Object.values(passwordStrength.checks).every(Boolean);
 
     useEffect(() => {
         if (!open) return;
@@ -406,28 +429,13 @@ function PenggunaFormModal({ open, onClose, onSubmit, editRow, isSubmitting, kel
                 role: "admin_kelurahan", kelurahan_id: "", is_active: "true",
             });
             setConfirmPassword("");
-            setPasswordStrength({ score: 0, text: "", color: "bg-gray-200" });
         }
+        setShowPassword(false);
+        setShowConfirmPassword(false);
     }, [open, editRow]);
 
     function set(field: string, value: any) {
         setForm(p => ({ ...p, [field]: value }));
-
-        // Calculate password strength
-        if (field === "password") {
-            const pwd = String(value);
-            let score = 0;
-            if (pwd.length > 5) score += 1;
-            if (pwd.length > 8) score += 1;
-            if (/[A-Z]/.test(pwd)) score += 1;
-            if (/[0-9]/.test(pwd)) score += 1;
-            if (/[^A-Za-z0-9]/.test(pwd)) score += 1;
-
-            if (pwd.length === 0) setPasswordStrength({ score: 0, text: "", color: "bg-gray-200" });
-            else if (score <= 2) setPasswordStrength({ score, text: "Lemah", color: "bg-red-500" });
-            else if (score <= 4) setPasswordStrength({ score, text: "Sedang", color: "bg-amber-400" });
-            else setPasswordStrength({ score, text: "Kuat", color: "bg-emerald-500" });
-        }
     }
 
     if (!open) return null;
@@ -439,11 +447,11 @@ function PenggunaFormModal({ open, onClose, onSubmit, editRow, isSubmitting, kel
         const isPasswordBeingSet = !isEdit || (isEdit && String(form.password).length > 0);
 
         if (isPasswordBeingSet) {
-            if (passwordStrength.score < 5) {
+            if (!allPasswordChecksPassed) {
                 onNotice({
                     tone: "warning",
-                    title: "Password belum kuat",
-                    message: "Gunakan kombinasi huruf besar, angka, dan simbol hingga indikator menunjukkan 'Kuat'.",
+                    title: "Password belum memenuhi persyaratan",
+                    message: "Password harus memuat minimal 8 karakter, huruf besar, huruf kecil, angka, dan karakter spesial.",
                 });
                 return;
             }
@@ -577,22 +585,45 @@ function PenggunaFormModal({ open, onClose, onSubmit, editRow, isSubmitting, kel
 
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">{isEdit ? "Password Baru" : "Password"} {isEdit ? <span className="text-gray-400 font-normal text-xs">(Kosongkan jika tidak diubah)</span> : <span className="text-red-500">*</span>}</label>
-                                        <input type="password" value={String(form.password)} onChange={e => set("password", e.target.value)} required={!isEdit} minLength={6} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder={isEdit ? "Ketik sandi baru" : "Minimal 6 karakter"} />
+                                        <div className="relative">
+                                            <input type={showPassword ? "text" : "password"} value={String(form.password)} onChange={e => set("password", e.target.value)} required={!isEdit} minLength={8} className="w-full px-4 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder={isEdit ? "Ketik sandi baru" : "Minimal 8 karakter"} autoComplete="new-password" />
+                                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors" tabIndex={-1}>
+                                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                            </button>
+                                        </div>
 
-                                        {/* Password Strength Meter */}
+                                        {/* Password Strength Meter + Checklist */}
                                         {String(form.password).length > 0 && (
-                                            <div className="mt-2 space-y-1">
-                                                <div className="flex gap-1 h-1.5">
-                                                    {[1, 2, 3, 4, 5].map((level) => (
-                                                        <div
-                                                            key={level}
-                                                            className={`flex-1 rounded-full transition-all duration-300 ${level <= passwordStrength.score ? passwordStrength.color : "bg-gray-200"}`}
-                                                        />
+                                            <div className="mt-3 space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs text-gray-500 font-medium">Kekuatan Password</span>
+                                                    <span className={`text-xs font-bold ${passwordStrength.textColor}`}>{passwordStrength.label}</span>
+                                                </div>
+                                                <div className="flex gap-1">
+                                                    {[1, 2, 3, 4].map(i => (
+                                                        <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${i <= passwordStrength.score ? passwordStrength.bgColor : "bg-gray-200"}`} />
                                                     ))}
                                                 </div>
-                                                <p className={`text-xs font-medium text-right ${passwordStrength.color.replace('bg-', 'text-')}`}>
-                                                    {passwordStrength.text}
-                                                </p>
+                                                <div className="mt-2 p-3 bg-gray-50/80 rounded-xl space-y-1.5">
+                                                    {[
+                                                        { ok: passwordStrength.checks.length, label: "Minimal 8 karakter" },
+                                                        { ok: passwordStrength.checks.lower, label: "Huruf kecil (a-z)" },
+                                                        { ok: passwordStrength.checks.upper, label: "Huruf besar (A-Z)" },
+                                                        { ok: passwordStrength.checks.number, label: "Angka (0-9)" },
+                                                        { ok: passwordStrength.checks.special, label: "Karakter spesial (!@#$%^&*)" },
+                                                    ].map(item => (
+                                                        <div key={item.label} className={`flex items-center gap-2 text-xs transition-colors duration-200 ${item.ok ? "text-emerald-600" : "text-gray-400"}`}>
+                                                            <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-all duration-200 shrink-0 ${item.ok ? "bg-emerald-100" : "bg-gray-100"}`}>
+                                                                {item.ok ? (
+                                                                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                                                ) : (
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                                                                )}
+                                                            </div>
+                                                            <span className={item.ok ? "font-medium" : ""}>{item.label}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -601,25 +632,31 @@ function PenggunaFormModal({ open, onClose, onSubmit, editRow, isSubmitting, kel
                                     {(!isEdit || (isEdit && String(form.password).length > 0)) && (
                                         <div>
                                             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Konfirmasi Password {isEdit ? "Baru" : ""} <span className="text-red-500">*</span></label>
-                                            <input
-                                                type="password"
-                                                value={confirmPassword}
-                                                onChange={e => setConfirmPassword(e.target.value)}
-                                                required
-                                                minLength={6}
-                                                className={`w-full px-4 py-2.5 bg-white border rounded-xl text-sm focus:ring-2 transition-all ${confirmPassword.length > 0
-                                                    ? confirmPassword !== String(form.password)
-                                                        ? "border-red-300 focus:ring-red-500/20 focus:border-red-500"
-                                                        : "border-emerald-300 focus:ring-emerald-500/20 focus:border-emerald-500"
-                                                    : "border-gray-200 focus:ring-blue-500/20 focus:border-blue-500"
-                                                    }`}
-                                                placeholder="Ketik ulang password"
-                                            />
+                                            <div className="relative">
+                                                <input
+                                                    type={showConfirmPassword ? "text" : "password"}
+                                                    value={confirmPassword}
+                                                    onChange={e => setConfirmPassword(e.target.value)}
+                                                    required
+                                                    minLength={8}
+                                                    className={`w-full px-4 pr-10 py-2.5 bg-white border rounded-xl text-sm focus:ring-2 transition-all ${confirmPassword.length > 0
+                                                        ? confirmPassword !== String(form.password)
+                                                            ? "border-red-300 focus:ring-red-500/20 focus:border-red-500"
+                                                            : "border-emerald-300 focus:ring-emerald-500/20 focus:border-emerald-500"
+                                                        : "border-gray-200 focus:ring-blue-500/20 focus:border-blue-500"
+                                                        }`}
+                                                    placeholder="Ketik ulang password"
+                                                    autoComplete="new-password"
+                                                />
+                                                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors" tabIndex={-1}>
+                                                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                </button>
+                                            </div>
                                             {confirmPassword.length > 0 && (
                                                 confirmPassword !== String(form.password) ? (
-                                                    <p className="text-xs text-red-500 mt-1">Sandi tidak cocok.</p>
+                                                    <p className="text-xs text-red-500 mt-1 font-medium">Password tidak cocok.</p>
                                                 ) : (
-                                                    <p className="text-xs text-emerald-500 mt-1">Sandi cocok.</p>
+                                                    <p className="text-xs text-emerald-600 mt-1 font-medium">Sandi cocok.</p>
                                                 )
                                             )}
                                         </div>

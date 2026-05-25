@@ -134,10 +134,74 @@ export async function getPublicInfrastrukturData(tenantSlug: string) {
             [tenant.id]
         ),
         rows(
-            `SELECT *
-             FROM infra_development
-             WHERE tenant_id = $1
-             ORDER BY created_at DESC, tahun DESC`,
+            `SELECT
+                ppb.id::text,
+                ppb.tenant_id,
+                ppb.kelurahan_id,
+                ppb.kode_paket,
+                ppb.nama_paket,
+                ppb.ket_paket,
+                ppb.tahun_paket AS tahun,
+                ppb.nama_kecamatan,
+                COALESCE(k.nama, ppb.nama_kelurahan, '-') AS nama_kelurahan,
+                COALESCE(ppb.nilai_kontrak, 0)::float8 AS nilai_kontrak,
+                COALESCE(ppb.hps, 0)::float8 AS hps,
+                COALESCE(ppb.pagu, 0)::float8 AS pagu,
+                COALESCE(ppb.total_progress, 0)::int AS total_progress,
+                ppb.status_paket,
+                COALESCE(ppb.is_verify, 0)::int AS is_verify,
+                ppb.created_at,
+                ppb.updated_at,
+                COALESCE(detail.detail_count, 0)::int AS detail_count,
+                detail.jenis_pekerjaan,
+                detail.volume_summary,
+                detail.lokasi_summary,
+                detail.rt_rw_summary,
+                detail.tgl_mulai,
+                detail.tgl_selesai,
+                detail.durasi_kontrak_hari,
+                detail.sisa_hari,
+                detail.nama_kontraktor,
+                NULLIF(REPLACE(COALESCE(detail.progress_status_label, ''), ' PPK', ''), '') AS progress_status_label,
+                detail.detail_avg_progress
+             FROM paket_pekerjaan_berjalan ppb
+             LEFT JOIN kelurahans k ON k.id = ppb.kelurahan_id AND k.tenant_id = ppb.tenant_id
+             LEFT JOIN LATERAL (
+                SELECT
+                    COUNT(*)::int AS detail_count,
+                    STRING_AGG(DISTINCT NULLIF(d.jenis_pekerjaan, ''), ', ') AS jenis_pekerjaan,
+                    STRING_AGG(
+                        DISTINCT NULLIF(
+                            CONCAT_WS(' ', NULLIF(d.volume_nilai::text, ''), NULLIF(d.volume_satuan, '')),
+                            ''
+                        ),
+                        ', '
+                    ) AS volume_summary,
+                    STRING_AGG(DISTINCT NULLIF(d.lokasi_keterangan, ''), '; ') AS lokasi_summary,
+                    STRING_AGG(
+                        DISTINCT NULLIF(
+                            CONCAT_WS(
+                                ' ',
+                                NULLIF(CONCAT('RT ', NULLIF(NULLIF(BTRIM(d.rt), ''), '-')), 'RT '),
+                                NULLIF(CONCAT('RW ', NULLIF(NULLIF(BTRIM(d.rw), ''), '-')), 'RW ')
+                            ),
+                            ''
+                        ),
+                        ', '
+                    ) AS rt_rw_summary,
+                    MIN(d.tgl_mulai) AS tgl_mulai,
+                    MAX(d.tgl_selesai) AS tgl_selesai,
+                    MAX(d.durasi_kontrak_hari)::int AS durasi_kontrak_hari,
+                    MIN(d.sisa_hari)::int AS sisa_hari,
+                    STRING_AGG(DISTINCT NULLIF(d.nama_kontraktor, ''), ', ') AS nama_kontraktor,
+                    MAX(d.progress_status_label) AS progress_status_label,
+                    ROUND(AVG(d.progress_persen))::int AS detail_avg_progress
+                FROM paket_pekerjaan_detail d
+                WHERE d.kode_paket = ppb.kode_paket
+                  AND (d.tahun_paket = ppb.tahun_paket OR d.tahun_paket IS NULL OR ppb.tahun_paket IS NULL)
+             ) detail ON true
+             WHERE ppb.tenant_id = $1
+             ORDER BY ppb.tahun_paket DESC NULLS LAST, ppb.updated_at DESC NULLS LAST, ppb.created_at DESC NULLS LAST, ppb.nama_paket ASC`,
             [tenant.id]
         ),
         rows(

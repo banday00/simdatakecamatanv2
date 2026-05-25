@@ -156,25 +156,50 @@ function ExecutiveLayoutInner({ children }: { children: React.ReactNode }) {
    Change Password Modal (reused pattern)
    ═══════════════════════════════════════════ */
 function ChangePasswordModal({ onClose }: { onClose: () => void }) {
+    const [currentPassword, setCurrentPassword] = useState("");
     const [password, setPassword] = useState("");
     const [confirm, setConfirm] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [mounted, setMounted] = useState(false);
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     useEffect(() => setMounted(true), []);
+
+    // Password strength calculation
+    const getPasswordStrength = (pw: string) => {
+        if (!pw) return { score: 0, label: "", color: "", bgColor: "", checks: { length: false, lower: false, upper: false, number: false, special: false } };
+        const checks = {
+            length: pw.length >= 8,
+            lower: /[a-z]/.test(pw),
+            upper: /[A-Z]/.test(pw),
+            number: /[0-9]/.test(pw),
+            special: /[^A-Za-z0-9]/.test(pw),
+        };
+        const passed = Object.values(checks).filter(Boolean).length;
+        if (passed <= 2) return { score: 1, label: "Lemah", color: "text-red-600", bgColor: "bg-red-500", checks };
+        if (passed === 3) return { score: 2, label: "Sedang", color: "text-amber-600", bgColor: "bg-amber-500", checks };
+        if (passed === 4) return { score: 3, label: "Kuat", color: "text-blue-600", bgColor: "bg-blue-500", checks };
+        return { score: 4, label: "Sangat Kuat", color: "text-emerald-600", bgColor: "bg-emerald-500", checks };
+    };
+
+    const strength = getPasswordStrength(password);
+    const allChecksPassed = Object.values(strength.checks).every(Boolean);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(""); setSuccess("");
+        if (!currentPassword) { setError("Password lama wajib diisi."); return; }
+        if (!allChecksPassed) { setError("Password baru belum memenuhi semua persyaratan keamanan."); return; }
         if (password !== confirm) { setError("Kombinasi password tidak cocok."); return; }
-        if (password.length < 8) { setError("Password minimal 8 karakter."); return; }
         setIsSubmitting(true);
         try {
             const res = await fetch("/api/auth/password/change", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ newPassword: password }),
+                body: JSON.stringify({ currentPassword, newPassword: password }),
             });
             const result = await res.json();
             if (!res.ok || result.error) throw new Error(result.error || "Gagal mengubah password.");
@@ -186,10 +211,33 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
 
     if (typeof document === "undefined" || !mounted) return null;
 
+    const EyeIcon = ({ show, onClick }: { show: boolean; onClick: () => void }) => (
+        <button type="button" onClick={onClick} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-0.5" tabIndex={-1}>
+            {show ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+            ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+            )}
+        </button>
+    );
+
+    const CheckItem = ({ ok, label }: { ok: boolean; label: string }) => (
+        <div className={`flex items-center gap-2 text-xs transition-colors duration-200 ${ok ? "text-emerald-600" : "text-gray-400"}`}>
+            <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-all duration-200 shrink-0 ${ok ? "bg-emerald-100" : "bg-gray-100"}`}>
+                {ok ? (
+                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                ) : (
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                )}
+            </div>
+            <span className={ok ? "font-medium" : ""}>{label}</span>
+        </div>
+    );
+
     return createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
             <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md" onClick={onClose} />
-            <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden" style={{ animation: "modalSlideIn 0.3s ease-out" }}>
+            <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden" style={{ animation: "modalSlideIn 0.3s ease-out" }}>
                 <div className="h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shrink-0" />
                 <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
                     <div className="flex items-center gap-4">
@@ -200,29 +248,71 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
                         </div>
                     </div>
                 </div>
-                <div className="p-6">
-                    <form id="exec-pw-form" onSubmit={handleSubmit} className="space-y-6">
+                <div className="overflow-y-auto p-6 custom-scrollbar">
+                    <form id="exec-pw-form" onSubmit={handleSubmit} className="space-y-5">
                         {error && <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-100">{error}</div>}
                         {success && <div className="p-3 text-sm text-green-600 bg-green-50 rounded-lg border border-green-100">{success}</div>}
+
+                        {/* Password Lama */}
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password Baru</label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password Lama <span className="text-red-500">*</span></label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm" placeholder="Masukkan password baru" required />
+                                <input type={showCurrentPassword ? "text" : "password"} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm" placeholder="Masukkan password lama" required autoComplete="current-password" />
+                                <EyeIcon show={showCurrentPassword} onClick={() => setShowCurrentPassword(!showCurrentPassword)} />
                             </div>
                         </div>
+
+                        <div className="border-t border-dashed border-gray-200" />
+
+                        {/* Password Baru */}
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Konfirmasi Password</label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password Baru <span className="text-red-500">*</span></label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} className={`w-full pl-10 pr-4 py-2.5 bg-white border rounded-xl text-sm focus:ring-2 transition-all shadow-sm ${confirm && password !== confirm ? "border-red-300" : confirm && password === confirm ? "border-green-300" : "border-gray-200"}`} placeholder="Ulangi password baru" required />
+                                <input type={showNewPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm" placeholder="Masukkan password baru" required autoComplete="new-password" />
+                                <EyeIcon show={showNewPassword} onClick={() => setShowNewPassword(!showNewPassword)} />
                             </div>
+
+                            {/* Strength Meter */}
+                            {password && (
+                                <div className="mt-3 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-gray-500 font-medium">Kekuatan Password</span>
+                                        <span className={`text-xs font-bold ${strength.color}`}>{strength.label}</span>
+                                    </div>
+                                    <div className="flex gap-1">
+                                        {[1, 2, 3, 4].map(i => (
+                                            <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${i <= strength.score ? strength.bgColor : "bg-gray-200"}`} />
+                                        ))}
+                                    </div>
+                                    <div className="mt-2 p-3 bg-gray-50/80 rounded-xl space-y-1.5">
+                                        <CheckItem ok={strength.checks.length} label="Minimal 8 karakter" />
+                                        <CheckItem ok={strength.checks.lower} label="Huruf kecil (a-z)" />
+                                        <CheckItem ok={strength.checks.upper} label="Huruf besar (A-Z)" />
+                                        <CheckItem ok={strength.checks.number} label="Angka (0-9)" />
+                                        <CheckItem ok={strength.checks.special} label="Karakter spesial (!@#$%^&*)" />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Konfirmasi */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Konfirmasi Password <span className="text-red-500">*</span></label>
+                            <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <input type={showConfirmPassword ? "text" : "password"} value={confirm} onChange={e => setConfirm(e.target.value)} className={`w-full pl-10 pr-10 py-2.5 bg-white border rounded-xl text-sm focus:ring-2 transition-all shadow-sm ${confirm && password !== confirm ? "border-red-300" : confirm && password === confirm ? "border-green-300" : "border-gray-200"}`} placeholder="Ulangi password baru" required autoComplete="new-password" />
+                                <EyeIcon show={showConfirmPassword} onClick={() => setShowConfirmPassword(!showConfirmPassword)} />
+                            </div>
+                            {confirm && password !== confirm && <p className="text-xs text-red-500 mt-1 font-medium">Password tidak cocok.</p>}
+                            {confirm && password === confirm && <p className="text-xs text-green-600 mt-1 font-medium">Sandi cocok.</p>}
                         </div>
                     </form>
                 </div>
                 <div className="flex items-center justify-end px-6 py-4 border-t border-gray-100 gap-3">
                     <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors">Batal</button>
-                    <button type="submit" form="exec-pw-form" disabled={isSubmitting || !password || password !== confirm} className="flex items-center gap-2 px-7 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-lg shadow-indigo-600/25 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button type="submit" form="exec-pw-form" disabled={isSubmitting || !currentPassword || !allChecksPassed || password !== confirm} className="flex items-center gap-2 px-7 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-lg shadow-indigo-600/25 disabled:opacity-50 disabled:cursor-not-allowed">
                         {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                         Simpan
                     </button>
