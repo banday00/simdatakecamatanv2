@@ -104,7 +104,6 @@ const navGroups = [
                 children: [
                     { label: "Olahraga", href: "/admin/infrastruktur/olahraga" },
                     { label: "Sanitasi", href: "/admin/infrastruktur/sanitasi" },
-                    { label: "Pembangunan", href: "/admin/infrastruktur/pembangunan" },
                 ],
             },
             {
