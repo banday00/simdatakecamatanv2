@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
     ChevronUp,
     ChevronDown,
@@ -91,6 +91,10 @@ export function DataTable<T extends Record<string, unknown>>({
     // Paginate
     const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
     const paginated = sorted.slice(page * pageSize, (page + 1) * pageSize);
+
+    useEffect(() => {
+        setPage((currentPage) => Math.min(currentPage, totalPages - 1));
+    }, [totalPages]);
 
     function handleSort(key: string) {
         if (sortKey === key) {

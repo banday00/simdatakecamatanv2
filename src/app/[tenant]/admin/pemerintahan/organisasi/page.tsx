@@ -577,7 +577,9 @@ export default function OrganisasiPage() {
             await remove(deleteRow.id);
             setDeleteRow(null);
             setToast({ message: "Data pejabat berhasil dihapus", type: "success" });
+            await fetchData();
         } catch (err: any) {
+            console.error("[Organisasi] handleDelete:", err);
             setToast({ message: `Gagal menghapus data: ${err?.message || 'Silakan coba lagi'}`, type: "error" });
         } finally {
             setIsSubmitting(false);
