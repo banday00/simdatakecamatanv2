@@ -66,27 +66,35 @@ const modules = [
 ============================================================ */
 // GovTech Stat Card Component
 function PublicStatCard({
-    label, value, icon: Icon, gradient, delay = 0,
-}: { label: string; value: string | number; icon: React.ComponentType<{ className?: string }>; gradient: string; delay?: number }) {
+    label, value, unit, icon: Icon, delay = 0,
+}: { label: string; value: string | number; unit?: string; icon: React.ComponentType<{ className?: string }>; gradient?: string; delay?: number }) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-50px" }}
             transition={{ duration: 0.6, delay: delay / 1000, ease: "easeOut" }}
-            className={`group relative flex flex-col items-center justify-center p-3 md:p-6 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden`}
+            className="group relative min-h-[118px] overflow-hidden rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] md:min-h-[142px] md:p-5"
         >
-            {/* Top colored strip */}
-            <div className="absolute top-0 left-0 w-full h-1 bg-indigo-600" />
-
-            <div className={`mb-2 p-2 rounded-xl bg-slate-50 group-hover:bg-slate-100 transition-colors text-slate-600 group-hover:text-indigo-600`}>
-                <Icon className="w-4 h-4 md:w-6 md:h-6" />
-            </div>
-            <div className="text-lg md:text-3xl font-extrabold text-slate-800 tracking-tight group-hover:scale-110 transition-transform duration-300">
-                {value}
-            </div>
-            <div className="text-[9px] md:text-xs font-semibold uppercase tracking-wider text-slate-400 mt-1 text-center leading-tight">
-                {label}
+            <div className="flex h-full flex-col justify-between gap-4">
+                <div className="flex items-start justify-between gap-3">
+                    <p className="text-[10px] font-semibold uppercase leading-tight tracking-wider text-slate-500 md:text-xs">
+                        {label}
+                    </p>
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition-colors group-hover:border-primary-100 group-hover:bg-primary-50 group-hover:text-primary-700 md:h-10 md:w-10">
+                        <Icon className="h-4 w-4 md:h-5 md:w-5" />
+                    </div>
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                    <span className="text-2xl font-extrabold leading-none tracking-tight text-slate-900 md:text-3xl">
+                        {value}
+                    </span>
+                    {unit && value !== "-" && (
+                        <span className="text-xs font-semibold text-slate-500 md:text-sm">
+                            {unit}
+                        </span>
+                    )}
+                </div>
             </div>
         </motion.div>
     );
@@ -258,8 +266,8 @@ export default function HomePage() {
 
             {/* ========== QUICK STATS ========== */}
             <section className="px-6 mt-8 lg:mt-12 relative z-20 max-w-7xl mx-auto">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <PublicStatCard label="Penduduk" value={stats.penduduk > 0 ? stats.penduduk.toLocaleString("id-ID") + " jiwa" : "-"} icon={Users} gradient="stat-gradient-blue" delay={0} />
+                <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+                    <PublicStatCard label="Penduduk" value={stats.penduduk > 0 ? stats.penduduk.toLocaleString("id-ID") : "-"} unit="jiwa" icon={Users} gradient="stat-gradient-blue" delay={0} />
                     <PublicStatCard label="Kelurahan" value={stats.kelurahan || kelurahans.length} icon={MapPin} gradient="stat-gradient-cyan" delay={100} />
                     <PublicStatCard label="Faskes" value={stats.fasilitas_kesehatan} icon={Heart} gradient="stat-gradient-emerald" delay={200} />
                     <PublicStatCard label="Sekolah" value={stats.sarana_pendidikan} icon={GraduationCap} gradient="stat-gradient-amber" delay={300} />
