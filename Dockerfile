@@ -29,6 +29,10 @@ ENV NEXT_PUBLIC_UPLOAD_BASE_URL=$NEXT_PUBLIC_UPLOAD_BASE_URL
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Limit Node.js heap to prevent OOM kill on low-memory VPS (2GB)
+# Adjust the value based on your VPS RAM: 1024 for 2GB, 2048 for 4GB
+ENV NODE_OPTIONS="--max-old-space-size=1536"
+
 # Build the application
 RUN npm run build
 

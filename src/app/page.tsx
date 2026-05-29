@@ -3,6 +3,9 @@ import Link from "next/link";
 import { ArrowRight, Building2, MapPinned } from "lucide-react";
 import { listActiveTenants } from "@/lib/tenant/server";
 
+// Render at request time, not build time (DB not available during build)
+export const dynamic = "force-dynamic";
+
 export default async function TenantLandingPage() {
     const tenants = await listActiveTenants();
 
