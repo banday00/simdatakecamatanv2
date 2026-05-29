@@ -8,7 +8,7 @@ import { Navbar } from "@/components/ui/navbar";
 import { Footer } from "@/components/ui/footer";
 import type { Kelurahan } from "@/types";
 import {
-    ChevronLeft, MapPin, Hammer, CheckCircle, Clock, Banknote,
+    ChevronLeft, MapPin, Hammer, CheckCircle, Clock,
     Droplets, BarChart3, Trophy,
     Pipette, ChevronDown, Activity, PieChart as PieChartIcon, Info
 } from "lucide-react";
@@ -31,9 +31,6 @@ type PublicDevelopmentProject = {
     tahun: number | null;
     nama_kecamatan: string | null;
     nama_kelurahan: string | null;
-    nilai_kontrak: number;
-    hps: number;
-    pagu: number;
     total_progress: number;
     status_paket: string | null;
     is_verify: number;
@@ -50,16 +47,6 @@ type PublicDevelopmentProject = {
     progress_status_label: string | null;
     detail_avg_progress: number | null;
 };
-
-const formatCurrencyCompact = (value: number | null | undefined) => {
-    const amount = Number(value) || 0;
-    if (amount >= 1_000_000_000) return `Rp${(amount / 1_000_000_000).toLocaleString("id-ID", { maximumFractionDigits: 1 })} M`;
-    if (amount >= 1_000_000) return `Rp${(amount / 1_000_000).toLocaleString("id-ID", { maximumFractionDigits: 1 })} Jt`;
-    return `Rp${amount.toLocaleString("id-ID")}`;
-};
-
-const formatCurrencyFull = (value: number | null | undefined) =>
-    `Rp${(Number(value) || 0).toLocaleString("id-ID")}`;
 
 const formatDateId = (value: string | null | undefined) => {
     if (!value) return "-";
@@ -252,8 +239,9 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
 
     const totalProyek = latestData.length;
     const terverifikasi = latestData.filter((project) => project.is_verify === 1 || project.status_paket === "TERVALIDASI").length;
-    const totalNilaiKontrak = latestData.reduce((sum, project) => sum + (Number(project.nilai_kontrak) || 0), 0);
     const avgProgress = latestData.length ? Math.round(latestData.reduce((sum, project) => sum + (Number(project.total_progress) || 0), 0) / latestData.length) : 0;
+    const kelurahanTercakup = new Set(latestData.map((project) => project.kelurahan_id || project.nama_kelurahan).filter(Boolean)).size;
+    const totalKelurahanAcuan = selectedKelurahan ? 1 : (kelurahans.length || kelurahanTercakup);
     const [page, setPage] = useState(1);
     const limit = 10;
     const paginationData = latestData.slice((page - 1) * limit, page * limit);
@@ -266,14 +254,14 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
     });
     const barData = Array.from(statusMap.entries()).map(([name, jumlah]) => ({ name, jumlah })).sort((a, b) => b.jumlah - a.jumlah);
 
-    const kelurahanValueMap = new Map<string, number>();
+    const kelurahanProjectMap = new Map<string, number>();
     latestData.forEach((project) => {
         const kelurahanName = kelurahans.find((kel) => kel.id === project.kelurahan_id)?.nama || project.nama_kelurahan || "Lainnya";
-        kelurahanValueMap.set(kelurahanName, (kelurahanValueMap.get(kelurahanName) || 0) + (Number(project.nilai_kontrak) || 0));
+        kelurahanProjectMap.set(kelurahanName, (kelurahanProjectMap.get(kelurahanName) || 0) + 1);
     });
-    const valueByKelurahan = Array.from(kelurahanValueMap.entries())
-        .map(([name, nilai]) => ({ name, nilai }))
-        .sort((a, b) => b.nilai - a.nilai)
+    const projectByKelurahan = Array.from(kelurahanProjectMap.entries())
+        .map(([name, jumlah]) => ({ name, jumlah }))
+        .sort((a, b) => b.jumlah - a.jumlah)
         .slice(0, 10);
 
     return (
@@ -282,7 +270,7 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
                 {[
                     { label: 'Total Paket', value: totalProyek, sub: `Tahun ${latestYear}`, icon: Hammer, color: 'bg-indigo-50 text-indigo-600', border: 'border-indigo-100' },
                     { label: 'Terverifikasi', value: terverifikasi, sub: 'Paket valid', icon: CheckCircle, color: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
-                    { label: 'Nilai Kontrak', value: formatCurrencyCompact(totalNilaiKontrak), sub: 'Total paket publik', icon: Banknote, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
+                    { label: 'Wilayah Tercakup', value: `${kelurahanTercakup} / ${totalKelurahanAcuan || 0}`, sub: 'Kelurahan memiliki paket', icon: MapPin, color: 'bg-amber-50 text-amber-600', border: 'border-amber-100' },
                     { label: 'Rata-rata Progress', value: `${avgProgress}%`, sub: 'Realisasi paket', icon: BarChart3, color: 'bg-rose-50 text-rose-600', border: 'border-rose-100' },
                 ].map((item) => (
                     <div key={item.label} className={`bg-white p-4 rounded-2xl border ${item.border} shadow-sm hover:shadow-md transition-all`}>
@@ -311,15 +299,15 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><Banknote className="w-5 h-5 text-indigo-600" /> Nilai Kontrak per Kelurahan</h3>
+                    <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><MapPin className="w-5 h-5 text-indigo-600" /> Jumlah Paket per Kelurahan</h3>
                     <div className="h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={valueByKelurahan} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                            <BarChart data={projectByKelurahan} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#64748b" }} interval={0} angle={-45} textAnchor="end" height={70} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#64748b" }} tickFormatter={(value) => formatCurrencyCompact(Number(value)).replace("Rp", "")} />
-                                <Tooltip formatter={(value) => [formatCurrencyFull(Number(value)), "Nilai Kontrak"]} cursor={{ fill: "#f8fafc" }} contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} />
-                                <Bar dataKey="nilai" name="Nilai Kontrak" fill="#10b981" radius={[4, 4, 0, 0]} barSize={18} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#64748b" }} allowDecimals={false} />
+                                <Tooltip formatter={(value) => [`${Number(value).toLocaleString("id-ID")} paket`, "Jumlah Paket"]} cursor={{ fill: "#f8fafc" }} contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }} />
+                                <Bar dataKey="jumlah" name="Jumlah Paket" fill="#10b981" radius={[4, 4, 0, 0]} barSize={18} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -330,7 +318,7 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100 font-semibold">
-                            <tr><th className="px-6 py-4">Paket</th><th className="px-6 py-4">Kelurahan</th><th className="px-6 py-4">Jenis / Lokasi</th><th className="px-6 py-4">Nilai</th><th className="px-6 py-4">Jadwal</th><th className="px-6 py-4">Progress</th><th className="px-6 py-4 text-center">Status</th></tr>
+                            <tr><th className="px-6 py-4">Paket</th><th className="px-6 py-4">Kelurahan</th><th className="px-6 py-4">Jenis / Lokasi</th><th className="px-6 py-4">Jadwal</th><th className="px-6 py-4">Progress</th><th className="px-6 py-4 text-center">Status</th></tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {paginationData.map((row) => (
@@ -352,10 +340,6 @@ function PembangunanSection({ development, kelurahans, selectedKelurahan }: { de
                                         <p className="text-sm font-semibold text-slate-700 line-clamp-1">{row.jenis_pekerjaan || "-"}</p>
                                         <p className="text-xs text-slate-500 mt-1 line-clamp-2">{[row.rt_rw_summary, row.lokasi_summary].filter(Boolean).join(" - ") || "-"}</p>
                                         {row.volume_summary && <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">Volume: {row.volume_summary}</p>}
-                                    </td>
-                                    <td className="px-6 py-4 min-w-[150px]">
-                                        <p className="font-bold text-slate-800">{formatCurrencyCompact(row.nilai_kontrak)}</p>
-                                        <p className="text-[10px] text-slate-400 mt-1">Pagu {formatCurrencyCompact(row.pagu)}</p>
                                     </td>
                                     <td className="px-6 py-4 min-w-[160px]">
                                         <p className="text-xs font-semibold text-slate-700">{formatDateId(row.tgl_mulai)} - {formatDateId(row.tgl_selesai)}</p>
