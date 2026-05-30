@@ -340,7 +340,7 @@ export async function getPublicHomeData(tenantSlug: string) {
                 (SELECT COUNT(*)::int FROM health_posyandu WHERE tenant_id = $1) AS posyandu_count,
                 (SELECT COUNT(*)::int FROM social_religious WHERE tenant_id = $1) AS ibadah_count,
                 (SELECT COUNT(*)::int FROM infra_sports WHERE tenant_id = $1) AS olahraga_count,
-                (SELECT COUNT(*)::int FROM infra_development WHERE tenant_id = $1 AND status = 'berjalan') AS proyek_count`,
+                (SELECT COUNT(*)::int FROM paket_pekerjaan_berjalan WHERE tenant_id = $1 AND status_paket = 'SEDANG_DIPROSES') AS proyek_count`,
             [tenant.id]
         ),
         rows<{
